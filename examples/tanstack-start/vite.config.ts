@@ -7,9 +7,16 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig((env) => ({
 	environments: {
-		// `bundle-check` reads which modules the browser gets from the client
-		// build's source maps. Hidden: the chunks don't point to them.
-		client: { build: { sourcemap: "hidden" } },
+		client: {
+			build: {
+				// `bundle-check` reads which modules the browser gets from the
+				// client build's source maps. Hidden: the chunks don't point to
+				// them. Without the sources: route modules' maps would carry
+				// the server code the client build strips.
+				rolldownOptions: { output: { sourcemapExcludeSources: true } },
+				sourcemap: "hidden",
+			},
+		},
 	},
 	// Tests import the app's modules directly, without the Start build.
 	plugins:
