@@ -267,11 +267,11 @@ function IssueRoute() {
 	});
 	// SAFETY: the issue route's loader returns `LoaderHandles`, or nothing
 	// for the render strategy.
-	const handles = useLoaderData({ strict: false }) as LoaderHandles | undefined;
-	return handles === undefined ? (
+	const data = useLoaderData({ strict: false }) as LoaderHandles | undefined;
+	return data === undefined ? (
 		<RenderPage id={id} key={id} />
 	) : (
-		<LoaderPage handles={handles} key={id} />
+		<LoaderPage handles={data} key={id} />
 	);
 }
 

@@ -30,16 +30,16 @@ export const Route = createFileRoute("/issues/$id")({
 
 // #region component
 function IssuePage() {
-	const handles = Route.useLoaderData();
+	const data = Route.useLoaderData();
 	// IssueNotFound, Unauthorized and RpcClientError go to their boundaries,
 	// so no failure is left.
-	const result = useAtomResult(useIssueBoundary().wrap(issue), handles.issue);
+	const result = useAtomResult(useIssueBoundary().wrap(issue), data.issue);
 	//    ^?
 	return (
 		<article>
 			<h1>{result.value.title}</h1>
 			<Suspense fallback={<p>Loading the assignee…</p>}>
-				<Assignee assignee={handles.assignee} />
+				<Assignee assignee={data.assignee} />
 			</Suspense>
 		</article>
 	);
