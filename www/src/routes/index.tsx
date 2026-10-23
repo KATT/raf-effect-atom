@@ -13,9 +13,13 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import boundaries from "sample:tanstack-start/src/boundaries.tsx#issue";
+import fetchInRender from "sample:tanstack-start/src/docs/coding-agents.tsx#fetch-in-render";
+import forgottenTag from "sample:tanstack-start/src/docs/coding-agents.tsx#forgotten-tag";
+import misspelledTag from "sample:tanstack-start/src/docs/error-boundaries.tsx#misspelled";
 import route from "sample:tanstack-start/src/routes/issues.$id.tsx#hero";
 
 import { DocBody } from "~/components/doc-body.tsx";
+import type { Sample } from "~/content/types.ts";
 import { pageHead } from "~/seo.ts";
 import { site } from "~/site.ts";
 
@@ -108,6 +112,32 @@ const features: ReadonlyArray<{
 		icon: <Workflow />,
 		slug: "overview",
 		title: "Thin layers on Effect Atom",
+	},
+];
+
+/** Mistakes a coding agent makes, and the tool that stops each one. */
+const mistakes: ReadonlyArray<{
+	readonly caughtBy: string;
+	readonly code: Sample;
+	readonly report?: string;
+	readonly title: string;
+}> = [
+	{
+		caughtBy: "Throws in development",
+		code: fetchInRender,
+		report:
+			"raf-effect-atom: rendering read AtomRpc:GetIssueAssignee:1 before anything else had started it, so its request waits for this render: a request waterfall.",
+		title: "Fetches in a component",
+	},
+	{
+		caughtBy: "Doesn't compile",
+		code: misspelledTag,
+		title: "Misspells a tag",
+	},
+	{
+		caughtBy: "Doesn't compile",
+		code: forgottenTag,
+		title: "Forgets a tag",
 	},
 ];
 
@@ -248,6 +278,64 @@ function HomePage() {
 				<div className="min-w-0 [&_.code-block]:my-0!">
 					<DocBody segments={boundaries.segments} />
 				</div>
+			</section>
+
+			<section
+				aria-labelledby="coding-agents"
+				className="mx-auto grid max-w-7xl items-start gap-10 border-b px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"
+			>
+				<div className="grid content-start gap-4 lg:sticky lg:top-24">
+					<h2
+						className="scroll-mt-24 text-2xl font-semibold tracking-tight"
+						id="coding-agents"
+					>
+						<HashLink id="coding-agents">Wrong code fails loudly</HashLink>
+					</h2>
+					<p className="text-muted-foreground">
+						Coding agents write what compiles and runs. Here, the usual mistakes
+						don’t: a fetch in a component throws in development, and a
+						misspelled tag, or a match that forgets one, is a type error. The
+						agent is corrected by the tools before a reviewer sees the code.
+					</p>
+					<p className="text-muted-foreground">
+						<a
+							className="font-medium text-foreground underline underline-offset-4"
+							href="/llms.txt"
+						>
+							llms.txt
+						</a>{" "}
+						starts with the rules, so an agent reads what to write before it
+						writes it.
+					</p>
+					<Link
+						className="w-fit text-sm font-medium underline underline-offset-4"
+						params={{ slug: "coding-agents" }}
+						to="/docs/$slug"
+					>
+						Rules for coding agents <ArrowRight className="inline size-4" />
+					</Link>
+				</div>
+				<ol className="grid min-w-0 gap-8">
+					{mistakes.map((mistake) => (
+						<li className="grid min-w-0 gap-3" key={mistake.title}>
+							<p className="flex flex-wrap items-baseline gap-x-2 text-sm">
+								<span className="font-semibold">{mistake.title}</span>
+								<span className="font-mono text-xs text-muted-foreground">
+									{mistake.caughtBy}
+								</span>
+							</p>
+							<div className="min-w-0 [&_.code-block]:my-0!">
+								<DocBody segments={mistake.code.segments} />
+							</div>
+							{mistake.report === undefined ? null : (
+								<p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 font-mono text-xs leading-relaxed">
+									<span className="font-semibold text-destructive">Error:</span>{" "}
+									{mistake.report}
+								</p>
+							)}
+						</li>
+					))}
+				</ol>
 			</section>
 
 			<section

@@ -5,6 +5,7 @@
   - both package READMEs have a short "For coding agents" section with the rules that package owns, linking the page and `llms.txt`;
   - the root README points agents at `llms.txt`;
   - the overview's "Where to go next" links the page.
+- **It's part of the pitch** (human asked): the home page's "Wrong code fails loudly" section and the overview's "Built for coding agents" paragraph say the setup corrects agents through the tools: a fetch in a component throws in development (`WaterfallDetection mode="throw"`), and a misspelled tag or a `Match.valueTags` that forgets one doesn't compile. The home section shows each mistake as a compiled sample (`www/samples/tanstack-start/src/docs/coding-agents.tsx`, and `error-boundaries.tsx#misspelled`) with the error Twoslash or the check reports. Both link the page.
 - **No headings in the inlined copy.** llms.txt's format keeps `##` headings for the page lists, so the build turns the page's headings into bold lines there. The page itself keeps `## Do` and `## Avoid` for its table of contents.
 - **The rules match what the library checks.** Starting atoms before render is enforced in development by `WaterfallDetection` (see `waterfall-detection.md`); the page tells agents to keep it on `throw` and to fix what it reports rather than switch it off or reach for `useWaterfall`.
 - **The examples follow the rules**, and the docs' samples do too except where a page shows what a rule prevents. `AGENTS.md` says so.
