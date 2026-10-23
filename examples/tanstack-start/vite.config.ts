@@ -18,6 +18,10 @@ export default defineConfig((env) => ({
 			},
 		},
 	},
+	// Not `assets`: some browsers send `/assets` requests on this host a
+	// `__vdpl` cookie with that path, set by an older build's script, which
+	// Vercel would follow to a deployment without these files.
+	build: { assetsDir: "static" },
 	// Tests import the app's modules directly, without the Start build.
 	plugins:
 		env.mode === "test"
