@@ -37,6 +37,13 @@ describe("useAtomResult", () => {
 		>();
 	});
 
+	it("returns a success when no typed failure is left", () => {
+		const claimed = hole<Atom.Atom<AsyncResult.AsyncResult<Issue, never>>>();
+		expect(useAtomResult(claimed)).type.toBe<
+			AsyncResult.Success<Issue, never>
+		>();
+	});
+
 	it("rejects an atom that isn't an AsyncResult", () => {
 		expect(useAtomResult).type.not.toBeCallableWith(Atom.make(1));
 	});

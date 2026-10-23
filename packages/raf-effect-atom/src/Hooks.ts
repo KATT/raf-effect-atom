@@ -69,7 +69,8 @@ const sourceOf = (atom: Atom.Atom<unknown>): Atom.Atom<unknown> => {
  *   `initialValueTarget` chain points at: that one is awaited, hydrated and
  *   released, so the derived atom doesn't request it again.
  * - The settled result is returned, typed failures included. A defect is
- *   thrown to the error boundaries above.
+ *   thrown to the error boundaries above. With no typed failures left, such
+ *   as an atom whose boundaries claim all of them, it's typed as a success.
  * - While a failed atom refreshes, such as after a boundary's `reset`, the
  *   read suspends instead of returning the old failure again.
  *
@@ -111,7 +112,9 @@ const sourceOf = (atom: Atom.Atom<unknown>): Atom.Atom<unknown> => {
  */
 export const useAtomResult = <A, E>(
 	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-): SettledResult<A, E> => {
+): [E] extends [never]
+	? AsyncResult.Success<A, never>
+	: SettledResult<A, E> => {
 	const registry = React.useContext(RegistryContext);
 	if (
 		Registry.isServer() &&
@@ -154,5 +157,9 @@ export const useAtomResult = <A, E>(
 	) {
 		throw Cause.squash(result.cause);
 	}
-	return result;
+	// SAFETY: a failure with no typed error was thrown above, so when `E` is
+	// `never` the result is a success.
+	return result as [E] extends [never]
+		? AsyncResult.Success<A, never>
+		: SettledResult<A, E>;
 };
