@@ -1,48 +1,68 @@
 import type { IssueId } from "@examples/contract";
-import { useAtomSuspense } from "@effect/atom-react";
-import { AtomErrorBoundary } from "effect-atom-boundary";
+import { Match, Option } from "effect";
+import { createErrorBoundary } from "effect-atom-boundary";
+import { AsyncResult } from "effect/reactivity";
+import { useAtomResult } from "raf-effect-atom";
 import { Suspense } from "react";
 
 import { issue } from "~/issues.ts";
 
-declare const id: IssueId;
+// #region issue
+export const [AppBoundary] = createErrorBoundary({
+	name: "App",
+	errors: issue,
+	catchTags: {
+		RpcClientError: ({ reset }) => (
+			<p>
+				Can't reach the server. <button onClick={reset}>Try again</button>
+			</p>
+		),
+	},
+});
 
-// #region boundary
+export const [IssueBoundary, useIssueBoundary] = createErrorBoundary({
+	name: "Issue",
+	errors: issue,
+	parent: AppBoundary,
+	catchTags: {
+		IssueNotFound: ({ error, reset }) => (
+			<p>
+				There's no issue #{error.id}. <button onClick={reset}>Try again</button>
+			</p>
+		),
+	},
+});
+
 export function IssuePanel(props: { id: IssueId }) {
 	return (
-		<AtomErrorBoundary
-			atom={issue(props.id)}
-			// claim throws every tag the atom fails with. RpcClientError has no
-			// handler here, so it goes on to the app's boundary above.
-			catchTags={{
-				IssueNotFound: ({ error }) => <p>There's no issue #{error.id}.</p>,
-				Unauthorized: ({ reset }) => (
-					<p>
-						You're signed out. <button onClick={reset}>Try again</button>
-					</p>
-				),
-			}}
-		>
-			<Suspense fallback={<p>Loading…</p>}>
-				<IssueTitle id={props.id} />
-			</Suspense>
-		</AtomErrorBoundary>
+		<AppBoundary>
+			<IssueBoundary>
+				<Suspense fallback={<p>Loading…</p>}>
+					<IssueTitle id={props.id} />
+				</Suspense>
+			</IssueBoundary>
+		</AppBoundary>
 	);
 }
 
 function IssueTitle(props: { id: IssueId }) {
-	// Suspends while loading, throws a typed failure to the boundaries above.
-	const claimed = AtomErrorBoundary.claim(issue(props.id));
-	const result = useAtomSuspense(claimed, { suspendOnWaiting: true });
+	const result = useAtomResult(useIssueBoundary().wrap(issue(props.id)));
+	if (AsyncResult.isSuccess(result)) {
+		return <h1>{result.value.title}</h1>;
+	}
+	const error = Option.getOrThrow(AsyncResult.error(result));
 	//    ^?
-	return <h1>{result.value.title}</h1>;
+	return Match.valueTags(error, {
+		Unauthorized: () => <p>Sign in to see this issue.</p>,
+	});
 }
-// #endregion boundary
+// #endregion issue
 
 // #region handler-types
-<AtomErrorBoundary
-	atom={issue(id)}
-	catchTags={{
+export const [IssueAccessBoundary] = createErrorBoundary({
+	name: "IssueAccess",
+	errors: issue,
+	catchTags: {
 		IssueNotFound: ({ error }) => {
 			error;
 			// ^?
@@ -53,16 +73,17 @@ function IssueTitle(props: { id: IssueId }) {
 			// ^?
 			return <p>Sign in to see this issue.</p>;
 		},
-	}}
-/>;
+	},
+});
 // #endregion handler-types
 
 // #region misspelled
-<AtomErrorBoundary
-	atom={issue(id)}
-	catchTags={{
+export const [NotFoundBoundary] = createErrorBoundary({
+	name: "NotFound",
+	errors: issue,
+	catchTags: {
 		// @ts-expect-error -- 2561: the atom can't fail with IssueNotFund
 		IssueNotFund: () => <p>Not found</p>,
-	}}
-/>;
+	},
+});
 // #endregion misspelled
