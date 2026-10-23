@@ -72,6 +72,25 @@ export const issue = (id: number) =>
 		{ reactivityKeys: ["issues"], serializationKey: String(id) },
 	);
 
+/**
+ * `Issues` again. Its queries have `issue`'s keys but are other atoms, as a
+ * family member is once the garbage collector takes it and a read makes it
+ * again.
+ */
+class Remade extends AtomRpc.Service<Remade>()("Remade", {
+	group: IssuesRpc,
+	makeEffect: RpcTest.makeClient(IssuesRpc, { flatten: true }),
+	protocol: handlers,
+}) {}
+
+/** `issue(id)` made again: another atom with the same key. */
+export const remadeIssue = (id: number) =>
+	Remade.query(
+		"GetIssue",
+		{ id },
+		{ reactivityKeys: ["issues"], serializationKey: String(id) },
+	);
+
 /** A query atom without a `serializationKey`, which never hydrates. */
 export const unkeyedIssue = (id: number) => Issues.query("GetIssue", { id });
 

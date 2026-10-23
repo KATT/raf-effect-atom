@@ -12,6 +12,7 @@ import {
 	counter,
 	issue,
 	IssueNotFound,
+	remadeIssue,
 	serve,
 	unkeyedIssue,
 } from "./fixtures/issues.ts";
@@ -153,6 +154,16 @@ describe("fetch", () => {
 			assert.isTrue(AsyncResult.isFailure(first));
 			assert.isTrue(AsyncResult.isSuccess(second));
 			assert.isFalse(second.waiting);
+			assert.strictEqual(server.requests(1), 2);
+		}).pipe(Effect.provide(browser())),
+	);
+
+	it.live("refreshes the atom the registry runs for its key", () =>
+		Effect.gen(function* () {
+			using server = serve({ 1: ["missing", "found"] });
+			yield* Loader.ensure(issue(1));
+			const result = yield* Loader.fetch(remadeIssue(1));
+			assert.isTrue(AsyncResult.isSuccess(result));
 			assert.strictEqual(server.requests(1), 2);
 		}).pipe(Effect.provide(browser())),
 	);

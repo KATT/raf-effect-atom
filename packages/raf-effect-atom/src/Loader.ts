@@ -239,7 +239,11 @@ export const fetch: <A, E>(
 		const started = yield* start(atom);
 		const { registry, target } = started;
 		if (started.existed && isSettled(registry.get(target))) {
-			registry.refresh(target);
+			// An `Atom.family` makes a member again once the garbage collector
+			// takes it, such as an AtomRpc query: its refresh reaches inner atoms
+			// the registry doesn't run, so refresh the atom its node runs.
+			const node = registry.getNodes().get(Leases.keyOf(target));
+			registry.refresh(node?.atom ?? target);
 		}
 		return yield* settled(registry, target, isSettled);
 	});
