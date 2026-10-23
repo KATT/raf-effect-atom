@@ -14,8 +14,8 @@ import { describe, expect, it } from "tstyche";
 import {
 	AtomErrorBoundary,
 	createErrorBoundary,
-	type ErrorBoundaryClaims,
 	type ErrorsOf,
+	type UseErrorBoundary,
 } from "../src/index.ts";
 import { issue, Issues, user } from "../test/fixtures/Issues.ts";
 
@@ -196,11 +196,11 @@ describe("createErrorBoundary", () => {
 	});
 
 	it("claims the tags of its handlers, and its parent's", () => {
-		expect(useOfflineBoundary).type.toBe<
-			() => ErrorBoundaryClaims<"Offline">
+		expect(useOfflineBoundary).type.toBeAssignableTo<
+			UseErrorBoundary<"Offline">
 		>();
-		expect(useAuthBoundary).type.toBe<
-			() => ErrorBoundaryClaims<"Offline" | "Unauthorized">
+		expect(useAuthBoundary).type.toBeAssignableTo<
+			UseErrorBoundary<"Offline" | "Unauthorized">
 		>();
 		expect(AuthBoundary).type.toBeCallableWith({ children: null });
 	});
@@ -228,7 +228,7 @@ describe("createErrorBoundary", () => {
 	});
 
 	it("wraps an atom into one typed without the claimed errors", () => {
-		expect(useAuthBoundary().wrap(issue(1))).type.toBe<
+		expect(useAuthBoundary(issue(1))).type.toBe<
 			Atom.Atom<
 				AsyncResult.AsyncResult<
 					Issue,
@@ -236,13 +236,13 @@ describe("createErrorBoundary", () => {
 				>
 			>
 		>();
-		expect(useAuthBoundary().wrap(user("a"))).type.toBe<
+		expect(useAuthBoundary(user("a"))).type.toBe<
 			Atom.Atom<AsyncResult.AsyncResult<string, UserError>>
 		>();
 	});
 
 	it("wraps a family into one of atoms typed without the claimed errors", () => {
-		expect(useAuthBoundary().wrap(issue)).type.toBe<
+		expect(useAuthBoundary(issue)).type.toBe<
 			(
 				id: number,
 			) => Atom.Atom<
@@ -255,10 +255,10 @@ describe("createErrorBoundary", () => {
 	});
 
 	it("rejects an atom or a family that isn't an AsyncResult", () => {
-		expect(useAuthBoundary().wrap).type.not.toBeCallableWith(
+		expect(useAuthBoundary).type.not.toBeCallableWith(
 			hole<Atom.Atom<number>>(),
 		);
-		expect(useAuthBoundary().wrap).type.not.toBeCallableWith(
+		expect(useAuthBoundary).type.not.toBeCallableWith(
 			hole<(id: number) => Atom.Atom<number>>(),
 		);
 	});

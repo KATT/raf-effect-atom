@@ -30,6 +30,7 @@ import {
 	type ErrorBoundaryClaims,
 	type TagsOf,
 	TypeId,
+	type UseErrorBoundary,
 	type Variance,
 } from "./Claim.ts";
 import * as FailedReads from "./internal/failedReads.ts";
@@ -391,7 +392,7 @@ export interface ErrorBoundaryComponent<
  */
 export type ErrorBoundary<Tags extends string> = readonly [
 	Boundary: ErrorBoundaryComponent<Tags>,
-	useBoundary: () => ErrorBoundaryClaims<Tags>,
+	useBoundary: UseErrorBoundary<Tags> & (() => ErrorBoundaryClaims<Tags>),
 ];
 
 /**
@@ -454,10 +455,10 @@ const isMounted = (at: Mounted | undefined, boundary: Internal): boolean => {
  *
  * **Details**
  *
- * A component under it reads `useBoundary().wrap(atom)`: the same atom with
- * the errors this boundary or one above it claims turned into defects, so the
- * read throws them to the nearest boundary that claims them, and the atom's
- * `AsyncResult` is typed without them. `parent` is the boundary it sits
+ * A component under it reads `useBoundary(atom)`, or `useBoundary(family)`:
+ * the same atom with the errors this boundary or one above it claims turned
+ * into defects, so the read throws them to the nearest boundary that claims
+ * them, and the atom's `AsyncResult` is typed without them. `parent` is the boundary it sits
  * under; the claimed tags add up along the chain. `catchTags`' keys are tags
  * of `errors`' error type, so a misspelled tag is a type error and each
  * handler's `error` is typed.
@@ -496,7 +497,7 @@ const isMounted = (at: Mounted | undefined, boundary: Internal): boolean => {
  * })
  *
  * function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
- *   const result = useAtomResult(useAuthBoundary().wrap(issue), props.issue)
+ *   const result = useAtomResult(useAuthBoundary(issue), props.issue)
  *   // AsyncResult<Issue, IssueNotFound | RpcClientError>
  * }
  * ```
@@ -584,14 +585,16 @@ export const createErrorBoundary = <
 	});
 	internals.set(component, boundary);
 
-	const useBoundary = (): ErrorBoundaryClaims<string> => {
+	// SAFETY: `wrap`'s overloads type what it returns for an atom and for a
+	// family, and called without one the hook returns the claims.
+	const useBoundary = ((source?: Parameters<typeof claims.wrap>[0]) => {
 		if (!isMounted(React.useContext(MountedBoundaries), boundary)) {
 			throw new Error(
 				`The ${options.name} error boundary's hook found no <${boundary.displayName}> above it: wrap the tree in <${boundary.displayName}>`,
 			);
 		}
-		return claims;
-	};
+		return source === undefined ? claims : claims.wrap(source);
+	}) as UseErrorBoundary<string> & (() => ErrorBoundaryClaims<string>);
 
 	// SAFETY: the tags are type-level only; `variance` is the same value for
 	// every set of tags.
