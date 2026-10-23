@@ -12,6 +12,12 @@ On the server, each request renders from its own registry. Once the loaders have
 
 In the browser, `Hydration.hydrate(registry, state)` applies the settled values at once and holds each streamed result until its promise resolves. `useAtomResult` waits for a held result instead of starting the atom, so nothing is requested twice. The [framework integrations](./tanstack-start.md) call both for you.
 
+Below, the server is a request registry with its own worker. Its loaders wait for the issue and start the assignee without waiting, so the issue crosses with the page and the assignee streams in after it.
+
+```demo
+hydration
+```
+
 ## Serialization keys
 
 Only serializable atoms cross. An `AtomRpc` query is serializable when it's given a `serializationKey`, which must be unique for the procedure:

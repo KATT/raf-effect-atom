@@ -84,15 +84,23 @@ const Handlers = DemoRpcs.toLayer(
 	}),
 );
 
+/**
+ * The assignee comes from a slower service: it waits the latency once more
+ * before the db's own wait, so it always settles after an issue started
+ * beside it, and a loader that waits only for the issue streams it in.
+ */
+const slowerKey = DemoRpcs.requests.get("GetIssueAssignee")?.key;
+
 /** The contract's `Latency`: the db waits what the toolbar set. */
 const LatencyLayer = Layer.effect(
 	Latency,
 	Effect.gen(function* () {
 		const controls = yield* Controls;
-		return Latency.of((effect) =>
-			Effect.flatMap(Ref.get(controls.latency), (ms) =>
-				Effect.provideService(effect, DbLatency, ms),
-			),
+		return Latency.of((effect, options) =>
+			Effect.flatMap(Ref.get(controls.latency), (ms) => {
+				const timed = Effect.provideService(effect, DbLatency, ms);
+				return options.rpc.key === slowerKey ? Effect.delay(timed, ms) : timed;
+			}),
 		);
 	}),
 );
