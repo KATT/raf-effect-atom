@@ -1,0 +1,72 @@
+packages:
+  - apps/*
+  - packages/*
+
+# `pnpm <script>` installs first when node_modules is out of date with the lockfile.
+verifyDepsBeforeRun: install
+
+catalog:
+  "@effect/platform-browser": 4.0.6
+  "@effect/platform-node": 4.0.6
+  "@effect/vitest": 4.0.6
+  effect: 4.0.6
+
+overrides:
+  # One Effect in the workspace. vendor-src pins effect and
+  # @effect/platform-node 4.0.1, whose caret range on
+  # @effect/platform-node-shared resolves a release that needs a newer effect.
+  effect: "catalog:"
+  "@effect/platform-node": "catalog:"
+  "@effect/platform-node-shared": 4.0.6
+  # Keep plugins such as @effect/vitest on the Vitest copy bundled by vite-plus.
+  vite@*: npm:@voidzero-dev/vite-plus-core@1.4.0
+  vitest@*: 5.0.5
+
+peerDependencyRules:
+  allowedVersions:
+    vite: 1.4.0
+
+# pnpm adds a version here when an install takes it before it is a day old
+# (its built-in, non-strict minimum release age). Drop entries once they're older.
+minimumReleaseAgeExclude:
+  - "@effect/platform-node@4.0.6"
+  - "@oxlint-tsgolint/darwin-arm64@7.0.2005"
+  - "@oxlint-tsgolint/darwin-x64@7.0.2005"
+  - "@oxlint-tsgolint/linux-arm64@7.0.2005"
+  - "@oxlint-tsgolint/linux-x64@7.0.2005"
+  - "@oxlint-tsgolint/win32-arm64@7.0.2005"
+  - "@oxlint-tsgolint/win32-x64@7.0.2005"
+  - "@tanstack/react-router@1.170.46"
+  - "@tanstack/router-core@1.171.39"
+  - "@voidzero-dev/vite-plus-core@1.4.0"
+  - "@voidzero-dev/vite-plus-darwin-arm64@1.4.0"
+  - "@voidzero-dev/vite-plus-darwin-x64@1.4.0"
+  - "@voidzero-dev/vite-plus-linux-arm64-gnu@1.4.0"
+  - "@voidzero-dev/vite-plus-linux-arm64-musl@1.4.0"
+  - "@voidzero-dev/vite-plus-linux-x64-gnu@1.4.0"
+  - "@voidzero-dev/vite-plus-linux-x64-musl@1.4.0"
+  - "@voidzero-dev/vite-plus-win32-arm64-msvc@1.4.0"
+  - "@voidzero-dev/vite-plus-win32-x64-msvc@1.4.0"
+  - effect@4.0.6
+  - oxlint-tsgolint@7.0.2005
+  - vite-plus@1.4.0
+  - "@tanstack/react-start-client@1.168.44"
+  - "@tanstack/react-start-rsc@0.1.65"
+  - "@tanstack/react-start-server@1.167.52"
+  - "@tanstack/react-start@1.169.4"
+  - "@tanstack/router-generator@1.167.46"
+  - "@tanstack/router-plugin@1.168.48"
+  - "@tanstack/start-client-core@1.170.39"
+  - "@tanstack/start-plugin-core@1.171.55"
+  - "@tanstack/start-server-core@1.169.45"
+  - "@tanstack/start-storage-context@1.167.41"
+  - "@next/env@16.4.3"
+  - "@next/swc-darwin-arm64@16.4.3"
+  - "@next/swc-darwin-x64@16.4.3"
+  - "@next/swc-linux-arm64-gnu@16.4.3"
+  - "@next/swc-linux-arm64-musl@16.4.3"
+  - "@next/swc-linux-x64-gnu@16.4.3"
+  - "@next/swc-linux-x64-musl@16.4.3"
+  - "@next/swc-win32-arm64-msvc@16.4.3"
+  - "@next/swc-win32-x64-msvc@16.4.3"
+  - next@16.4.3

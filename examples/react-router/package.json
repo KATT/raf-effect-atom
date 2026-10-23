@@ -1,0 +1,18 @@
+{
+	"engines": {
+		"node": ">=24"
+	},
+	"name": "raf-effect-atom-react-router-example",
+	"packageManager": "pnpm@12.15.0",
+	"private": true,
+	"scripts": {
+		"build": "pnpm --filter @examples/react-router build",
+		"check:bundle": "pnpm --filter @examples/react-router check:bundle",
+		"dev": "pnpm --filter @examples/react-router dev",
+		"start": "pnpm --filter @examples/react-router start",
+		"test": "pnpm --filter @examples/react-router test",
+		"typecheck": "pnpm --filter @examples/react-router typecheck"
+	},
+	"type": "module",
+	"version": "0.0.0"
+}

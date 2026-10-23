@@ -1,0 +1,28 @@
+{
+	"name": "@examples/backend",
+	"version": "0.0.0",
+	"private": true,
+	"description": "The issue tracker's RPC handlers over @examples/db, as a web handler the apps serve and a standalone server. Server-only",
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"start": "node src/bin/start.ts",
+		"test": "vp test",
+		"typecheck": "tsc"
+	},
+	"dependencies": {
+		"@effect/platform-node": "catalog:",
+		"@examples/contract": "workspace:*",
+		"@examples/db": "workspace:*",
+		"effect": "catalog:"
+	},
+	"devDependencies": {
+		"@effect/vitest": "catalog:",
+		"@types/node": "24.19.2",
+		"typescript": "7.0.2",
+		"vite-plus": "1.4.0"
+	}
+}

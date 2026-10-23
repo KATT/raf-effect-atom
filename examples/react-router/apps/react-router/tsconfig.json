@@ -1,0 +1,25 @@
+{
+	"compilerOptions": {
+		"allowImportingTsExtensions": true,
+		"jsx": "react-jsx",
+		"lib": ["ES2024", "DOM", "DOM.Iterable"],
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"paths": {
+			"~/*": ["./app/*"]
+		},
+		"rootDirs": [".", "./.react-router/types"],
+		"skipLibCheck": true,
+		"strict": true,
+		"target": "ES2024",
+		"types": ["node", "vite-plus/client"],
+		"verbatimModuleSyntax": true
+	},
+	"include": [
+		"app",
+		".react-router/types/**/*",
+		"react-router.config.ts",
+		"vite.config.ts"
+	]
+}

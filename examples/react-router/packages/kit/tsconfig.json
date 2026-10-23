@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"allowImportingTsExtensions": true,
+		"exactOptionalPropertyTypes": true,
+		"jsx": "react-jsx",
+		"lib": ["ES2024", "DOM", "DOM.Iterable"],
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"paths": {
+			"@examples/kit/*": ["./src/*"]
+		},
+		"skipLibCheck": true,
+		"strict": true,
+		"target": "ES2024",
+		"types": []
+	},
+	"include": ["src", "vite.config.ts"]
+}

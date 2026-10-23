@@ -1,0 +1,203 @@
+import { RegistryContext } from "@effect/atom-react";
+import { assert, describe, it } from "@effect/vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import * as Option from "effect/Option";
+import * as AsyncResult from "effect/reactivity/AsyncResult";
+import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
+import type * as EffectHydration from "effect/reactivity/Hydration";
+import * as Schema from "effect/Schema";
+import * as React from "react";
+import {
+	createContext,
+	createStaticHandler,
+	RouterContextProvider,
+} from "react-router";
+
+import { HydrationBoundary, useAtomResult } from "../src/index.ts";
+import {
+	atomsMiddleware,
+	RegistryProvider,
+	type RequestAtoms,
+} from "../src/ReactRouter.ts";
+import { settle } from "./fixtures/browser.tsx";
+import { counter, issue, IssueNotFound, serve } from "./fixtures/issues.ts";
+import { wire } from "./fixtures/wire.ts";
+
+const atomsContext = createContext<RequestAtoms>();
+
+interface IssueData {
+	readonly atoms: Array<EffectHydration.DehydratedAtom>;
+	readonly registry: AtomRegistry.AtomRegistry;
+}
+
+const handler = createStaticHandler([
+	{
+		children: [
+			{
+				loader: async (args): Promise<IssueData> => {
+					const atoms = args.context.get(atomsContext);
+					await atoms.ensure(issue(Number(args.params.id)));
+					return { atoms: atoms.dehydrate(), registry: atoms.registry };
+				},
+				path: "issues/:id",
+			},
+			{
+				loader: (args): IssueData => {
+					const atoms = args.context.get(atomsContext);
+					atoms.prefetch(issue(Number(args.params.id)));
+					return { atoms: atoms.dehydrate(), registry: atoms.registry };
+				},
+				path: "streamed/:id",
+			},
+		],
+		id: "root",
+		middleware: [atomsMiddleware(atomsContext)],
+		path: "/",
+	},
+]);
+
+const streamOf = (entry: EffectHydration.DehydratedAtom) =>
+	"resultPromise" in entry ? entry.resultPromise : undefined;
+
+/**
+ * Handles a request as React Router's server does: the middleware runs
+ * around the loaders, and the response streams the loader data's pending
+ * promises after it returns, as Single Fetch does.
+ */
+const handle = async (path: string) => {
+	const request = new Request(`http://localhost${path}`);
+	let data: IssueData | undefined;
+	const response = await handler.query(request, {
+		generateMiddlewareResponse: async (query) => {
+			const context = await query(request);
+			if ("loaderData" in context) {
+				data = Object.values(context.loaderData).find(
+					(value): value is IssueData => value !== undefined,
+				);
+			}
+			const streams = data?.atoms.map(streamOf) ?? [];
+			const body = new ReadableStream<Uint8Array>({
+				start: async (controller) => {
+					controller.enqueue(new TextEncoder().encode("head"));
+					await Promise.all(streams);
+					controller.enqueue(new TextEncoder().encode("tail"));
+					controller.close();
+				},
+			});
+			return new Response(body);
+		},
+		requestContext: new RouterContextProvider(),
+	});
+	if (data === undefined || !("body" in response)) {
+		throw new Error("the request didn't run a loader to a response");
+	}
+	return { data, response };
+};
+
+const isIssueNotFound = Schema.is(IssueNotFound);
+
+function Title(props: { readonly id: number }) {
+	const result = useAtomResult(issue(props.id));
+	if (AsyncResult.isSuccess(result)) {
+		return <p>{result.value.title}</p>;
+	}
+	const error = AsyncResult.error(result);
+	return (
+		<p>
+			{Option.isSome(error) && isIssueNotFound(error.value)
+				? `IssueNotFound ${error.value.id}`
+				: "Other failure"}
+		</p>
+	);
+}
+
+/** Renders the route in the browser from its loader data. */
+const renderRoute = async (id: number, data: IssueData) => {
+	await act(async () => {
+		render(
+			<RegistryProvider>
+				<HydrationBoundary state={wire(data.atoms)}>
+					<React.Suspense fallback={<p>Loading</p>}>
+						<Title id={id} />
+					</React.Suspense>
+				</HydrationBoundary>
+			</RegistryProvider>,
+		);
+	});
+	await settle();
+	return { [Symbol.dispose]: cleanup };
+};
+
+describe("atomsMiddleware", () => {
+	it("sends a loader's IssueNotFound that hydrates as an IssueNotFound", async () => {
+		using server = serve({ 1: ["missing"] });
+		const handled = await handle("/issues/1");
+		await handled.response.text();
+		using _route = await renderRoute(1, handled.data);
+		assert.isDefined(screen.getByText("IssueNotFound 1"));
+		assert.strictEqual(server.requests(1), 1);
+	});
+
+	it("streams a prefetched result without requesting it again", async () => {
+		using server = serve({});
+		const handled = await handle("/streamed/2");
+		using _route = await renderRoute(2, handled.data);
+		await handled.response.text();
+		await settle();
+		assert.isDefined(screen.getByText("Issue 2"));
+		assert.strictEqual(server.requests(2), 1);
+	});
+
+	it("disposes the request's registry once the response body has been sent", async () => {
+		using _server = serve({});
+		const handled = await handle("/streamed/3");
+		const registry = handled.data.registry;
+		assert.doesNotThrow(() => registry.get(counter));
+		assert.strictEqual(await handled.response.text(), "headtail");
+		assert.throws(() => registry.get(counter), /disposed/);
+	});
+
+	it("disposes the registry when the client cancels the response", async () => {
+		using _server = serve({});
+		const handled = await handle("/streamed/4");
+		await handled.response.body?.cancel();
+		assert.throws(() => handled.data.registry.get(counter), /disposed/);
+	});
+
+	it("gives each request its own registry", async () => {
+		using _server = serve({});
+		const first = await handle("/issues/5");
+		const second = await handle("/issues/5");
+		assert.notStrictEqual(first.data.registry, second.data.registry);
+		await Promise.all([first.response.text(), second.response.text()]);
+	});
+});
+
+describe("RegistryProvider", () => {
+	it("keeps an unread atom for defaultIdleTTL in the browser", async () => {
+		const registries: Array<AtomRegistry.AtomRegistry> = [];
+		function Capture() {
+			registries.push(React.useContext(RegistryContext));
+			return null;
+		}
+		render(
+			<>
+				<RegistryProvider defaultIdleTTL={50}>
+					<Capture />
+				</RegistryProvider>
+				<RegistryProvider>
+					<Capture />
+				</RegistryProvider>
+			</>,
+		);
+		using _rendered = { [Symbol.dispose]: cleanup };
+		const [short, standard] = registries;
+		assert.isDefined(short);
+		assert.isDefined(standard);
+		short.mount(counter)();
+		standard.mount(counter)();
+		await settle(200);
+		assert.isFalse(short.getNodes().has(counter));
+		assert.isTrue(standard.getNodes().has(counter));
+	});
+});

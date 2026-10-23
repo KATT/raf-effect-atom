@@ -1,0 +1,76 @@
+{
+	"name": "effect-atom-boundary",
+	"version": "0.0.0",
+	"description": "Typed error boundaries for Effect Atom: catch an atom's failures by tag, typed by the atom",
+	"keywords": [
+		"effect",
+		"effect-atom",
+		"error-boundary",
+		"react",
+		"suspense"
+	],
+	"license": "MIT",
+	"author": {
+		"name": "KATT",
+		"email": "alexander@n1s.se"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/KATT/raf-effect-atom.git",
+		"directory": "packages/effect-atom-boundary"
+	},
+	"homepage": "https://raf-effect-atom.katt.dev",
+	"bugs": {
+		"url": "https://github.com/KATT/raf-effect-atom/issues"
+	},
+	"files": [
+		"dist/",
+		"CHANGELOG.md",
+		"LICENSE",
+		"README.md"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "vp pack",
+		"test": "vp test && pnpm test-types",
+		"typecheck": "tsc",
+		"publish:npm": "pnpm pack --out package.tgz && npm publish package.tgz --access public",
+		"test-types": "tstyche"
+	},
+	"peerDependencies": {
+		"@effect/atom-react": "^4.0.6",
+		"effect": "^4.0.6",
+		"react": "^19.0.0"
+	},
+	"devDependencies": {
+		"@babel/core": "8.0.7",
+		"@effect/atom-react": "4.0.6",
+		"@effect/vitest": "catalog:",
+		"@rolldown/plugin-babel": "0.2.4",
+		"@testing-library/react": "16.3.3",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"@vitejs/plugin-react": "6.1.2",
+		"@vitest/coverage-v8": "5.0.5",
+		"babel-plugin-react-compiler": "1.0.0",
+		"effect": "catalog:",
+		"happy-dom": "21.0.4",
+		"react": "19.3.1",
+		"react-dom": "19.3.1",
+		"react-error-boundary": "6.1.6",
+		"tstyche": "7.2.5",
+		"typescript": "7.0.2",
+		"vite-plus": "1.4.0"
+	},
+	"publishConfig": {
+		"access": "public",
+		"exports": {
+			".": "./dist/index.mjs"
+		},
+		"provenance": true
+	}
+}

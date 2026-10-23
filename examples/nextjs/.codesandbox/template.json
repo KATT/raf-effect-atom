@@ -1,0 +1,4 @@
+{
+	"description": "The issue tracker on the Next.js App Router: atoms started in server components and streamed into client components, over Effect RPC served from a route handler",
+	"title": "raf-effect-atom on the Next.js App Router"
+}

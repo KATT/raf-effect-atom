@@ -1,0 +1,20 @@
+/**
+ * The raf-effect-atom mark: an "r" inside an orbit. `www/public/favicon.svg` is
+ * the same file, which the docs site and the README use; `logo.test.ts` keeps
+ * the two equal.
+ */
+export const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+	<defs>
+		<linearGradient id="raf-effect-atom-orbit" x1="4" y1="26" x2="28" y2="6" gradientUnits="userSpaceOnUse">
+			<stop offset="0" stop-color="#2DD4BF" />
+			<stop offset="1" stop-color="#A78BFA" />
+		</linearGradient>
+	</defs>
+	<rect width="32" height="32" rx="8" fill="#0B0B14" />
+	<ellipse cx="16" cy="16" rx="12.5" ry="5.5" transform="rotate(-35 16 16)" fill="none" stroke="url(#raf-effect-atom-orbit)" stroke-width="2" />
+	<path d="M13 21.5V15.5a4 4 0 0 1 4-4h1.5" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" />
+	<circle cx="26.24" cy="8.83" r="2.5" fill="#A78BFA" stroke="#0B0B14" stroke-width="1" />
+</svg>
+`;
+
+export const logoUrl = `data:image/svg+xml,${encodeURIComponent(logoSvg)}`;

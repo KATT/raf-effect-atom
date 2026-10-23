@@ -1,0 +1,18 @@
+{
+	"engines": {
+		"node": ">=24"
+	},
+	"name": "raf-effect-atom-tanstack-start-example",
+	"packageManager": "pnpm@12.15.0",
+	"private": true,
+	"scripts": {
+		"build": "pnpm --filter @examples/tanstack-start build",
+		"check:bundle": "pnpm --filter @examples/tanstack-start check:bundle",
+		"dev": "pnpm --filter @examples/tanstack-start dev",
+		"start": "pnpm --filter @examples/tanstack-start start",
+		"test": "pnpm --filter @examples/tanstack-start test",
+		"typecheck": "pnpm --filter @examples/tanstack-start typecheck"
+	},
+	"type": "module",
+	"version": "0.0.0"
+}

@@ -1,0 +1,54 @@
+{
+	"name": "@examples/react-router",
+	"version": "0.0.0",
+	"private": true,
+	"description": "The issue tracker on React Router Framework Mode: atoms started from server loaders and streamed into the browser, over Effect RPC served from a resource route",
+	"type": "module",
+	"imports": {
+		"#rpc-transport": {
+			"browser": "./app/rpc-transport.browser.ts",
+			"default": "./app/rpc-transport.server.ts"
+		}
+	},
+	"scripts": {
+		"build": "example-og-image react-router public/og.png && react-router build",
+		"check:bundle": "bundle-check build/client --forbid @examples/db --forbid @examples/backend",
+		"dev": "react-router dev --port 3006",
+		"start": "PORT=3006 react-router-serve ./build/server/index.js",
+		"test": "vp test",
+		"typecheck": "react-router typegen && tsc"
+	},
+	"dependencies": {
+		"@effect/atom-react": "4.0.6",
+		"@examples/backend": "workspace:*",
+		"@examples/contract": "workspace:*",
+		"@examples/kit": "workspace:*",
+		"@examples/ui": "workspace:*",
+		"@react-router/node": "8.5.0",
+		"@react-router/serve": "8.5.0",
+		"@tanstack/react-form": "1.33.5",
+		"effect": "catalog:",
+		"effect-atom-boundary": "workspace:*",
+		"isbot": "5.2.2",
+		"raf-effect-atom": "workspace:*",
+		"react": "19.3.1",
+		"react-dom": "19.3.1",
+		"react-router": "8.5.0",
+		"sonner": "2.0.8"
+	},
+	"devDependencies": {
+		"@babel/core": "8.0.7",
+		"@effect/vitest": "catalog:",
+		"@react-router/dev": "8.5.0",
+		"@rolldown/plugin-babel": "0.2.4",
+		"@tailwindcss/vite": "4.3.3",
+		"@tooling/bundle-check": "workspace:*",
+		"@types/node": "24.19.2",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"@vitejs/plugin-react": "6.1.2",
+		"babel-plugin-react-compiler": "1.0.0",
+		"typescript": "7.0.2",
+		"vite-plus": "1.4.0"
+	}
+}

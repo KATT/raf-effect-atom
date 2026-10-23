@@ -1,0 +1,33 @@
+{
+	"name": "@tooling/og-image",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Social cards (og:image) in the raf-effect-atom brand, rendered to PNG at build time with satori and resvg",
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		"./render": "./src/render.ts",
+		"./vite": "./src/vite.ts"
+	},
+	"scripts": {
+		"test": "vp test",
+		"typecheck": "tsc"
+	},
+	"dependencies": {
+		"@effect/platform-node": "catalog:",
+		"@fontsource/inter": "5.3.0",
+		"@fontsource/jetbrains-mono": "5.3.0",
+		"@resvg/resvg-js": "2.6.2",
+		"effect": "catalog:",
+		"react": "19.3.1",
+		"satori": "0.63.2"
+	},
+	"devDependencies": {
+		"@effect/vitest": "catalog:",
+		"@types/node": "24.19.2",
+		"@types/react": "19.3.0",
+		"typescript": "7.0.2",
+		"vite": "8.3.5",
+		"vite-plus": "1.4.0"
+	}
+}

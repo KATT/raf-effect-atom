@@ -1,0 +1,18 @@
+{
+	"engines": {
+		"node": ">=24"
+	},
+	"name": "raf-effect-atom-nextjs-example",
+	"packageManager": "pnpm@12.15.0",
+	"private": true,
+	"scripts": {
+		"build": "pnpm --filter @examples/nextjs build",
+		"check:bundle": "pnpm --filter @examples/nextjs check:bundle",
+		"dev": "pnpm --filter @examples/nextjs dev",
+		"start": "pnpm --filter @examples/nextjs start",
+		"test:browser": "pnpm --filter @examples/nextjs test:browser",
+		"typecheck": "pnpm --filter @examples/nextjs typecheck"
+	},
+	"type": "module",
+	"version": "0.0.0"
+}

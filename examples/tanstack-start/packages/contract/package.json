@@ -1,0 +1,23 @@
+{
+	"name": "@examples/contract",
+	"version": "0.0.0",
+	"private": true,
+	"description": "The issue tracker's RPC contract: procedures, Schemas and tagged errors. Safe to bundle for the browser",
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"test": "vp test",
+		"typecheck": "tsc"
+	},
+	"dependencies": {
+		"effect": "catalog:"
+	},
+	"devDependencies": {
+		"@effect/vitest": "catalog:",
+		"typescript": "7.0.2",
+		"vite-plus": "1.4.0"
+	}
+}

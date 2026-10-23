@@ -1,0 +1,14 @@
+node_modules
+.DS_Store
+.next
+.output
+.react-router
+.tanstack
+.vercel
+build
+coverage
+dist
+next-env.d.ts
+*.tsbuildinfo
+# Rendered by `example-og-image` before each build.
+/apps/*/public/og.png
