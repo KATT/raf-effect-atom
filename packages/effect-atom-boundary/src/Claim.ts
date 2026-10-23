@@ -90,7 +90,8 @@ export interface Variance<Tags extends string> {
  *
  * Code that inspects the derived atom's value sees a defect where the atom
  * failed with a claimed error: `AsyncResult.error` returns `None` for it.
- * The derived atom isn't serializable, so loaders start the atom itself.
+ * The derived atom isn't serializable: `raf-effect-atom`'s loader verbs
+ * start the atom it points at, whichever of the two a loader passes them.
  *
  * @stability unstable
  * @category models

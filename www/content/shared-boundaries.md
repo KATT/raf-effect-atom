@@ -11,7 +11,7 @@ Some failures belong to the app rather than to the component that read them. Eve
 tanstack-start/src/boundaries.tsx#app
 ```
 
-`errors` names what the errors come from, for the types only: an `AtomRpc` client (the errors of all its procedures), an atom, or an atom family. `name` names the boundary in messages and React DevTools: `"App"` is `<AppBoundary>`. `reset` refreshes every atom that failed with a tag the boundary handles, so `Try again` loads the page again once the server is back.
+`errors` names what the errors come from, for the types only: an `AtomRpc` client (the errors of all its procedures), an [`AtomHttpApi`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/reactivity/AtomHttpApi.ts) client (the errors of all its endpoints and their middleware), an atom, or an atom family. An `AtomHttpApi` query turns a transport failure (`HttpClientError`) or an answer that doesn't decode into a defect rather than a typed failure, so neither is one of its client's tags. `name` names the boundary in messages and React DevTools: `"App"` is `<AppBoundary>`. `reset` refreshes every atom that failed with a tag the boundary handles, so `Try again` loads the page again once the server is back.
 
 ## Reads under the boundary
 
