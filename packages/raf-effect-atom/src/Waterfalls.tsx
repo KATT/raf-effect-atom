@@ -86,14 +86,16 @@ export const WaterfallDetection = (props: {
 
 /**
  * Starts an atom during render and returns it, for an input only a render
- * knows, such as an id from another atom's result.
+ * knows, such as a debounced search query.
  *
  * **When to use**
  *
- * Only when no loader or server component can start the atom: each call is
- * a request waterfall, a round trip after the render that found the input.
- * Prefer putting the input in the route, or a procedure that resolves it on
- * the server. Searching a codebase for `useWaterfall` lists its waterfalls.
+ * As an escape hatch, when no loader, server component or event handler can
+ * start the atom: each call is a request waterfall, a round trip after the
+ * render that found the input. Prefer putting the state that picks the data
+ * in the URL, where a loader reads it, or a procedure that resolves the input
+ * on the server. Searching a codebase for `useWaterfall` lists its
+ * waterfalls.
  *
  * **Details**
  *

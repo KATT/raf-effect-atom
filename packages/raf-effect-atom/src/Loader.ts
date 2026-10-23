@@ -278,7 +278,8 @@ export interface Loader {
  *
  * Use in a framework integration, in loaders that are async functions, or
  * in an event handler that starts an atom before the state change that
- * renders its reader, such as the next page of a list. In Effect code, use
+ * renders its reader, for state that can't be in the URL, such as a
+ * search-as-you-type query. In Effect code, use
  * the verbs directly with the `AtomRegistry` provided.
  *
  * **Example**

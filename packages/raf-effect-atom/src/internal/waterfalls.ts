@@ -66,7 +66,7 @@ const nameOf = (atom: Atom.Atom<unknown>): string => {
 };
 
 const message = (read: string, started: string): string =>
-	`raf-effect-atom: rendering ${read === started ? `read ${read}` : `read ${read}, which started ${started}`} before anything else had started it, so its request waits for this render: a request waterfall. Start it before render: in the route's loader or the server component (atoms.prefetch or atoms.ensure), or in the event handler that shows it (Loader.make(registry).prefetch). If its input is only known at render time, read it with useAtomResult(useWaterfall(atom)). ${docs}`;
+	`raf-effect-atom: rendering ${read === started ? `read ${read}` : `read ${read}, which started ${started}`} before anything else had started it, so its request waits for this render: a request waterfall. Start it before render, in the route's loader or the server component (atoms.prefetch or atoms.ensure). If the state that picks it, such as a page, a filter or an open dialog, isn't in the URL, put it there so the loader can. As escape hatches for state that can't be in the URL: start it in the event handler that changes the state (Loader.make(registry).prefetch), or, if its input only exists in render, read it with useAtomResult(useWaterfall(atom)). ${docs}`;
 
 const warned = new WeakMap<AtomRegistry.AtomRegistry, Set<string>>();
 

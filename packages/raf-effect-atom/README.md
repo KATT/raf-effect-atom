@@ -53,7 +53,7 @@ In development, `useAtomResult` reports a read that starts an atom nothing start
 
 ## For coding agents
 
-Start every atom in a loader, a server component or an event handler, never in a component or `useEffect`. Read atoms with `useAtomResult`, not `useAtomValue` or `useAtomSuspense`. Keep `<WaterfallDetection mode="throw">` at the root and fix what it reports instead of turning it off. The full rules, with the reason for each: [For coding agents](https://raf-effect-atom.katt.dev/docs/coding-agents). The docs as markdown: [llms.txt](https://raf-effect-atom.katt.dev/llms.txt).
+Start every atom in a loader or a server component, never in a component or `useEffect`, and put the state that picks data (pages, filters, open dialogs) in the URL so the loader can. Event handlers and `useWaterfall` are escape hatches for state that can't be in the URL. Read atoms with `useAtomResult`, not `useAtomValue` or `useAtomSuspense`. Keep `<WaterfallDetection mode="throw">` at the root and fix what it reports instead of turning it off. The full rules, with the reason for each: [For coding agents](https://raf-effect-atom.katt.dev/docs/coding-agents). The docs as markdown: [llms.txt](https://raf-effect-atom.katt.dev/llms.txt).
 
 ## License
 

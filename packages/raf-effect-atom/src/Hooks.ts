@@ -79,8 +79,10 @@ const sourceOf = (atom: Atom.Atom<unknown>): Atom.Atom<unknown> => {
  * A read of an atom that nothing started starts it, and its request waits
  * for the render: a request waterfall. In development, the read reports it
  * as `WaterfallDetection` says, by default with a warning. Start the atom in
- * a loader, a server component or the event handler that shows it, or read
- * it through `useWaterfall` when only the render knows its input.
+ * a loader or a server component, with the state that picks it in the URL.
+ * For state that can't be in the URL, start it in the event handler that
+ * changes the state, or read it through `useWaterfall` when only the render
+ * knows its input.
  *
  * During server rendering, the registry must be a request registry (see
  * `RequestRegistry.make`), or a module-level registry would share results
