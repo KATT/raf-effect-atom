@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@effect/vitest";
+import { describe, expect, it, vi } from "@effect/vitest";
 import { screen } from "@testing-library/react";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
@@ -72,6 +72,20 @@ const nodeOf = (app: ReturnType<typeof mount>, id: number) =>
 	app.registry.getNodes().get(`AtomRpc:GetIssue:${id}`);
 
 describe("useAtomResult after server rendering", () => {
+	// React reports a conditional `use` once per page, so this runs first.
+	it("calls use() again on the retry after a streamed result", async () => {
+		using server = serve();
+		using errors = vi.spyOn(console, "error");
+		using rendered = await load(Loader.prefetch(issue(2)));
+		using app = mount();
+		await app.render(<Page ids={[2]} state={rendered.state} />);
+		await settle(100);
+		expect(screen.getByText("Issue 2")).toBeDefined();
+		const reported = errors.mock.calls.flat().map(String);
+		expect(reported.filter((message) => message.includes("use()"))).toEqual([]);
+		expect(server.requests(2)).toBe(1);
+	});
+
 	it("catches a server-side IssueNotFound as an IssueNotFound", async () => {
 		using server = serve({ 1: ["missing"] });
 		using _errors = silenceCaughtErrors();

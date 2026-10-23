@@ -130,7 +130,7 @@ export const useAtomResult = <A, E>(
 	const read = target === atom ? hydrated(atom) : atom;
 	const key = Leases.keyOf(source);
 	const streamed = Predicate.isString(key)
-		? Pending.get(registry, key)
+		? Pending.stream(registry, key)
 		: undefined;
 	if (streamed !== undefined) {
 		React.use(streamed);
