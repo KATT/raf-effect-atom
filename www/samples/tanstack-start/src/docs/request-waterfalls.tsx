@@ -1,5 +1,6 @@
-import type { IssueId } from "@examples/contract";
+import type { IssueId, UserId } from "@examples/contract";
 import { Effect } from "effect";
+import { AsyncResult } from "effect/reactivity";
 import {
 	type Handle,
 	Loader,
@@ -14,6 +15,8 @@ import { assignee, issue, searchIssues } from "~/issues.ts";
 
 declare const atoms: Loader.Loader;
 declare const id: IssueId;
+/** A user by id, from an API the app can't reshape. */
+declare const user: (id: UserId) => ReturnType<typeof assignee>;
 /** `value`, once it has stopped changing for `ms`. */
 declare function useDebouncedValue<A>(value: A, ms: number): A;
 
@@ -69,6 +72,15 @@ const both = Effect.all(
 	{ concurrency: "unbounded" },
 );
 // #endregion effect-all
+
+// #region dependent
+// The input comes from the issue: the user starts a round trip later.
+const parent = await atoms.ensure(issue, id);
+const found = Loader.result(parent);
+const userHandle = AsyncResult.isSuccess(found)
+	? atoms.prefetch(user, found.value.assigneeId)
+	: undefined;
+// #endregion dependent
 
 // #region event-handler
 // Each keystroke doesn't belong in the URL, so the debounced handler starts

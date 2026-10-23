@@ -1,7 +1,7 @@
 import type { IssueId } from "@examples/contract";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { Effect, Match, Option, Schema } from "effect";
-import { AsyncResult } from "effect/reactivity";
+import { AsyncResult, Atom } from "effect/reactivity";
 import { Loader } from "raf-effect-atom";
 
 import { assignee, issue, IssueParams } from "~/issues.ts";
@@ -21,6 +21,16 @@ const issueHandle = await atoms.ensure(issue, id);
 // Refreshes the atom if it has a result, and waits for the new one.
 await atoms.fetch(issue, id);
 // #endregion verbs
+
+// #region derived
+// The issue's title alone. The verbs start, and the server sends, issue(id).
+const issueTitle = (id: IssueId) =>
+	Object.assign(
+		Atom.mapResult(issue(id), (found) => found.title),
+		{ initialValueTarget: issue(id) },
+	);
+const titleHandle = atoms.prefetch(issueTitle, id);
+// #endregion derived
 
 // #region match
 // The result ensure or fetch waited for, in the loader that called it.

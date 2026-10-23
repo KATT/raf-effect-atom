@@ -15,6 +15,12 @@ Each verb takes a source, an atom family or one atom, and the family's arguments
 
 A source can be a derived atom with no serialization key that points at a serializable one with Effect's `initialValueTarget`, such as an [error boundary](./shared-boundaries.md#reading-a-wrapped-atom)'s `wrap(issue)`. The verbs start the atom it points at, the one [`useAtomResult`](./reading-atoms.md) reads it through: the lease, the handle's key and what the server sends are that atom's, and `ensure` and `fetch` wait for the derived atom's own result. The server sends a result still loading as a promise only when that atom holds an `AsyncResult`; one that holds another value, such as an `Option` snapshot, crosses with the value it has when the loaders finish, so point a derived atom at an `AsyncResult` atom, or `ensure` it.
 
+To derive one, assign `initialValueTarget` to the atom it reads. [`Atom.map`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/reactivity/Atom.ts) and `Atom.mapResult` set none, and `Atom.transform`'s `initialValueTarget` option follows the atom's own target to the end of its chain, which for an `AtomRpc` or `AtomHttpApi` query with `reactivityKeys` is an inner atom without a key:
+
+```sample
+tanstack-start/src/docs/loader-verbs.ts#derived
+```
+
 | Verb       | Starts the atom                          | Waits                             | When the atom has a result | Returns         |
 | ---------- | ---------------------------------------- | --------------------------------- | -------------------------- | --------------- |
 | `prefetch` | if it isn't in the registry              | never                             | leaves it alone            | a handle        |

@@ -86,8 +86,12 @@ An atom whose input comes from another atom's result is a waterfall by construct
 
 When the data really can't be reshaped, such as a third-party API, you have two options, and both pay the extra round trip:
 
-- **In the loader:** await the parent with `ensure` and start the child from its result. The navigation waits for both.
+- **In the loader:** await the parent with `ensure` and start the child from its result, which [`Loader.result`](./loader-verbs.md#typed-failures-are-results) returns. The navigation waits for the parent, and the child streams in or waits too, as its verb says.
 - **In a component:** start the child with [`useWaterfall`](#render-time-inputs-usewaterfall), an escape hatch. The rest of the page renders first.
+
+```sample
+tanstack-start/src/docs/request-waterfalls.tsx#dependent
+```
 
 ## Put the state in the URL
 
