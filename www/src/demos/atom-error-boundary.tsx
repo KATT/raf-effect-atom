@@ -6,18 +6,15 @@ import {
 	type CatchTagProps,
 	useAtomResult,
 } from "effect-atom-boundary";
-import { Atom } from "effect/reactivity";
 import { Suspense, useState } from "react";
 
-import { IssuesClient } from "~/demo-kit/client.ts";
+import { AppBoundary } from "~/demo-kit/app-boundary.tsx";
+import { BoundaryChain } from "~/demo-kit/boundary-chain.tsx";
 import { ErrorNotice, FailNextButton } from "~/demo-kit/controls.tsx";
 import { defineDemo } from "~/demo-kit/define.ts";
 import { Crash } from "~/demo-kit/rpcs.ts";
 
-function makeIssue(id: IssueId) {
-	return IssuesClient.query("GetIssue", { id }, { serializationKey: `${id}` });
-}
-const issue = Atom.family(makeIssue);
+import { issue } from "./issue-atoms.ts";
 
 /** Issue 404 isn't in the db, so it fails with IssueNotFound. */
 const ids = [1, 2, 3, 404].map((id) => IssueId.make(id));
@@ -97,7 +94,19 @@ function AtomErrorBoundaryDemo() {
 					</Button>
 				))}
 			</div>
-			<IssuePanel id={id} />
+			<AppBoundary>
+				<IssuePanel id={id} />
+			</AppBoundary>
+			<BoundaryChain
+				atom={`GetIssue:${id}`}
+				levels={[
+					{
+						claims: ["IssueNotFound", "Unauthorized"],
+						name: "<AtomErrorBoundary>",
+					},
+				]}
+				reader="<IssueTitle>"
+			/>
 			<div className="flex flex-wrap gap-2 border-t pt-3">
 				<FailNextButton make={() => new Unauthorized()} tag="Unauthorized" />
 				<FailNextButton

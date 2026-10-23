@@ -43,6 +43,10 @@ tanstack-start/src/boundaries.tsx#issue
 
 A read with `useIssueBoundary()` throws `IssueNotFound` to `<IssueBoundary>` and `Unauthorized` to `<AuthBoundary>`, and returns a result whose only failure left is `RpcClientError`. `<IssueBoundary>` throws when `<AuthBoundary>` isn't mounted above it.
 
+```demo
+boundary-chain
+```
+
 ## Matching is by tag
 
 A shared boundary catches a claimed tag from any atom read under it, not only from the reads that used its hook. `reset` refreshes the atom whose read threw the failure.

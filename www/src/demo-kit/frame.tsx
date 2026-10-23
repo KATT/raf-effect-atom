@@ -14,14 +14,15 @@ import {
 	TabsTrigger,
 } from "@examples/ui/components/tabs";
 import { cn } from "@examples/ui/lib/utils";
-import { Option, Predicate } from "effect";
+import { Option } from "effect";
 import { AsyncResult, type AtomRegistry } from "effect/reactivity";
 import { Expand, FlaskConical, RotateCcw, Shrink } from "lucide-react";
 import { makeRegistry } from "raf-effect-atom/tanstack-router";
-import { Component, type ReactNode, Suspense, useState } from "react";
+import { type ReactNode, Suspense, useState } from "react";
 
+import { AppBoundary, StartOverContext } from "./app-boundary.tsx";
 import { controlsAtom, serverEventsAtom, setLatency } from "./client.ts";
-import { ErrorNotice, LatencyControl } from "./controls.tsx";
+import { LatencyControl } from "./controls.tsx";
 import type { DemoDefinition } from "./define.ts";
 import { Devtools } from "./devtools.tsx";
 import { QueriesPanel, TracePanel } from "./queries-panel.tsx";
@@ -45,50 +46,6 @@ function createSession(demo: DemoDefinition): Session {
 	const session = { id: sessionCount, registry: makeRegistry() };
 	liveSessions.set(demo, session);
 	return session;
-}
-
-/**
- * The demo's fallback for what no boundary in it caught: a defect, or a
- * typed error nothing claimed. Its type here is `unknown`.
- */
-interface UncaughtState {
-	/** What was thrown: anything, which is why its type is `unknown`. */
-	readonly caught: { readonly thrown: unknown } | undefined;
-}
-
-class UncaughtBoundary extends Component<
-	{ readonly children: ReactNode; readonly onStartOver: () => void },
-	UncaughtState
-> {
-	override state: UncaughtState = { caught: undefined };
-
-	// oxlint-disable-next-line anti-slop/no-unknown-parameters -- React passes whatever was thrown
-	static getDerivedStateFromError(thrown: unknown): UncaughtState {
-		return { caught: { thrown } };
-	}
-
-	override render() {
-		const caught = this.state.caught;
-		if (caught === undefined) {
-			return this.props.children;
-		}
-		const error = caught.thrown;
-		return (
-			<ErrorNotice
-				action={
-					<Button onClick={this.props.onStartOver} size="xs" variant="outline">
-						<RotateCcw /> Start over
-					</Button>
-				}
-				caughtBy="the app's error boundary"
-				type="unknown"
-			>
-				{Predicate.hasProperty(error, "message")
-					? String(error.message)
-					: String(error)}
-			</ErrorNotice>
-		);
-	}
 }
 
 function DemoSkeleton() {
@@ -221,11 +178,11 @@ export function DemoFrame(props: { readonly demo: DemoDefinition }) {
 
 	const Demo = demo.Component;
 	const body = (
-		<UncaughtBoundary key={session.id} onStartOver={startOver}>
+		<AppBoundary key={session.id}>
 			<Suspense fallback={<DemoSkeleton />}>
 				<Demo />
 			</Suspense>
-		</UncaughtBoundary>
+		</AppBoundary>
 	);
 	const icon = (
 		<FlaskConical className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
@@ -233,76 +190,78 @@ export function DemoFrame(props: { readonly demo: DemoDefinition }) {
 
 	return (
 		<RegistryContext.Provider value={session.registry}>
-			<TraceRecorder key={session.id} />
-			<DemoCard
-				action={
-					<Button
-						onClick={() => {
-							setExpanded(true);
-						}}
-						size="xs"
-						variant="outline"
-					>
-						<Expand /> Expand
-					</Button>
-				}
-				body={
-					expanded ? (
-						<p className="py-10 text-center text-sm text-muted-foreground">
-							Running in the expanded view.
+			<StartOverContext.Provider value={startOver}>
+				<TraceRecorder key={session.id} />
+				<DemoCard
+					action={
+						<Button
+							onClick={() => {
+								setExpanded(true);
+							}}
+							size="xs"
+							variant="outline"
+						>
+							<Expand /> Expand
+						</Button>
+					}
+					body={
+						expanded ? (
+							<p className="py-10 text-center text-sm text-muted-foreground">
+								Running in the expanded view.
+							</p>
+						) : (
+							body
+						)
+					}
+					className="not-prose my-8 overflow-hidden rounded-xl border shadow-sm"
+					description={
+						<p className="text-xs text-muted-foreground">{demo.hint}</p>
+					}
+					devtools={false}
+					onStartOver={startOver}
+					title={
+						<p className="flex items-center gap-2 text-sm font-semibold">
+							{icon}
+							{demo.title}
 						</p>
-					) : (
-						body
-					)
-				}
-				className="not-prose my-8 overflow-hidden rounded-xl border shadow-sm"
-				description={
-					<p className="text-xs text-muted-foreground">{demo.hint}</p>
-				}
-				devtools={false}
-				onStartOver={startOver}
-				title={
-					<p className="flex items-center gap-2 text-sm font-semibold">
-						{icon}
-						{demo.title}
-					</p>
-				}
-			/>
-			<Dialog onOpenChange={setExpanded} open={expanded}>
-				<DialogContent
-					className="h-[min(56rem,92dvh)] w-[96vw] max-w-none gap-0 overflow-hidden p-0 sm:max-w-7xl"
-					showCloseButton={false}
-				>
-					<DemoCard
-						action={
-							<Button
-								onClick={() => {
-									setExpanded(false);
-								}}
-								size="xs"
-								variant="outline"
-							>
-								<Shrink /> Close
-							</Button>
-						}
-						body={body}
-						className="h-full min-h-0"
-						description={
-							<DialogDescription className="text-xs">
-								{demo.hint}
-							</DialogDescription>
-						}
-						devtools
-						onStartOver={startOver}
-						title={
-							<DialogTitle className="flex items-center gap-2 text-sm">
-								{icon}
-								{demo.title}
-							</DialogTitle>
-						}
-					/>
-				</DialogContent>
-			</Dialog>
+					}
+				/>
+				<Dialog onOpenChange={setExpanded} open={expanded}>
+					<DialogContent
+						className="h-[min(56rem,92dvh)] w-[96vw] max-w-none gap-0 overflow-hidden p-0 sm:max-w-7xl"
+						showCloseButton={false}
+					>
+						<DemoCard
+							action={
+								<Button
+									onClick={() => {
+										setExpanded(false);
+									}}
+									size="xs"
+									variant="outline"
+								>
+									<Shrink /> Close
+								</Button>
+							}
+							body={body}
+							className="h-full min-h-0"
+							description={
+								<DialogDescription className="text-xs">
+									{demo.hint}
+								</DialogDescription>
+							}
+							devtools
+							onStartOver={startOver}
+							title={
+								<DialogTitle className="flex items-center gap-2 text-sm">
+									{icon}
+									{demo.title}
+								</DialogTitle>
+							}
+						/>
+					</DialogContent>
+				</Dialog>
+			</StartOverContext.Provider>
 		</RegistryContext.Provider>
 	);
 }
