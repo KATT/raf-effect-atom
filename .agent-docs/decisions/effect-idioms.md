@@ -45,4 +45,4 @@ The rules below are what those files do. Where this file and `.repos/effect` dis
 
 ## Files
 
-- An Effect module is named after what it exports, in PascalCase like Effect's own (`Issues.ts`, `IssueErrors.ts`, `IssueRpcs.ts`, `Authorization.ts`), with its test beside it (`Issues.test.ts`). Framework files keep the framework's names (routes, `vite.config.ts`), and `tooling/*` keeps its existing lowercase names until it's next reworked.
+- An Effect module is named after what it exports, in PascalCase like Effect's own (`Issues.ts`, `IssueErrors.ts`, `IssueRpcs.ts`, `Authorization.ts`), with its test beside it (`Issues.test.ts`); internal modules are camelCase (`internal/failedReads.ts`). Lint enforces both ([file-names.md](./file-names.md)). Framework files keep the framework's names (routes, `vite.config.ts`), and `tooling/*` keeps its existing lowercase names until it's next reworked.

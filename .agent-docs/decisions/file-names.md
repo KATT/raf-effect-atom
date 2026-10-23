@@ -1,0 +1,10 @@
+# File names: Effect's in Effect code, each framework's in apps (human)
+
+- Human: library and Effect package files follow Effect's own naming, read from `.repos/effect`. App code keeps its framework's and raf-query's names. This reverses a first ask for kebab-case everywhere: Effect's PascalCase module names say what a file exports (`Atom.ts` exports the `Atom` namespace), and readers move between this repo and `.repos/effect`.
+- **Public modules** are PascalCase, named after what they export (`Atom.ts`, `AtomRpc.ts`, `@effect/atom-react`'s `Hooks.ts` and `ReactHydration.ts`; here `Claim.ts`, `ErrorBoundary.tsx`, `TanStackRouter.tsx`, `IssueRpcs.ts`), plus an `index.ts` barrel.
+- **Internal modules** (`src/internal/**`) are camelCase, like Effect's `internal/dateTime.ts` and `internal/rcRef.ts`.
+- **Tests and type tests** mirror the module they cover: `test/Atom.test.ts`, `typetest/Array.tst.ts`. Here a package's tests sit in `test/` and `typetest/`; the example packages keep each test beside its module (`IssueRpcs.test.ts`).
+- **Test fixtures and helpers** are unconstrained: Effect mixes `fixtures/rpc-schemas.ts`, `fixtures/eventJournal.ts` and `MessageStorageTest.ts`.
+- **Enforced** by `unicorn/filename-case` in `.oxlintrc.json` overrides: PascalCase on `packages/*/src/*`, `packages/*/test/*.test.*`, `packages/*/typetest/*.tst.*` and `examples/.shared/{contract,db,backend}/src/*`, and camelCase on their `src/internal/**`. The rule reads only the part before the first dot, so `Next.rsc.test.tsx` checks `Next`.
+- **Not enforced, and not renamed**: TanStack Router and Next.js route files (`__root.tsx`, `$issueId.tsx`, `page.tsx`), the shadcn CLI output in `examples/.shared/ui`, app components in `www/` and `examples/*` (raf-query's names), `tooling/*` (lowercase), `bin/` entry points, config files.
+- Lost: kebab-case everywhere with one repo-wide rule. It would have renamed every Effect module away from the names Effect's docs, source and `LLMS.md` use, for a consistency nobody reading Effect code expects.
