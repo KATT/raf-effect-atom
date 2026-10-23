@@ -22,13 +22,23 @@ import * as Registry from "./internal/registry.ts";
  * `@effect/atom-react`'s `RegistryProvider`, which would share one registry
  * between requests' server renders.
  *
+ * **Details**
+ *
+ * `defaultIdleTTL` is how many milliseconds the browser's registry keeps an
+ * atom no component reads, 400 by default, as `@effect/atom-react`'s default
+ * registry does. An atom's own `Atom.setIdleTTL` or `Atom.keepAlive` wins.
+ * It's read once, when the registry is made. The server's request registry
+ * lives for one request, so it has none.
+ *
  * **Example**
  *
  * ```tsx
  * import { RegistryProvider } from "raf-effect-atom/next" // or "raf-effect-atom/react-router"
  *
  * export default function RootLayout(props: { children: React.ReactNode }) {
- *   return <RegistryProvider>{props.children}</RegistryProvider>
+ *   return (
+ *     <RegistryProvider defaultIdleTTL={60_000}>{props.children}</RegistryProvider>
+ *   )
  * }
  * ```
  *
@@ -38,8 +48,11 @@ import * as Registry from "./internal/registry.ts";
  */
 export const RegistryProvider = (props: {
 	readonly children?: React.ReactNode | undefined;
+	readonly defaultIdleTTL?: number | undefined;
 }): React.ReactNode => {
-	const [registry] = React.useState(Registry.make);
+	const [registry] = React.useState(() =>
+		Registry.make({ defaultIdleTTL: props.defaultIdleTTL }),
+	);
 	return (
 		<RegistryContext.Provider value={registry}>
 			{props.children}

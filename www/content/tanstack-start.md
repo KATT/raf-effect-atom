@@ -15,7 +15,7 @@ order: 5
 tanstack-start/src/router.tsx#router
 ```
 
-- `makeRegistry()` returns a request registry on the server and a browser registry in the browser.
+- `makeRegistry()` returns a request registry on the server and a browser registry in the browser. The browser's registry keeps an atom no component reads for 400 ms, as `@effect/atom-react`'s default registry does; `makeRegistry({ defaultIdleTTL: 60_000 })` keeps it for a minute, so navigating back shows it at once. An atom's own [`Atom.setIdleTTL`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/reactivity/Atom.ts) or `Atom.keepAlive` wins.
 - `Loader.make(registry)` puts `prefetch`, `ensure` and `fetch` on the [router context](https://tanstack.com/router/latest/docs/framework/react/guide/router-context).
 - `setupRouterAtoms` wraps the app in the registry's `RegistryContext`, adds `Hydration.dehydrate(registry)` to the router's dehydrated state once the loaders have run, hydrates it in the browser before the app renders, and disposes the server's registry when the response finishes.
 

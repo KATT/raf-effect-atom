@@ -1,3 +1,4 @@
+import { RegistryContext } from "@effect/atom-react";
 import { assert, describe, it } from "@effect/vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import * as Option from "effect/Option";
@@ -169,5 +170,34 @@ describe("atomsMiddleware", () => {
 		const second = await handle("/issues/5");
 		assert.notStrictEqual(first.data.registry, second.data.registry);
 		await Promise.all([first.response.text(), second.response.text()]);
+	});
+});
+
+describe("RegistryProvider", () => {
+	it("keeps an unread atom for defaultIdleTTL in the browser", async () => {
+		const registries: Array<AtomRegistry.AtomRegistry> = [];
+		function Capture() {
+			registries.push(React.useContext(RegistryContext));
+			return null;
+		}
+		render(
+			<>
+				<RegistryProvider defaultIdleTTL={50}>
+					<Capture />
+				</RegistryProvider>
+				<RegistryProvider>
+					<Capture />
+				</RegistryProvider>
+			</>,
+		);
+		using _rendered = { [Symbol.dispose]: cleanup };
+		const [short, standard] = registries;
+		assert.isDefined(short);
+		assert.isDefined(standard);
+		short.mount(counter)();
+		standard.mount(counter)();
+		await settle(200);
+		assert.isFalse(short.getNodes().has(counter));
+		assert.isTrue(standard.getNodes().has(counter));
 	});
 });

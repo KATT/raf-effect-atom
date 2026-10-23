@@ -91,6 +91,16 @@ describe("makeRegistry", () => {
 		using registry = disposable(makeRegistry());
 		assert.isFalse(RequestRegistry.isRequestRegistry(registry.value));
 	});
+
+	it("keeps an unread atom for defaultIdleTTL, 400 ms by default", async () => {
+		using short = disposable(makeRegistry({ defaultIdleTTL: 50 }));
+		using standard = disposable(makeRegistry());
+		short.value.mount(counter)();
+		standard.value.mount(counter)();
+		await new Promise((resolve) => setTimeout(resolve, 200));
+		assert.isFalse(short.value.getNodes().has(counter));
+		assert.isTrue(standard.value.getNodes().has(counter));
+	});
 });
 
 const disposable = (value: AtomRegistry.AtomRegistry) => ({

@@ -70,15 +70,31 @@ export interface RouterAtomsOptions<TRouter extends AnyRouter> {
  *
  * **Details**
  *
- * The server is anywhere without a `window`. To decide otherwise, make the
- * registry with `RequestRegistry.make` on the server and `AtomRegistry.make`
- * in the browser.
+ * - The server is anywhere without a `window`. To decide otherwise, make
+ *   the registry with `RequestRegistry.make` on the server and
+ *   `AtomRegistry.make` in the browser.
+ * - `defaultIdleTTL` is how many milliseconds the browser's registry keeps
+ *   an atom no component reads, 400 by default, as `@effect/atom-react`'s
+ *   default registry does. An atom's own `Atom.setIdleTTL` or
+ *   `Atom.keepAlive` wins. The server's request registry lives for one
+ *   request, so it has none.
+ *
+ * **Example**
+ *
+ * ```ts
+ * import { makeRegistry } from "raf-effect-atom/tanstack-router"
+ *
+ * // Keeps an issue the user navigated away from for a minute.
+ * const registry = makeRegistry({ defaultIdleTTL: 60_000 })
+ * ```
  *
  * @stability unstable
  * @category constructors
  * @since 0.1.0
  */
-export const makeRegistry: () => AtomRegistry.AtomRegistry = Registry.make;
+export const makeRegistry = (options?: {
+	readonly defaultIdleTTL?: number | undefined;
+}): AtomRegistry.AtomRegistry => Registry.make(options);
 
 const hasRouterAtoms = (value: unknown): value is DehydratedRouterAtoms =>
 	Predicate.hasProperty(value, "raf-effect-atom") &&
