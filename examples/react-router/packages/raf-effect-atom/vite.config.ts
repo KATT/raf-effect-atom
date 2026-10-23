@@ -4,10 +4,10 @@ export default defineConfig({
 	pack: {
 		entry: [
 			"src/index.ts",
-			"src/index.react-server.ts",
-			"src/ReactRouter.ts",
-			"src/Rsc.ts",
-			"src/TanStackRouter.tsx",
+			"src/index-react-server.ts",
+			"src/react-router.ts",
+			"src/rsc.ts",
+			"src/tanstack-router.tsx",
 		],
 		unbundle: true,
 	},
@@ -26,7 +26,7 @@ export default defineConfig({
 			{
 				extends: true,
 				test: {
-					exclude: ["test/**/*.rsc.test.{ts,tsx}"],
+					exclude: ["test/**/*.react-server.test.{ts,tsx}"],
 					include: ["test/**/*.test.{ts,tsx}"],
 					name: "dom",
 				},
@@ -64,7 +64,7 @@ export default defineConfig({
 				},
 				test: {
 					environment: "node",
-					include: ["test/**/*.rsc.test.{ts,tsx}"],
+					include: ["test/**/*.react-server.test.{ts,tsx}"],
 					name: "react-server",
 				},
 			},

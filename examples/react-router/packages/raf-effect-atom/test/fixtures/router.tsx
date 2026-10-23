@@ -27,7 +27,7 @@ import {
 	useAtomResult,
 	WaterfallDetection,
 } from "../../src/index.ts";
-import { setupRouterAtoms } from "../../src/TanStackRouter.tsx";
+import { setupRouterAtoms } from "../../src/tanstack-router.tsx";
 import { mount, settle } from "./browser.tsx";
 import {
 	greeting,

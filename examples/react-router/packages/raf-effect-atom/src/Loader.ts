@@ -45,7 +45,7 @@ import type {
 	LoadedHandle,
 	Source,
 	SuccessOf,
-} from "./Handle.ts";
+} from "./handle.ts";
 import { hydrated } from "./Hydration.ts";
 import { isDevelopment } from "./internal/development.ts";
 import * as Handles from "./internal/handles.ts";

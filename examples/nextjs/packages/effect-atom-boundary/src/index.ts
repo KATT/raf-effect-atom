@@ -6,9 +6,9 @@
 /**
  * @since 0.1.0
  */
-export * from "./Claim.ts";
+export * from "./claim.ts";
 
 /**
  * @since 0.1.0
  */
-export * from "./ErrorBoundary.tsx";
+export * from "./error-boundary.tsx";

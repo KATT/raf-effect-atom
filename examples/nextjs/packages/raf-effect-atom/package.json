@@ -34,12 +34,12 @@
 	"sideEffects": false,
 	"exports": {
 		".": {
-			"react-server": "./src/index.react-server.ts",
+			"react-server": "./src/index-react-server.ts",
 			"default": "./src/index.ts"
 		},
-		"./react-router": "./src/ReactRouter.ts",
-		"./rsc": "./src/Rsc.ts",
-		"./tanstack-router": "./src/TanStackRouter.tsx"
+		"./react-router": "./src/react-router.ts",
+		"./rsc": "./src/rsc.ts",
+		"./tanstack-router": "./src/tanstack-router.tsx"
 	},
 	"scripts": {
 		"build": "vp pack",
@@ -84,12 +84,12 @@
 		"access": "public",
 		"exports": {
 			".": {
-				"react-server": "./dist/index.react-server.mjs",
+				"react-server": "./dist/index-react-server.mjs",
 				"default": "./dist/index.mjs"
 			},
-			"./react-router": "./dist/ReactRouter.mjs",
-			"./rsc": "./dist/Rsc.mjs",
-			"./tanstack-router": "./dist/TanStackRouter.mjs"
+			"./react-router": "./dist/react-router.mjs",
+			"./rsc": "./dist/rsc.mjs",
+			"./tanstack-router": "./dist/tanstack-router.mjs"
 		},
 		"provenance": true
 	}

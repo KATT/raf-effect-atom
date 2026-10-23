@@ -1,7 +1,7 @@
 import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import * as React from "react";
 
-import type { ArgsOf, Handle, LoadedHandle, Source } from "../Handle.ts";
+import type { ArgsOf, Handle, LoadedHandle, Source } from "../handle.ts";
 import * as Loader from "../Loader.ts";
 import * as RequestRegistry from "../RequestRegistry.ts";
 

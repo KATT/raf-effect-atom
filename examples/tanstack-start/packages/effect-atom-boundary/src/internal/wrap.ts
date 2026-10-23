@@ -3,8 +3,8 @@ import * as Option from "effect/Option";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
 
-import type { UseErrorBoundary } from "../Claim.ts";
-import * as FailedReads from "./failedReads.ts";
+import type { UseErrorBoundary } from "../claim.ts";
+import * as FailedReads from "./failed-reads.ts";
 
 // oxlint-disable-next-line typescript/no-explicit-any -- any atom's result
 type AnyAtom = Atom.Atom<AsyncResult.AsyncResult<any, any>>;

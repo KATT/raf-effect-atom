@@ -8,7 +8,7 @@ import type {
 	HandleKey,
 	LoadedHandle,
 	Source,
-} from "../Handle.ts";
+} from "../handle.ts";
 import * as Leases from "./leases.ts";
 
 /** The atom a source makes for its arguments. */
