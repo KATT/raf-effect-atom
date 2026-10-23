@@ -72,7 +72,7 @@
 - **effect-atom-boundary:** add claims.wrap and AtomErrorBoundary.claim ([05750fe](https://github.com/KATT/raf-effect-atom/commit/05750fe38129e6707c7e72791a27635bfb3fe5d2))
 - **effect-atom-boundary:** drop useAtomResult and claim ([024d029](https://github.com/KATT/raf-effect-atom/commit/024d029020f3fa15f33d4abed516df0a6256353f))
 - **effect-atom-boundary:** render a caught failure's handler during server rendering ([07492a3](https://github.com/KATT/raf-effect-atom/commit/07492a3395edd0467fb6c95b33d36e740ec53bce))
-- **effect-atom-boundary:** typed error boundaries for Effect Atom ([76b45c0](https://github.com/KATT/raf-effect-atom/commit/76b45c080082ea8f52236f775821cae5c5647ccd)), references [#222](https://github.com/KATT/raf-effect-atom/issues/222) [#223](https://github.com/KATT/raf-effect-atom/issues/223)
+- **effect-atom-boundary:** typed error boundaries for Effect Atom ([76b45c0](https://github.com/KATT/raf-effect-atom/commit/76b45c080082ea8f52236f775821cae5c5647ccd))
 - **effect-atom-boundary:** wrap and claim take atom families ([ac25fb6](https://github.com/KATT/raf-effect-atom/commit/ac25fb6c2c950278c5aaa0d630cd500b1f4db2e8))
 - **raf-effect-atom:** loader verbs return handles that components read ([52a4323](https://github.com/KATT/raf-effect-atom/commit/52a4323bae1507e6b5f524262b7ed1609b1ed5d6))
 
@@ -80,7 +80,7 @@
 
 - **effect-atom-boundary:** keep createErrorBoundary working under React Compiler ([8930765](https://github.com/KATT/raf-effect-atom/commit/8930765610fd89d7a02d2dad1d3fdfaef5f78d31))
 - **effect-atom-boundary:** refresh every failure a shared boundary handles on reset ([d1e6de6](https://github.com/KATT/raf-effect-atom/commit/d1e6de61b2e1b7d94624acd3e9cd312852378c9d))
-- **effect-atom-boundary:** render catchTags handlers as components ([76c8af7](https://github.com/KATT/raf-effect-atom/commit/76c8af7adc255ac5e1e370e2c11315b39f24f1f2)), references [#321](https://github.com/KATT/raf-effect-atom/issues/321)
+- **effect-atom-boundary:** render catchTags handlers as components ([76c8af7](https://github.com/KATT/raf-effect-atom/commit/76c8af7adc255ac5e1e370e2c11315b39f24f1f2))
 
 ### Code Refactoring
 

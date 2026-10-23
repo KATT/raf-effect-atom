@@ -10,7 +10,7 @@
 
 ### Features
 
-- **raf-effect-atom:** stop a loader's wait when its request is aborted ([b1f2f16](https://github.com/KATT/raf-effect-atom/commit/b1f2f16fcce9cd5dd1ba18fa653b40c805eebd93)), references [#41](https://github.com/KATT/raf-effect-atom/issues/41) [#40](https://github.com/KATT/raf-effect-atom/issues/40) [#40](https://github.com/KATT/raf-effect-atom/issues/40) [#41](https://github.com/KATT/raf-effect-atom/issues/41)
+- **raf-effect-atom:** stop a loader's wait when its request is aborted ([b1f2f16](https://github.com/KATT/raf-effect-atom/commit/b1f2f16fcce9cd5dd1ba18fa653b40c805eebd93))
 
 ### Bug Fixes
 
@@ -25,13 +25,13 @@
 
 ### Features
 
-- **raf-effect-atom:** run React Router loaders in the browser after the first page ([bee00a9](https://github.com/KATT/raf-effect-atom/commit/bee00a981fd24fcdc9d746053dcd73dbc7ebc853)), references [#41](https://github.com/KATT/raf-effect-atom/issues/41) [#41](https://github.com/KATT/raf-effect-atom/issues/41)
+- **raf-effect-atom:** run React Router loaders in the browser after the first page ([bee00a9](https://github.com/KATT/raf-effect-atom/commit/bee00a981fd24fcdc9d746053dcd73dbc7ebc853))
 
 ## [0.2.0](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.1.0...raf-effect-atom%400.2.0) (2026-10-23)
 
 ### ⚠ BREAKING CHANGES
 
-- **raf-effect-atom:** `dehydrate()` from `raf-effect-atom/next` returns a
+- **raf-effect-atom:** `dehydrate()` from `raf-effect-atom/next` returns a promise: write `<HydrateAtoms state={await dehydrate()}>`.
 
 ### Features
 
@@ -123,7 +123,7 @@
 
 ### Bug Fixes
 
-- **raf-effect-atom:** call use() on a streamed result's promise on every render that reads it ([36d2aaa](https://github.com/KATT/raf-effect-atom/commit/36d2aaa8bacf18a60507e4997fd61476d7a908c0)), references [#41](https://github.com/KATT/raf-effect-atom/issues/41)
+- **raf-effect-atom:** call use() on a streamed result's promise on every render that reads it ([36d2aaa](https://github.com/KATT/raf-effect-atom/commit/36d2aaa8bacf18a60507e4997fd61476d7a908c0))
 - **raf-effect-atom:** point waterfall reports at the URL before the escape hatches ([0d127e3](https://github.com/KATT/raf-effect-atom/commit/0d127e38a10cb3a44340c5540c75b53491faceee))
 - **raf-effect-atom:** refresh the atom the registry runs for a key in Loader.fetch ([0b35c97](https://github.com/KATT/raf-effect-atom/commit/0b35c97b4de60de254c7fc921b89aed7be753ec8))
 - **raf-effect-atom:** wait for results streamed in a server component payload ([00cb981](https://github.com/KATT/raf-effect-atom/commit/00cb98125aad2cda70525fbfdedcd2b5a8f7fc79))
