@@ -93,6 +93,12 @@ const resolvedSearchId = `\0${searchId}`;
  */
 const samplePrefix = "sample:";
 const resolvedSamplePrefix = `\0${samplePrefix}`;
+/**
+ * The region goes in the resolved id as a query: the dev server serves the
+ * module at a URL made from the id, where a `#region` is a fragment the
+ * browser never sends, so the client would get the whole file's sample.
+ */
+const regionQuery = "?region=";
 
 const parseSource = Effect.fn("parseSource")(function* (
 	dirs: ContentDirs,
@@ -538,7 +544,9 @@ export function docsContent(options: ContentOptions): Plugin {
 		async load(id) {
 			if (id.startsWith(resolvedSamplePrefix)) {
 				const output = await run(
-					renderSample(id.slice(resolvedSamplePrefix.length)),
+					renderSample(
+						id.slice(resolvedSamplePrefix.length).replace(regionQuery, "#"),
+					),
 				);
 				for (const file of output.files) {
 					this.addWatchFile(file);
@@ -557,7 +565,7 @@ export function docsContent(options: ContentOptions): Plugin {
 		name: "raf-effect-atom-docs:content",
 		resolveId(id) {
 			if (id.startsWith(samplePrefix)) {
-				return `\0${id}`;
+				return `\0${id.replace("#", regionQuery)}`;
 			}
 			if (id === searchId) {
 				return resolvedSearchId;
