@@ -45,7 +45,10 @@ const acceptsMarkdown = [
  * response sets `__vdpl` to the deployment that served it, before the page
  * requests anything, so the chunks a page imports after a newer deployment
  * goes live still come from its own. Vercel routes navigations to the latest
- * deployment whatever the cookie says.
+ * deployment whatever the cookie says. Only `/assets` needs it, and Vercel
+ * reads the first `__vdpl` a request sends, which is the one with the longest
+ * path: on `/assets` it replaces any older one there, so no earlier cookie
+ * can send this page's files to another deployment.
  */
 const skewProtection = (deploymentId: Option.Option<string>) =>
 	Option.match(deploymentId, {
@@ -55,7 +58,7 @@ const skewProtection = (deploymentId: Option.Option<string>) =>
 				continue: true,
 				has: [{ key: "Sec-Fetch-Dest", type: "header", value: "document" }],
 				headers: {
-					"Set-Cookie": `__vdpl=${id}; Path=/; SameSite=Lax; Secure; HttpOnly`,
+					"Set-Cookie": `__vdpl=${id}; Path=/assets; SameSite=Lax; Secure; HttpOnly`,
 				},
 				src: "^/.*$",
 			},
