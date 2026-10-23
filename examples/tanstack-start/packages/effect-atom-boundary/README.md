@@ -17,54 +17,51 @@ npm install effect-atom-boundary effect @effect/atom-react react
 
 ## Usage
 
-`AtomErrorBoundary` guards one atom. The read under it reads `AtomErrorBoundary.claim(atom)`, the same atom with its typed failures turned into defects, so `useAtomSuspense` throws them to the boundary:
+A boundary catches the tags its `catchTags` name, and no others. `createErrorBoundary` makes one, with a hook whose `wrap(atom)` turns the tags it and the boundaries above it catch into defects. A read that returns typed failures and throws defects, such as [`raf-effect-atom`](https://github.com/KATT/raf-effect-atom/tree/main/packages/raf-effect-atom)'s `useAtomResult`, throws those to their boundaries and returns the failures left, typed without them:
 
 ```tsx
-import { useAtomSuspense } from "@effect/atom-react";
-import { AtomErrorBoundary } from "effect-atom-boundary";
-
-// issue: (id: number) => Atom<AsyncResult<Issue, IssueNotFound | Unauthorized | RpcClientError>>
-
-function IssuePage(props: { readonly id: number }) {
-	const result = useAtomSuspense(AtomErrorBoundary.claim(issue(props.id)), {
-		suspendOnWaiting: true,
-	});
-	return <h1>{result.value.title}</h1>;
-}
-
-<AtomErrorBoundary
-	atom={issue(id)}
-	catchTags={{
-		IssueNotFound: ({ error, reset }) => (
-			<NotFound id={error.id} onRetry={reset} />
-		),
-	}}
->
-	<Suspense fallback={<Spinner />}>
-		<IssuePage id={id} />
-	</Suspense>
-</AtomErrorBoundary>;
-```
-
-`createErrorBoundary` makes a shared boundary for failures that belong to the app, such as Effect RPC's `RpcClientError`, which every procedure fails with when the request doesn't reach the server. `errors` names what the errors come from: an `AtomRpc` client, an atom, or an atom family. The hook's `wrap(atom)` turns what the boundary and the ones above it claim into defects, so a read that returns typed failures and throws defects, such as [`raf-effect-atom`](https://github.com/KATT/raf-effect-atom/tree/main/packages/raf-effect-atom)'s `useAtomResult`, gets a result typed without them:
-
-```tsx
+import { Match, Option } from "effect";
+import { AsyncResult } from "effect/reactivity";
 import { createErrorBoundary } from "effect-atom-boundary";
 import { useAtomResult } from "raf-effect-atom";
 
-const [AppBoundary, useAppBoundary] = createErrorBoundary({
+const [AppBoundary] = createErrorBoundary({
 	name: "App",
 	errors: Issues,
 	catchTags: { RpcClientError: ({ reset }) => <Offline onRetry={reset} /> },
 });
 
+const [IssueBoundary, useIssueBoundary] = createErrorBoundary({
+	name: "Issue",
+	errors: Issues,
+	parent: AppBoundary,
+	catchTags: { IssueNotFound: ({ error }) => <NotFound id={error.id} /> },
+});
+
 function IssueTitle(props: { readonly id: number }) {
-	const result = useAtomResult(useAppBoundary().wrap(issue(props.id)));
-	// AsyncResult<Issue, IssueNotFound | Unauthorized>: RpcClientError is claimed
+	const result = useAtomResult(useIssueBoundary().wrap(issue(props.id)));
+	if (AsyncResult.isSuccess(result)) {
+		return <h1>{result.value.title}</h1>;
+	}
+	return Match.valueTags(Option.getOrThrow(AsyncResult.error(result)), {
+		Unauthorized: () => <SignIn />,
+	});
 }
+
+<AppBoundary>
+	<IssueBoundary>
+		<Suspense fallback={<Spinner />}>
+			<IssueTitle id={id} />
+		</Suspense>
+	</IssueBoundary>
+</AppBoundary>;
 ```
 
-`reset` refreshes every atom whose failure the boundary has a handler for, and renders the children again.
+`issue`'s error is `IssueNotFound | Unauthorized | RpcClientError`. The read throws `IssueNotFound` to `<IssueBoundary>` and `RpcClientError` to `<AppBoundary>`, and returns `Unauthorized`, the one failure left. `errors` names what the errors come from, for the types: an `AtomRpc` client, an atom, or an atom family. A handler's `reset` refreshes every atom whose failure the boundary has a handler for, and renders the children again.
+
+When the boundaries' `catchTags` name every tag of the atom's error, the read's error type is `never`. See [Error boundaries](https://raf-effect-atom.katt.dev/docs/error-boundaries).
+
+`AtomErrorBoundary` is a separate component for one atom (`<AtomErrorBoundary atom={issue(id)} catchTags={…}>`), with no hook. Its read, `AtomErrorBoundary.claim(atom)`, claims every typed failure whatever its `catchTags` name, so the read's error type is `never` and a tag without a handler goes to the boundaries above.
 
 ## For coding agents
 

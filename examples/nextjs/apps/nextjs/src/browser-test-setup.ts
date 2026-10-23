@@ -57,15 +57,56 @@ const startApp = async (): Promise<
 	}
 };
 
+/** The pages the tests open. */
+const testedPaths = [
+	"/prefetch/issues/999",
+	"/ensure/issues/999",
+	"/fetch/issues/999",
+	"/prefetch/issues/3",
+];
+
 /**
- * Starts the app's server and a Chrome once for the run, outside every
- * test's time: Chrome's first start on a fresh CI runner takes seconds.
+ * Renders each tested page once, so no test pays for `next start` loading
+ * a route's server code on its first request.
+ */
+const warmUpApp = async (origin: string) => {
+	for (const path of testedPaths) {
+		await (await fetch(`${origin}${path}`)).text();
+	}
+};
+
+/**
+ * Opens a page in Chrome once, so the first test doesn't pay for Chrome
+ * starting its first renderer. Playwright takes a stack trace on every
+ * call, and Vitest's module runner throws formatting any stack trace taken
+ * in a global setup, so its formatting is off meanwhile.
+ */
+const warmUpChrome = async (endpoint: string, url: string) => {
+	await using stack = new AsyncDisposableStack();
+	const prepareStackTrace = Error.prepareStackTrace;
+	Reflect.deleteProperty(Error, "prepareStackTrace");
+	stack.defer(() => {
+		Error.prepareStackTrace = prepareStackTrace;
+	});
+	const browser = await chromium.connect(endpoint);
+	stack.defer(() => browser.close());
+	const page = await browser.newPage();
+	await page.goto(url, { waitUntil: "networkidle" });
+};
+
+/**
+ * Starts the app's server and a Chrome once for the run, and warms both,
+ * outside every test's time: on a fresh CI runner, Chrome's first start
+ * takes seconds, and the first page each needed took the first test past
+ * Vitest's timeout.
  */
 export default async function setup(project: TestProject) {
 	await using stack = new AsyncDisposableStack();
 	const app = stack.use(await startApp());
+	await warmUpApp(app.origin);
 	const chrome = await chromium.launchServer({ channel: "chrome" });
 	stack.defer(() => chrome.close());
+	await warmUpChrome(chrome.wsEndpoint(), `${app.origin}${testedPaths[0]}`);
 	project.provide("appOrigin", app.origin);
 	project.provide("chromeEndpoint", chrome.wsEndpoint());
 	const owned = stack.move();
