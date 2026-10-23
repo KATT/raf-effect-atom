@@ -61,5 +61,10 @@
 			],
 			"includeEntryExports": false,
 		},
+		"packages/effect-atom-boundary": {
+			// tstyche type tests. The entry file is the published API.
+			"entry": ["typetest/**/*.tst.tsx"],
+			"includeEntryExports": false,
+		},
 	},
 }
