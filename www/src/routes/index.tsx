@@ -1,7 +1,11 @@
 import { Badge } from "@examples/ui/components/badge";
 import { buttonVariants } from "@examples/ui/components/button";
 import { cn } from "@examples/ui/lib/utils";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	stripSearchParams,
+} from "@tanstack/react-router";
 import {
 	ArrowRight,
 	Layers,
@@ -12,18 +16,51 @@ import {
 	Workflow,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import boundaries from "sample:tanstack-start/src/boundaries.tsx#issue";
+import boundariesNext from "sample:nextjs/src/boundaries.tsx#issue";
+import componentNext from "sample:nextjs/src/components/issue-page.tsx#component";
+import layoutNext from "sample:nextjs/src/app/layout.tsx#layout";
+import pageNext from "sample:nextjs/src/app/issues/[id]/page.tsx#page";
+import clientNext from "sample:nextjs/src/issues-client.ts#client";
+import atomsNext from "sample:nextjs/src/issues.ts#atoms";
+import contextRouter from "sample:react-router/app/atoms.ts#context";
+import boundariesRouter from "sample:react-router/app/boundaries.tsx#issue";
+import clientRouter from "sample:react-router/app/issues-client.ts#client";
+import atomsRouter from "sample:react-router/app/issues.ts#atoms";
+import rootRouter from "sample:react-router/app/root.tsx#root";
+import componentRouter from "sample:react-router/app/routes/issues.$id.tsx#component";
+import heroRouter from "sample:react-router/app/routes/issues.$id.tsx#hero";
+import loaderRouter from "sample:react-router/app/routes/issues.$id.tsx#loader";
+import boundariesStart from "sample:tanstack-start/src/boundaries.tsx#issue";
 import fetchInRender from "sample:tanstack-start/src/docs/coding-agents.tsx#fetch-in-render";
 import forgottenTag from "sample:tanstack-start/src/docs/coding-agents.tsx#forgotten-tag";
 import misspelledTag from "sample:tanstack-start/src/docs/error-boundaries.tsx#misspelled";
-import route from "sample:tanstack-start/src/routes/issues.$id.tsx#hero";
+import clientStart from "sample:tanstack-start/src/issues-client.ts#client";
+import atomsStart from "sample:tanstack-start/src/issues.ts#atoms";
+import routerStart from "sample:tanstack-start/src/router.tsx#router";
+import rootStart from "sample:tanstack-start/src/routes/__root.tsx#root";
+import componentStart from "sample:tanstack-start/src/routes/issues.$id.tsx#component";
+import heroStart from "sample:tanstack-start/src/routes/issues.$id.tsx#hero";
+import routeStart from "sample:tanstack-start/src/routes/issues.$id.tsx#route";
 
 import { DocBody } from "~/components/doc-body.tsx";
-import type { Sample } from "~/content/types.ts";
+import { FrameworkModeBar } from "~/components/framework-mode-bar.tsx";
+import type { DocSegment, Sample } from "~/content/types.ts";
+import {
+	defaultFrameworkMode,
+	type FrameworkMode,
+	frameworkModes,
+	homeSearchDefaults,
+	homeSearchSchema,
+	syncFrameworkModeAttribute,
+} from "~/framework-mode.ts";
 import { pageHead } from "~/seo.ts";
 import { site } from "~/site.ts";
 
 export const Route = createFileRoute("/")({
+	validateSearch: homeSearchSchema,
+	search: {
+		middlewares: [stripSearchParams(homeSearchDefaults)],
+	},
 	head: () =>
 		pageHead({
 			description: site.description,
@@ -153,7 +190,310 @@ function HashLink(props: {
 	);
 }
 
+/** The samples' code, one after the other. */
+const code = (...samples: ReadonlyArray<Sample>) =>
+	samples.flatMap((sample) => sample.segments);
+
+/**
+ * Start and React Router keep the loader and its components in one file;
+ * Next.js splits the server page from the client components it renders.
+ */
+const heroByMode = {
+	nextjs: code(pageNext, componentNext),
+	"react-router": code(heroRouter),
+	"tanstack-start": code(heroStart),
+} as const satisfies Record<FrameworkMode, ReadonlyArray<DocSegment>>;
+
+const howItWorksByMode = {
+	nextjs:
+		"A page says what it needs before it renders. The atoms are made once from the RPC client, the server component starts every request as the page renders, client components read the results as they arrive, and boundaries catch the failures by tag.",
+	"react-router":
+		"A page says what it needs before it renders. The atoms are made once from the RPC client, the route’s loader starts every request as the navigation begins, components read the results as they arrive, and boundaries catch the failures by tag.",
+	"tanstack-start":
+		"A page says what it needs before it renders. The atoms are made once from the RPC client, the route’s loader starts every request as the navigation begins, components read the results as they arrive, and boundaries catch the failures by tag.",
+} as const satisfies Record<FrameworkMode, string>;
+
+interface Step {
+	readonly body: ReactNode;
+	readonly code: ReadonlyArray<DocSegment>;
+	readonly guide: string;
+	readonly id: string;
+	readonly slug: string;
+	readonly title: string;
+}
+
+/** Step 1's prose; only where `#rpc-transport` sends requests differs. */
+const atomsStep = (
+	clientCode: Sample,
+	atomsCode: Sample,
+	transport: ReactNode,
+): Step => ({
+	body: (
+		<>
+			<p>
+				<code>AtomRpc.Service</code> turns the RPC contract into atoms:{" "}
+				<code>{'IssuesClient.query("GetIssue", { id })'}</code> is an atom of
+				that call’s <code>AsyncResult</code>, typed by the procedure’s success
+				and failures. A serialization key lets the server send its result to the
+				browser.
+			</p>
+			<p>{transport}</p>
+		</>
+	),
+	code: code(clientCode, atomsCode),
+	guide: "Quick start",
+	id: "define-atoms",
+	slug: "quick-start",
+	title: "Make atoms from the RPC client",
+});
+
+/** The last two steps read the same in every framework but Next.js. */
+const readStep = (componentCode: Sample, clientNote?: ReactNode): Step => ({
+	body: (
+		<>
+			{clientNote}
+			<p>
+				<code>useAtomResult</code> reads the atom the loader started from the
+				registry: it suspends until the result settles, and never starts a
+				request of its own. Wrapped by the issue boundary, every failure goes to
+				the boundary that claims its tag, so none is left in the type and the
+				result is a success.
+			</p>
+			<p>
+				A result still loading suspends only its own subtree, so the assignee
+				streams in under its <code>Suspense</code> while the issue shows.
+			</p>
+		</>
+	),
+	code: code(componentCode),
+	guide: "Reading atoms",
+	id: "read-in-components",
+	slug: "reading-atoms",
+	title: clientNote
+		? "Read them in client components"
+		: "Read them in components",
+});
+
+const boundariesStep = (
+	boundariesCode: Sample,
+	clientNote?: ReactNode,
+): Step => ({
+	body: (
+		<>
+			<p>
+				A boundary names what its errors come from, here the RPC client. Its{" "}
+				<code>catchTags</code> keys are that client’s error tags, and each
+				handler gets the error with that tag. UI code never imports an error
+				class.
+			</p>
+			{clientNote}
+			<p>
+				The idea comes from{" "}
+				<a
+					className="font-medium text-foreground underline underline-offset-4"
+					href="https://result-rpc.com/"
+				>
+					result-rpc
+				</a>
+				.
+			</p>
+		</>
+	),
+	code: code(boundariesCode),
+	guide: "Error boundaries",
+	id: "boundaries",
+	slug: "error-boundaries",
+	title: "Catch failures by tag",
+});
+
+const stepsByMode = {
+	nextjs: [
+		atomsStep(
+			clientNext,
+			atomsNext,
+			<>
+				<code>#rpc-transport</code> picks where requests go: server components
+				call the RPC handler in the same process, and client components{" "}
+				<code>POST /rpc</code>.
+			</>,
+		),
+		{
+			body: (
+				<p>
+					Server components share one request registry, which the verbs make
+					through React’s <code>cache</code> and dispose when the render ends.
+					The root layout holds the browser’s registry in{" "}
+					<code>RegistryProvider</code>, turns on{" "}
+					<code>WaterfallDetection</code>, and catches{" "}
+					<code>RpcClientError</code> and <code>Unauthorized</code> once, for
+					every page.
+				</p>
+			),
+			code: code(layoutNext),
+			guide: "Streaming and hydration",
+			id: "set-up-the-registry",
+			slug: "hydration",
+			title: "Set up the registry",
+		},
+		{
+			body: (
+				<>
+					<p>
+						A server component runs as soon as the App Router renders the page.
+						Every atom the page needs starts there, at the same time, before
+						client components render.
+					</p>
+					<p>
+						<code>prefetch</code> starts an atom without waiting, and{" "}
+						<code>ensure</code> waits for one the page can’t lay out without.{" "}
+						<code>HydrateAtoms</code> sends <code>dehydrate()</code> to the
+						browser’s registry, with the results still loading as promises, so
+						nothing is fetched twice.
+					</p>
+				</>
+			),
+			code: code(pageNext),
+			guide: "Loader verbs",
+			id: "start-in-the-loader",
+			slug: "loader-verbs",
+			title: "Start them in a server component",
+		},
+		readStep(
+			componentNext,
+			<p>
+				Client components live in their own files, marked{" "}
+				<code>{'"use client"'}</code>.
+			</p>,
+		),
+		boundariesStep(
+			boundariesNext,
+			<p>
+				Boundaries are client components too. The server page renders the issue
+				boundary around <code>IssuePage</code>.
+			</p>,
+		),
+	],
+	"react-router": [
+		atomsStep(
+			clientRouter,
+			atomsRouter,
+			<>
+				<code>#rpc-transport</code> picks where requests go: on the server they
+				call the RPC handler in the same process, and in the browser they{" "}
+				<code>POST /rpc</code>, a resource route.
+			</>,
+		),
+		{
+			body: (
+				<p>
+					<code>atomsMiddleware</code> gives each server request its own
+					registry, under a router context every loader reads. In the browser,
+					the root’s <code>RegistryProvider</code> holds the registry each
+					route’s <code>HydrationBoundary</code> fills. The root also turns on{" "}
+					<code>WaterfallDetection</code> and catches{" "}
+					<code>RpcClientError</code> and <code>Unauthorized</code> once, for
+					every page.
+				</p>
+			),
+			code: code(contextRouter, rootRouter),
+			guide: "Streaming and hydration",
+			id: "set-up-the-registry",
+			slug: "hydration",
+			title: "Set up the registry",
+		},
+		{
+			body: (
+				<>
+					<p>
+						React Router runs the loader on the server as soon as a navigation
+						starts. Every atom the page needs starts there, at the same time,
+						before anything renders.
+					</p>
+					<p>
+						<code>prefetch</code> starts an atom without waiting, and{" "}
+						<code>ensure</code> waits for one the page can’t lay out without.
+						The loader returns <code>atoms.dehydrate()</code>, React Router
+						streams the results still loading, and{" "}
+						<code>HydrationBoundary</code> writes them into the browser’s
+						registry, so nothing is fetched twice.
+					</p>
+				</>
+			),
+			code: code(loaderRouter),
+			guide: "Loader verbs",
+			id: "start-in-the-loader",
+			slug: "loader-verbs",
+			title: "Start them in the route loader",
+		},
+		readStep(componentRouter),
+		boundariesStep(boundariesRouter),
+	],
+	"tanstack-start": [
+		atomsStep(
+			clientStart,
+			atomsStart,
+			<>
+				<code>#rpc-transport</code> picks where requests go: during server
+				rendering they call the RPC handler in the same process, and in the
+				browser they <code>POST /rpc</code>, a server route.
+			</>,
+		),
+		{
+			body: (
+				<>
+					<p>
+						<code>getRouter</code> runs once per request on the server and once
+						in the browser. <code>makeRegistry()</code> makes a request registry
+						on the server and the browser’s registry in the browser, and{" "}
+						<code>Loader.make</code> puts the verbs on the router context.
+					</p>
+					<p>
+						<code>setupRouterAtoms</code> streams the server’s registry into the
+						page once the loaders have run, and hydrates the browser’s from it.
+						The root route turns on <code>WaterfallDetection</code> and catches{" "}
+						<code>RpcClientError</code> and <code>Unauthorized</code> once, for
+						every page.
+					</p>
+				</>
+			),
+			code: code(routerStart, rootStart),
+			guide: "TanStack Start",
+			id: "set-up-the-registry",
+			slug: "tanstack-start",
+			title: "Set up the registry",
+		},
+		{
+			body: (
+				<>
+					<p>
+						The router runs the loader as soon as a navigation starts, and with{" "}
+						<code>{'defaultPreload: "intent"'}</code>, when a link is hovered.
+						Every atom the page needs starts there, at the same time, before
+						anything renders.
+					</p>
+					<p>
+						<code>prefetch</code> starts an atom without waiting, and{" "}
+						<code>ensure</code> waits for one the page can’t lay out without.
+						Results still loading cross to the browser as promises, so nothing
+						is fetched twice.
+					</p>
+				</>
+			),
+			code: code(routeStart),
+			guide: "Loader verbs",
+			id: "start-in-the-loader",
+			slug: "loader-verbs",
+			title: "Start them in the route loader",
+		},
+		readStep(componentStart),
+		boundariesStep(boundariesStart),
+	],
+} as const satisfies Record<FrameworkMode, ReadonlyArray<Step>>;
+
 function HomePage() {
+	const search = Route.useSearch();
+	// Client navigations and hydration; first paint uses frameworkModeScript.
+	syncFrameworkModeAttribute(search.mode);
 	return (
 		<main>
 			<section className="relative border-b">
@@ -162,7 +502,7 @@ function HomePage() {
 					className="pointer-events-none absolute inset-0 overflow-hidden [background-image:radial-gradient(circle_at_1px_1px,var(--border)_1px,transparent_0)] [background-size:24px_24px] [mask-image:linear-gradient(to_bottom,black,transparent)]"
 				/>
 				<div className="relative mx-auto grid max-w-7xl items-start gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:py-24">
-					<div className="grid gap-6 lg:sticky lg:top-24">
+					<div className="grid gap-6 lg:sticky lg:top-36">
 						<Badge className="w-fit" variant="outline">
 							<Sparkles /> Early · 0.x
 						</Badge>
@@ -200,10 +540,76 @@ function HomePage() {
 							</Link>
 						</div>
 					</div>
-					<div className="min-w-0 [&_.code-block:first-child]:mt-0">
-						<DocBody segments={route.segments} />
+					{/* pt-14 is the room the framework pill docks in, above the code.
+					    Every mode ships in the HTML; CSS and frameworkModeScript pick. */}
+					<div
+						className="relative min-w-0 pt-14 [&_.code-block:first-child]:mt-0"
+						id="hero-code"
+					>
+						<FrameworkModeBar />
+						{frameworkModes.map((mode) => (
+							<div data-framework-panel={mode} key={mode}>
+								<DocBody segments={heroByMode[mode]} />
+							</div>
+						))}
 					</div>
 				</div>
+			</section>
+
+			<section
+				aria-labelledby="how-it-works"
+				className="mx-auto max-w-7xl border-b px-4 py-16 sm:px-6"
+			>
+				<h2
+					className="mb-2 scroll-mt-32 text-2xl font-semibold tracking-tight"
+					id="how-it-works"
+				>
+					<HashLink id="how-it-works">How a route loads its data</HashLink>
+				</h2>
+				{/* Every mode is in the HTML. Steps share ids, so frameworkModeScript
+				    and syncFrameworkModeAttribute set them on the visible panel only. */}
+				{frameworkModes.map((mode) => (
+					<div data-framework-panel={mode} key={mode}>
+						<p className="mb-12 max-w-2xl text-muted-foreground">
+							{howItWorksByMode[mode]}
+						</p>
+						<ol className="grid gap-16">
+							{stepsByMode[mode].map((step, index) => (
+								<li
+									className="grid scroll-mt-32 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:gap-12"
+									data-step-id={step.id}
+									id={mode === defaultFrameworkMode ? step.id : undefined}
+									key={step.id}
+								>
+									<div className="grid content-start gap-4 lg:sticky lg:top-36">
+										<h3 className="flex items-center gap-3 text-xl font-semibold tracking-tight">
+											<span
+												aria-hidden="true"
+												className="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-sm text-primary-foreground"
+											>
+												{index + 1}
+											</span>
+											<HashLink id={step.id}>{step.title}</HashLink>
+										</h3>
+										<div className="grid gap-3 text-muted-foreground [&_code]:font-mono [&_code]:text-[0.9em] [&_code]:text-foreground">
+											{step.body}
+										</div>
+										<Link
+											className="w-fit text-sm font-medium underline underline-offset-4"
+											params={{ slug: step.slug }}
+											to="/docs/$slug"
+										>
+											{step.guide} <ArrowRight className="inline size-4" />
+										</Link>
+									</div>
+									<div className="min-w-0 [&_.code-block]:my-0!">
+										<DocBody segments={step.code} />
+									</div>
+								</li>
+							))}
+						</ol>
+					</div>
+				))}
 			</section>
 
 			<section
@@ -245,39 +651,6 @@ function HomePage() {
 						</li>
 					))}
 				</ul>
-			</section>
-
-			<section
-				aria-labelledby="boundaries"
-				className="mx-auto grid max-w-7xl items-start gap-10 border-b px-4 py-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]"
-			>
-				<div className="grid content-start gap-4 lg:sticky lg:top-24">
-					<h2
-						className="scroll-mt-24 text-2xl font-semibold tracking-tight"
-						id="boundaries"
-					>
-						<HashLink id="boundaries">Boundaries that know the errors</HashLink>
-					</h2>
-					<p className="text-muted-foreground">
-						A boundary names what its errors come from, here the RPC client. Its{" "}
-						<code className="font-mono text-[0.9em]">catchTags</code> keys are
-						that client’s error tags, and each handler gets the error with that
-						tag. UI code never imports an error class.
-					</p>
-					<p className="text-muted-foreground">
-						The idea comes from{" "}
-						<a
-							className="font-medium text-foreground underline underline-offset-4"
-							href="https://result-rpc.com/"
-						>
-							result-rpc
-						</a>
-						.
-					</p>
-				</div>
-				<div className="min-w-0 [&_.code-block]:my-0!">
-					<DocBody segments={boundaries.segments} />
-				</div>
 			</section>
 
 			<section

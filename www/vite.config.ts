@@ -95,8 +95,13 @@ export default defineConfig({
 					if (!canonicalPaths.has(page.path)) {
 						page.sitemap = { exclude: true };
 					}
-					// `/docs` redirects to the first page.
-					return page.path !== "/docs" && !page.path.includes("#");
+					// `/docs` redirects to the first page. `/` renders every framework
+					// mode, so its `?mode=` links aren't pages of their own.
+					return (
+						page.path !== "/docs" &&
+						!page.path.includes("#") &&
+						!page.path.includes("?")
+					);
 				},
 			},
 			sitemap: { enabled: true, host: site.url },

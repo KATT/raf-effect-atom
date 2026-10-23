@@ -17,6 +17,7 @@ import {
 } from "~/components/announcement-bar.tsx";
 import { SiteHeader } from "~/components/site-header.tsx";
 import { themeScript, themeStorageKey } from "~/components/theme-toggle.tsx";
+import { frameworkModeScript } from "~/framework-mode.ts";
 import { site } from "~/site.ts";
 import appCss from "~/styles.css?url";
 
@@ -51,7 +52,11 @@ export const Route = createRootRouteWithContext<{
 			},
 			{ content: site.name, name: "application-name" },
 		],
-		scripts: [{ children: themeScript }, { children: announcementScript }],
+		scripts: [
+			{ children: themeScript },
+			{ children: announcementScript },
+			{ children: frameworkModeScript },
+		],
 	}),
 	component: Outlet,
 	shellComponent: RootDocument,

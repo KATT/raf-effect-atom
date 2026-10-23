@@ -60,6 +60,35 @@ html[data-announcement-dismissed] .announcement-bar {
 	display: none;
 }
 
+/*
+ * The home page's framework panels: every mode ships in the static HTML, and
+ * a blocking script sets data-framework-mode from ?mode= before paint, so
+ * the other modes never flash the prerendered TanStack Start panels.
+ */
+[data-framework-panel] {
+	display: none;
+}
+
+:root:not([data-framework-mode]) [data-framework-panel="tanstack-start"],
+[data-framework-mode="tanstack-start"] [data-framework-panel="tanstack-start"],
+[data-framework-mode="nextjs"] [data-framework-panel="nextjs"],
+[data-framework-mode="react-router"] [data-framework-panel="react-router"] {
+	display: contents;
+}
+
+:root:not([data-framework-mode])
+	[data-framework-mode-link="tanstack-start"].framework-mode-link,
+[data-framework-mode="tanstack-start"]
+	[data-framework-mode-link="tanstack-start"].framework-mode-link,
+[data-framework-mode="nextjs"]
+	[data-framework-mode-link="nextjs"].framework-mode-link,
+[data-framework-mode="react-router"]
+	[data-framework-mode-link="react-router"].framework-mode-link {
+	background-color: var(--primary);
+	color: var(--primary-foreground);
+	font-weight: 500;
+}
+
 .prose {
 	--tw-prose-body: var(--foreground);
 	--tw-prose-headings: var(--foreground);
