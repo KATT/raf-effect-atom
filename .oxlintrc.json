@@ -452,6 +452,7 @@
 				"scripts/**",
 				"tooling/*/src/**",
 				"examples/*/src/**",
+				"examples/*/app/**",
 				"examples/.shared/*/src/**"
 			],
 			"rules": {
@@ -482,6 +483,7 @@
 		{
 			"files": [
 				"examples/*/src/**/*.{ts,tsx}",
+				"examples/*/app/**/*.{ts,tsx}",
 				"examples/.shared/*/src/**/*.{ts,tsx}",
 				"www/src/**/*.{ts,tsx}"
 			],
@@ -496,7 +498,9 @@
 			// rules-of-hooks matches any call whose property is named `use`.
 			"files": [
 				"examples/*/src/**/*.{ts,tsx}",
-				"www/samples/*/src/**/*.{ts,tsx}"
+				"examples/*/app/**/*.{ts,tsx}",
+				"www/samples/*/src/**/*.{ts,tsx}",
+				"www/samples/react-router*/app/**/*.{ts,tsx}"
 			],
 			"rules": {
 				"react-hooks/rules-of-hooks": "off",
@@ -520,7 +524,10 @@
 			// The docs' example files are what readers copy: keys and props in the
 			// order the guides explain them, a call's input built at the call, and
 			// no ceremony a sample doesn't need.
-			"files": ["www/samples/*/src/**/*.{ts,tsx}"],
+			"files": [
+				"www/samples/*/src/**/*.{ts,tsx}",
+				"www/samples/react-router*/app/**/*.{ts,tsx}"
+			],
 			"rules": {
 				"anti-slop/require-safety-comment-for-type-assertion": "off",
 				"curly": "off",
@@ -538,12 +545,15 @@
 			}
 		},
 		{
-			// A page's own samples (`src/docs/<page>`) are its code blocks, shown
-			// one region at a time: fragments with hooks at the top level, bindings
-			// the next block reads, bare expressions to pin with `^?`, and the
-			// `unknown`s and shortcuts the prose is about. Typecheck them; the app
-			// code rules don't fit.
-			"files": ["www/samples/*/src/docs/**/*.{ts,tsx}"],
+			// A page's own samples (`src/docs/<page>`, `app/docs/<page>` in the
+			// React Router apps) are its code blocks, shown one region at a time:
+			// fragments with hooks at the top level, bindings the next block reads,
+			// bare expressions to pin with `^?`, and the `unknown`s and shortcuts
+			// the prose is about. Typecheck them; the app code rules don't fit.
+			"files": [
+				"www/samples/*/src/docs/**/*.{ts,tsx}",
+				"www/samples/react-router*/app/docs/**/*.{ts,tsx}"
+			],
 			"rules": {
 				"anti-slop/no-runtime-typeof": "off",
 				"anti-slop/no-shape-in-symbol-names": "off",

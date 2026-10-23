@@ -11,10 +11,10 @@
 
 Effect Atom's registry is the cache. These packages add only what it lacks, as thin layers over Effect Atom and [Effect RPC](https://github.com/Effect-TS/effect/tree/main/packages/effect/src/rpc):
 
-| Package                | What                                                                                   |
-| ---------------------- | -------------------------------------------------------------------------------------- |
-| `effect-atom-boundary` | Error boundaries typed by an atom's error type: catch failures by `_tag`.              |
-| `raf-effect-atom`      | Start atoms from TanStack Start and Next.js loaders before render, and stream them in. |
+| Package                | What                                                                                                 |
+| ---------------------- | ---------------------------------------------------------------------------------------------------- |
+| `effect-atom-boundary` | Error boundaries typed by an atom's error type: catch failures by `_tag`.                            |
+| `raf-effect-atom`      | Start atoms from TanStack Start, Next.js and React Router loaders before render, and stream them in. |
 
 Both take `effect`, `@effect/atom-react` and `react` as peer dependencies.
 
