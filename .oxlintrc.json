@@ -616,6 +616,18 @@
 			}
 		},
 		{
+			// The docs' demos run their server in a Web Worker in the page: an
+			// RpcServer over the example db. The worker's code is only loaded
+			// with `new Worker`, never imported by the page.
+			"files": ["www/src/demo-kit/worker/**"],
+			"rules": {
+				"workspace/no-server-imports": [
+					"error",
+					{ "sources": ["@examples/backend"] }
+				]
+			}
+		},
+		{
 			// The contract ships to the browser: Effect only, no Node, no other
 			// workspace package.
 			"files": ["examples/.shared/contract/**"],

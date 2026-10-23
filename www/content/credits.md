@@ -1,6 +1,6 @@
 ---
 title: Credits
-description: raf-effect-atom builds on Effect Atom and Effect RPC, takes its boundaries from result-rpc, and its loaders from raf-query.
+description: raf-effect-atom builds on Effect Atom and Effect RPC, takes its boundaries from result-rpc and its loaders from raf-query, and its demos' visuals are inspired by Visual Effect and the Effect website.
 section: Project
 order: 1
 ---
@@ -16,6 +16,15 @@ The typed error boundaries are [result-rpc](https://result-rpc.com/)'s idea: its
 ## raf-query
 
 The loader verbs, `prefetch`, `ensure` and `fetch`, and the way results stream from loaders into the browser, come from [raf-query](https://github.com/KATT/raf-query), a render-as-you-fetch cache for React. So do this site, its live demos and its docs tooling.
+
+## The demos' visuals
+
+The live demos draw what happens over time, after two sources of inspiration:
+
+- [Kit Langton](https://github.com/kitlangton)'s [Visual Effect](https://effect.kitlangton.com/) ([source](https://github.com/kitlangton/visual-effect)), which shows Effect programs as nodes that change colour as they run, succeed, fail or die, with a timer while they run. The demos' atoms do the same through `Initial`, `Success` and `Failure`.
+- The [Effect website](https://effect.website/)'s visuals, such as the lane timelines in its Module of the Week posts ([Cluster, part 4](https://effect.website/blog/module-of-the-week/cluster-idempotency/)), where messages travel between lanes over time. The demos' requests travel between the registry and the worker's RPC server the same way.
+
+The demos' code is this site's own, built on its shared components.
 
 ## TanStack
 

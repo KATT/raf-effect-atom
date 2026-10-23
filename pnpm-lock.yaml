@@ -164,6 +164,9 @@ settings:
 
 catalogs:
   default:
+    '@effect/platform-browser':
+      specifier: 4.0.6
+      version: 4.0.6
     '@effect/vitest':
       specifier: 4.0.6
       version: 4.0.6
@@ -872,6 +875,15 @@ importers:
       '@effect/atom-react':
         specifier: 4.0.6
         version: 4.0.6(effect@4.0.6)(react@19.3.1)(scheduler@0.28.0)
+      '@effect/platform-browser':
+        specifier: 'catalog:'
+        version: 4.0.6(effect@4.0.6)
+      '@examples/contract':
+        specifier: workspace:*
+        version: link:../examples/.shared/contract
+      '@examples/db':
+        specifier: workspace:*
+        version: link:../examples/.shared/db
       '@examples/kit':
         specifier: workspace:*
         version: link:../examples/.shared/kit
@@ -1323,6 +1335,11 @@ packages:
       effect: 4.0.6
       react: '>=19.0.0 <20.0.0'
       scheduler: '>=0.25.0 <0.29.0'
+
+  '@effect/platform-browser@4.0.6':
+    resolution: {integrity: sha512-i4bf1+FlUnZypqK0pQ5cq46KhroTgqFGktFn2WorwIk+yc+RuZO6qsF+Sk6lY5uHwdHTOLGMlnlXSJ8u1UG42g==}
+    peerDependencies:
+      effect: 4.0.6
 
   '@effect/platform-node-shared@4.0.6':
     resolution: {integrity: sha512-0PhyC4uG30xGtsajnxjkcBWfTjNRzUh4ZKl1Kvo/MNyCTb+W2O+fBzf7wCRCoqt+nLudiq4V7vX40Q8XIBuMaQ==}
@@ -7357,6 +7374,10 @@ snapshots:
       effect: 4.0.6
       react: 19.3.1
       scheduler: 0.28.0
+
+  '@effect/platform-browser@4.0.6(effect@4.0.6)':
+    dependencies:
+      effect: 4.0.6
 
   '@effect/platform-node-shared@4.0.6(effect@4.0.6)':
     dependencies:

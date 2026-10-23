@@ -23,6 +23,10 @@ A failure whose tag has a handler renders the handler in place of the children. 
 
 A handler renders as a component, so it can call hooks. A handler written inline is a new component each time the component around the boundary renders, so it mounts again and loses its state: give a handler with state a name outside the render.
 
+```demo
+atom-error-boundary
+```
+
 ## Handlers are typed by their tag
 
 Each handler's `error` is the member of the atom's error type with that tag:

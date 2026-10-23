@@ -1,7 +1,16 @@
 import type { ComponentType } from "react";
 
-/** What a `www/src/demos/<id>.tsx` module exports as its default. */
 export interface DemoDefinition {
+	/**
+	 * The demo, rendered in its own registry. Its atoms reach the demo's
+	 * worker through `IssuesClient`.
+	 */
 	readonly Component: ComponentType;
+	/** One sentence on what to try. */
+	readonly hint: string;
 	readonly title: string;
+}
+
+export function defineDemo(demo: DemoDefinition): DemoDefinition {
+	return demo;
 }
