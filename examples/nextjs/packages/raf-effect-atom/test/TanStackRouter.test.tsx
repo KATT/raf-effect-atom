@@ -91,12 +91,13 @@ describe("setupRouterAtoms", () => {
 		assert.isDefined(screen.getByText("Welcome, ada"));
 	});
 
-	it("starts a browser-only read from a client-only route's loader, after hydration", async () => {
+	it("renders the page on the server and leaves a prefetchInBrowser read to the browser", async () => {
 		using server = serve({});
-		const response = await renderOnServer("/entry");
+		const response = await renderOnServer("/in-browser/5");
+		assert.include(response.html, "Page");
 		assert.include(response.html, "Opening");
 		assert.strictEqual(server.requests(5), 0);
-		using _app = await renderInBrowser("/entry", response.html, 5);
+		using _app = await renderInBrowser("/in-browser/5", response.html);
 		assert.isDefined(screen.getByText("Issue 5"));
 		assert.strictEqual(server.requests(5), 1);
 	});

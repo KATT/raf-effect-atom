@@ -52,6 +52,11 @@ export const make = <S extends Source>(
 	atom: Atom.Atom<unknown>,
 ): Handle<S> => ({ args, key: keyOf<S>(atom) });
 
+export const inBrowser = <S extends Source>(
+	args: ArgsOf<S>,
+	atom: Atom.Atom<unknown>,
+): Handle<S> => ({ args, inBrowser: true, key: keyOf<S>(atom) });
+
 export const loaded = <S extends Source>(
 	args: ArgsOf<S>,
 	atom: Atom.Atom<unknown>,

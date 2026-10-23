@@ -73,6 +73,26 @@ describe("useAtomResult on the server", () => {
 		expect(server.requests(1)).toBe(1);
 	});
 
+	it("renders the Suspense fallback for a handle left to the browser", async () => {
+		using server = serve();
+		using rendered = await load(Loader.prefetchInBrowser(issue, 1));
+		const errors: Array<unknown> = [];
+		const stream = await renderToReadableStream(
+			page(rendered.registry, rendered.handles),
+			{
+				onError: (error) => {
+					errors.push(error);
+				},
+			},
+		);
+		await stream.allReady;
+		const html = await new Response(stream).text();
+		expect(html).toContain("Loading");
+		expect(html).not.toContain("Issue 1");
+		expect(String(errors[0])).toContain("starts in the browser");
+		expect(server.requests(1)).toBe(0);
+	});
+
 	it("throws in development without a request registry", () => {
 		using server = serve();
 		const registry = AtomRegistry.make();

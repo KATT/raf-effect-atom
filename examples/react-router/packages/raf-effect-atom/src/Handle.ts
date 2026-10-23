@@ -99,6 +99,11 @@ export type HandleKey<S> = string & {
  */
 export interface Handle<S> {
 	readonly args: ArgsOf<S>;
+	/**
+	 * `true` when `Loader.prefetchInBrowser` ran on the server and left the
+	 * atom to the browser: the browser's read starts it.
+	 */
+	readonly inBrowser?: true;
 	/** The atom's serialization key; `undefined` for an atom without one. */
 	readonly key: HandleKey<S> | undefined;
 }

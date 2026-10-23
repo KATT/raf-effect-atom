@@ -131,6 +131,19 @@ export const prefetch: <S extends Source>(
 ) => Handle<S> = atoms.prefetch;
 
 /**
+ * `Loader.prefetchInBrowser` on the request's registry: returns a handle
+ * whose atom the browser's read starts, without starting it on the server.
+ *
+ * @stability unstable
+ * @category verbs
+ * @since 0.2.6
+ */
+export const prefetchInBrowser: <S extends Source>(
+	source: S,
+	...args: ArgsOf<S>
+) => Handle<S> = atoms.prefetchInBrowser;
+
+/**
  * `Loader.ensure` on the request's registry: starts a source's atom, waits
  * for its result, and returns its handle.
  *

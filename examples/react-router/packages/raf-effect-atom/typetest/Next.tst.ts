@@ -10,6 +10,7 @@ import { issue } from "../test/fixtures/issues.ts";
 describe("raf-effect-atom/next", () => {
 	it("gives server components the verbs, returning handles", () => {
 		expect(Next.prefetch(issue, 1)).type.toBe<Handle<typeof issue>>();
+		expect(Next.prefetchInBrowser(issue, 1)).type.toBe<Handle<typeof issue>>();
 		expect(Next.ensure(issue, 1)).type.toBe<
 			Promise<LoadedHandle<typeof issue>>
 		>();

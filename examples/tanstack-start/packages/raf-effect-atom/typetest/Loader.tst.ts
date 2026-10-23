@@ -20,6 +20,9 @@ describe("Loader", () => {
 		expect(Loader.prefetch(issue, 1)).type.toBe<
 			Effect.Effect<Handle<typeof issue>, never, AtomRegistry.AtomRegistry>
 		>();
+		expect(Loader.prefetchInBrowser(issue, 1)).type.toBe<
+			Effect.Effect<Handle<typeof issue>, never, AtomRegistry.AtomRegistry>
+		>();
 		expect(Loader.ensure(issue, 1)).type.toBe<
 			Effect.Effect<
 				LoadedHandle<typeof issue>,

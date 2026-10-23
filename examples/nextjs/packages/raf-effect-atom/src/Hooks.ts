@@ -22,6 +22,7 @@ import * as Pending from "./internal/pending.ts";
 import * as Registry from "./internal/registry.ts";
 import * as Waterfalls from "./internal/waterfalls.ts";
 import type { SettledResult } from "./Loader.ts";
+import { isRequestRegistry } from "./RequestRegistry.ts";
 
 // Bundlers replace `process.env.NODE_ENV` at build time. Declared here, so
 // apps that type-check this source don't need Node's types.
@@ -128,6 +129,11 @@ export const useAtomResult = <S extends Source>(
 	const registry = React.useContext(RegistryContext);
 	const atom = Handles.atomOf(source, handle.args);
 	Registry.requireRequestRegistry(registry, "useAtomResult");
+	if (handle.inBrowser === true && isRequestRegistry(registry)) {
+		throw new Error(
+			`raf-effect-atom: ${String(atom)} starts in the browser (Loader.prefetchInBrowser), so the server renders the nearest Suspense boundary's fallback, and the browser renders the boundary.`,
+		);
+	}
 	const target = Handles.sourceOf(atom);
 	const started = hydrated(target);
 	const read = target === atom ? hydrated(atom) : atom;
@@ -148,7 +154,7 @@ export const useAtomResult = <S extends Source>(
 	if (streamed !== undefined) {
 		React.use(streamed);
 	}
-	if (process.env.NODE_ENV !== "production") {
+	if (process.env.NODE_ENV !== "production" && handle.inBrowser !== true) {
 		Waterfalls.check(registry, started, React.use(Waterfalls.ModeContext));
 	}
 	if (read !== started) {

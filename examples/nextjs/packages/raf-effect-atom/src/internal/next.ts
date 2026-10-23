@@ -50,6 +50,10 @@ export const make = (options?: RequestRegistry.Options): RequestAtoms => {
 		getRegistry,
 		prefetch: <S extends Source>(source: S, ...args: ArgsOf<S>): Handle<S> =>
 			getLoader().prefetch(source, ...args),
+		prefetchInBrowser: <S extends Source>(
+			source: S,
+			...args: ArgsOf<S>
+		): Handle<S> => getLoader().prefetchInBrowser(source, ...args),
 		run: (effect, runOptions) => getLoader().run(effect, runOptions),
 	};
 };

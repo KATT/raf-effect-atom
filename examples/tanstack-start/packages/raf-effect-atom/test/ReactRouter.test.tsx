@@ -78,6 +78,18 @@ const handler = createStaticHandler([
 				},
 				path: "streamed/:id",
 			},
+			{
+				loader: (args): IssueData => {
+					const atoms = args.context.get(atomsContext);
+					const handle = atoms.prefetchInBrowser(issue, Number(args.params.id));
+					return {
+						atoms: atoms.dehydrate(),
+						issue: handle,
+						registry: atoms.registry,
+					};
+				},
+				path: "in-browser/:id",
+			},
 		],
 		id: "root",
 		middleware: [atomsMiddleware(atomsContext)],
@@ -175,6 +187,17 @@ describe("atomsMiddleware", () => {
 		await settle();
 		assert.isDefined(screen.getByText("Issue 2"));
 		assert.strictEqual(server.requests(2), 1);
+	});
+
+	it("leaves a prefetchInBrowser read to the browser", async () => {
+		using server = serve({});
+		const handled = await handle("/in-browser/3");
+		await handled.response.text();
+		assert.deepStrictEqual(handled.data.atoms, []);
+		assert.strictEqual(server.requests(3), 0);
+		using _route = await renderRoute(handled.data);
+		assert.isDefined(screen.getByText("Issue 3"));
+		assert.strictEqual(server.requests(3), 1);
 	});
 
 	it("disposes the request's registry once the response body has been sent", async () => {

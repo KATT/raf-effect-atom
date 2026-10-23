@@ -11,6 +11,7 @@ import {
 	HydrationBoundary,
 	Loader,
 	useAtomResult,
+	WaterfallDetection,
 } from "../src/index.ts";
 import {
 	click,
@@ -248,6 +249,37 @@ const suspensions = () => {
 };
 
 describe("useAtomResult", () => {
+	it("starts a handle the server left to the browser, without a waterfall report", async () => {
+		using server = serve();
+		using loaded = await load(Loader.prefetchInBrowser(issue, 1));
+		using app = mount();
+		await app.render(
+			<WaterfallDetection mode="throw">
+				<React.Suspense fallback={<p>Loading</p>}>
+					<UnclaimedTitle issue={loaded.handles} />
+				</React.Suspense>
+			</WaterfallDetection>,
+		);
+		expect(screen.getByText("Found")).toBeDefined();
+		expect(server.requests(1)).toBe(1);
+	});
+
+	it("reports a waterfall for a handle nothing started or left to the browser", async () => {
+		using _server = serve();
+		using _errors = silenceCaughtErrors();
+		using loaded = await load(Loader.prefetchInBrowser(issue, 1));
+		using app = mount();
+		const { inBrowser: _, ...unmarked } = loaded.handles;
+		await app.render(
+			<WaterfallDetection mode="throw">
+				<React.Suspense fallback={<p>Loading</p>}>
+					<UnclaimedTitle issue={unmarked} />
+				</React.Suspense>
+			</WaterfallDetection>,
+		);
+		expect(screen.getByText(/^Outer: .*request waterfall/)).toBeDefined();
+	});
+
 	it("throws a defect to the error boundaries above", async () => {
 		using _server = serve({ 1: ["crash"] });
 		using _errors = silenceCaughtErrors();
