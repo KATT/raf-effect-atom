@@ -46,7 +46,9 @@ const hold = (
 	};
 	owner.set(
 		entry.key,
-		result.then((value) => {
+		// React's server component payload streams thenables whose `then`
+		// returns nothing, so adopt the result as a promise before chaining.
+		Promise.resolve(result).then((value) => {
 			done();
 			// A result the server couldn't encode resolves to a symbol.
 			if (!Predicate.isSymbol(value)) {

@@ -13,6 +13,7 @@ import {
 
 import * as Hydration from "../src/Hydration.ts";
 import * as Next from "../src/internal/next.ts";
+import * as Pending from "../src/internal/pending.ts";
 import { counter, issue, IssueNotFound, serve } from "./fixtures/issues.ts";
 
 const reference = {
@@ -38,25 +39,32 @@ const HydrateAtoms = registerClientReference(
 
 const clientModule = { [reference.name]: () => null };
 
-/**
- * Renders a server component tree to React's server component payload, as
- * Next.js does for one request, and decodes it as the browser would.
- */
-const renderPayload = async (page: React.ReactNode) => {
-	const stream = renderToReadableStream(page, {
+const render = (page: React.ReactNode) =>
+	renderToReadableStream(page, {
 		[`${reference.id}#${reference.name}`]: reference,
 	});
-	const payload = await new Response(stream).text();
+
+/** Decodes a server component payload as the browser does, as it arrives. */
+const decode = async (payload: ReadableStream<Uint8Array>) => {
 	const element: React.ReactElement<{
 		readonly state: ReadonlyArray<EffectHydration.DehydratedAtom>;
-	}> = await createFromReadableStream(new Response(payload).body!, {
+	}> = await createFromReadableStream(payload, {
 		serverConsumerManifest: {
 			moduleLoading: null,
 			moduleMap: { [reference.id]: { [reference.name]: reference } },
 			serverModuleMap: null,
 		},
 	});
-	return { payload, state: element.props.state };
+	return element.props.state;
+};
+
+/**
+ * Renders a server component tree to React's server component payload, as
+ * Next.js does for one request, and decodes it once all of it has arrived.
+ */
+const renderPayload = async (page: React.ReactNode) => {
+	const payload = await new Response(render(page)).text();
+	return { payload, state: await decode(new Response(payload).body!) };
 };
 
 const streamOf = (entry: EffectHydration.DehydratedAtom) =>
@@ -103,6 +111,26 @@ describe("raf-effect-atom/next in a server component render", () => {
 			AsyncResult.isSuccess(result) && result.value.title === "Issue 2",
 		);
 		assert.strictEqual(server.requests(2), 1);
+		registry.dispose();
+	});
+
+	it("holds a prefetched result that's still streaming, so the browser waits for it", async () => {
+		using server = serve({});
+		vi.stubGlobal("__webpack_require__", () => clientModule);
+		function IssuePage() {
+			Next.prefetch(issue(4));
+			return <HydrateAtoms state={Next.dehydrate()} />;
+		}
+		const registry = AtomRegistry.make();
+		Hydration.hydrate(registry, await decode(render(<IssuePage />)));
+		const streamed = Pending.get(registry, "AtomRpc:GetIssue:4");
+		assert.instanceOf(streamed, Promise);
+		await streamed;
+		const result = resultOf(registry, 4);
+		assert.isTrue(
+			AsyncResult.isSuccess(result) && result.value.title === "Issue 4",
+		);
+		assert.strictEqual(server.requests(4), 1);
 		registry.dispose();
 	});
 
