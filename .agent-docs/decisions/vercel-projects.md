@@ -26,5 +26,6 @@
   | `www`                     | `raf-effect-atom`                | `raf-effect-atom.katt.dev`                |
   | `examples/tanstack-start` | `raf-effect-atom-tanstack-start` | `tanstack-start.raf-effect-atom.katt.dev` |
   | `examples/nextjs`         | `raf-effect-atom-nextjs`         | `nextjs.raf-effect-atom.katt.dev`         |
+  | `examples/react-router`   | `raf-effect-atom-react-router`   | `react-router.raf-effect-atom.katt.dev`   |
 
   Add a row when a project is created. Each project's other hostnames are Vercel's own `*.vercel.app` ones.

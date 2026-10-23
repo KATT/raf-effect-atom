@@ -36,3 +36,4 @@ Commands:
 - `list-empty` isn't reachable on seed data (every status has issues). To see it, move all nine Closed issues to another status, then put them back.
 - Status labels in rows are `aria-label`s, not text, so `$CE wait --text` / `--gone` can't see them. Wait on `Showing … of <total> issues` (each filter has its own total) or with `--eval`.
 - Status counts and pages are all refreshed after a status change elsewhere settles (see [status changes](status-changes.md)).
+- React Router: `/prefetch/issues` has no search until you pick a filter or a sort; the filter links always carry both (`?sort=newest&status=open`). A search the list can't read (`?status=bogus`) answers 404 with `Nothing here.`

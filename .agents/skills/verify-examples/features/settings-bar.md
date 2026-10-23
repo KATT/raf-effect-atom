@@ -40,4 +40,5 @@ Commands:
 - All procedures share one path, `POST /rpc`, so compare how many calls there are rather than which.
 - `$CE select --value` takes the option's value (`3000`, `signed-out`) or its label (`3 s`, `Signed out`).
 - A server restart doesn't clear cookies; Reset does. Reset doesn't touch the db: edits stay until the server restarts.
+- React Router: a prefetching link loads the next page's modules and its `<path>.data`, which runs its loaders on the server; nothing calls `/rpc`, so the **Prefetch** recipes see no change in `$RPC`. Count `.data` entries instead (`performance.getEntriesByType("resource").filter(e => new URL(e.name).pathname.endsWith(".data"))`): hovering `Issues` adds one with `initiatorType` `link`. The click then requests the same `.data` again (`initiatorType` `fetch`): React Router doesn't reuse a prefetched data response, so the hover saves the module downloads only.
 - `$CE screenshot --width 390` shows the phone layout. Nothing in the header scrolls sideways at 360 px.

@@ -12,7 +12,7 @@ Every page arrives with its data in the HTML: the route's loader starts the page
 
 ## How to get to it (user POV)
 
-- Open any URL directly (address bar, reload, or a shared link). Client-side navigations call `/rpc` from the browser instead.
+- Open any URL directly (address bar, reload, or a shared link). Client-side navigations call `/rpc` from the browser instead (React Router: they request the next page's `<path>.data` from the server, which runs the loaders; see Gotchas).
 
 ## Driving it with control-examples
 
@@ -31,9 +31,11 @@ React puts `<!-- -->` between text parts, so strip those before grepping.
 
 ## Gotchas
 
-- `/issues` redirects to `/prefetch/issues`, which adds `?sort=newest&status=all`; use `curl -L`.
+- `/issues` redirects to `/prefetch/issues`, which adds `?sort=newest&status=all` on TanStack Start; use `curl -L`. React Router leaves the defaults out of the URL.
+- React Router: every navigation, not only the first page, runs the route's loaders on the server, in a new request registry, and returns the dehydrated atoms as `<path>.data` (Single Fetch). So the browser's `/rpc` calls are only what no loader starts: `Load more` pages and writes. "To see that the filter catches data requests" there, press `Load more`.
+- React Router: React's server renderer outlines a finished section once the HTML before it passes 12.8 KB (`progressiveChunkSize`), and this app's shell is past that by the first section. A section whose data was ready still arrives as a skeleton followed by its content, later in the same response. The streaming check holds; don't read skeletons in the HTML as data the server didn't have (see [loader verb](loader-verb.md)).
 - The browser posts to `/rpc/`, with a trailing slash. Match with `startsWith("/rpc")`: an exact `=== "/rpc"` never fires and passes for the wrong reason.
-- A typed failure the page claims (signed out, missing issue) is thrown during server rendering, so the HTML has the shell and the boundary renders in the browser. The production server logs `Error in renderToReadableStream` with the error; that's expected. Check what the boundary shows with `$CE text`, not with `curl` (see [error boundaries](error-boundaries.md)).
+- A typed failure the page claims (signed out, missing issue) is thrown during server rendering, so the HTML has the shell and the boundary renders in the browser. The production server logs `Error in renderToReadableStream` with the error; that's expected. On React Router the response is a `500` when the failure is already settled as the shell renders: `ensure` and `fetch` pages, and every page for `curl` (React Router's server waits for the whole page for bots). Known; the library will render the boundary on the server. Check what the boundary shows with `$CE text`, not with `curl` (see [error boundaries](error-boundaries.md)).
 - The list page makes one `/rpc` call after hydrating: rows 11-20, because the `Load more` button is within 300 px of the viewport at the helper's 1280×900 window (see [issue list](issue-list.md)). Count on the issue page, or scroll to the top first.
 - `head -c` on the response is not a streaming check: the document head (styles and scripts) is larger than any small byte window. Compare offsets as above.
 - A slow first compile after a dev-server start can make the first `curl` take 10-20 s. That's not streaming.

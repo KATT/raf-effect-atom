@@ -28,13 +28,13 @@ CAUGHT='[...document.querySelectorAll("[data-boundary]")].map(e => e.dataset.bou
 
 Commands:
 
-- **Missing issue, every verb.** For `v` in `prefetch ensure fetch`: `$CE open $U/$v/issues/999; $CE wait --text "doesn't exist"; $CE eval "$CAUGHT"`. `["IssueBoundary:IssueNotFound"]`, and `$CE text` still has the header (`raf-effect-atom · TanStack Start`). The failure came with the page: `$CE eval 'performance.getEntriesByType("resource").filter(e => new URL(e.name).pathname.startsWith("/rpc")).length'` is `0`.
+- **Missing issue, every verb.** For `v` in `prefetch ensure fetch`: `$CE open $U/$v/issues/999; $CE wait --text "doesn't exist"; $CE eval "$CAUGHT"`. `["IssueBoundary:IssueNotFound"]`, and `$CE text` still has the header (`raf-effect-atom · <framework>`, such as `raf-effect-atom · React Router`). The failure came with the page: `$CE eval 'performance.getEntriesByType("resource").filter(e => new URL(e.name).pathname.startsWith("/rpc")).length'` is `0`.
 - **Signed out.** `$CE select --name Session --value 'Signed out'`, wait for the reload, `$CE eval "$CAUGHT"`: `["AuthBoundary:Unauthorized"]`. `$CE click --role button --name 'Sign in'; $CE wait --text Showing`: back to the list.
 - **Unknown path.** `curl -s -o /dev/null -w '%{http_code}\n' $U/nope` is `404`. `$CE open $U/nope; $CE text | grep -E '^Nothing here\.$'`.
 - **Bad id.** The same for `$U/prefetch/issues/abc` and `$U/prefetch/issues/0`: `404`, `Nothing here.`
 
 ## Gotchas
 
-- A missing issue answers `200`: the page streams before the issue's result settles. The boundary renders in the browser, not in the server's HTML (React can't render error boundaries on the server), so `curl` doesn't see `doesn't exist`. Assert with `$CE`.
+- A missing issue answers `200` on TanStack Start: the page streams before the issue's result settles. React Router answers `500` for `ensure` and `fetch` (and for `curl` under every verb) until the library renders the boundary on the server; see [server rendering](server-rendering.md). The browser shows the boundary either way. The boundary renders in the browser, not in the server's HTML (React can't render error boundaries on the server), so `curl` doesn't see `doesn't exist`. Assert with `$CE`.
 - The production server logs `Error in renderToReadableStream` with the claimed error, and the browser console logs React's report of the caught error; `$CE open` prints that stack. Both are expected for a claimed failure.
-- The typed failure crosses intact: `src/issue-not-found.test.ts` in the app checks that a server-side `IssueNotFound` hydrates in the browser as an `IssueNotFound` instance.
+- The typed failure crosses intact: `issue-not-found.test.ts` in each app (`src/` or `app/`) checks that a server-side `IssueNotFound` hydrates in the browser as an `IssueNotFound` instance.

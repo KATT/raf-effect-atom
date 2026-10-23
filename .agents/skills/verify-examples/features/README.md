@@ -5,7 +5,7 @@ Behavior-level inventory of the example issue tracker, from a user's point of vi
 ## Baseline preconditions
 
 - The app is running from this checkout and `$CE doctor --app <app>` is `ok` (see [`../SKILL.md`](../SKILL.md)).
-- `CE="node .agents/skills/verify-examples/scripts/control-examples.mjs"` and `U=http://localhost:3005` (`tanstack-start`).
+- `CE="node .agents/skills/verify-examples/scripts/control-examples.mjs"` and `U=http://localhost:3005` (`tanstack-start`) or `U=http://localhost:3006` (`react-router`).
 - Seed data: 42 issues, `#1` (oldest, Jan 7) to `#42` (newest), each Open, In progress or Closed (17, 16, 9), with 0-10 comments and an assignee. Ten issues per page, four comments per page. Data lives in the server process: a restart reseeds, and each app has its own copy.
 - Settings cookies are at their defaults (Prefetch links Off, Latency 400 ms, Session Signed in). `Reset settings` restores them.
 

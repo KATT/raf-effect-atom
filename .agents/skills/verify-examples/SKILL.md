@@ -10,6 +10,7 @@ The example apps are one issue tracker on several stacks, so one feature map ([`
 | App              | Start                                        | Port | Data layer                                       |
 | ---------------- | -------------------------------------------- | ---- | ------------------------------------------------ |
 | `tanstack-start` | `pnpm --filter @examples/tanstack-start dev` | 3005 | Effect RPC at `POST /rpc`, in-process during SSR |
+| `react-router`   | `pnpm --filter @examples/react-router dev`   | 3006 | Effect RPC at `POST /rpc`, in-process during SSR |
 
 Add a row (and an `apps` entry in the helper) when an app lands.
 
@@ -23,7 +24,7 @@ CE="node .agents/skills/verify-examples/scripts/control-examples.mjs"
 
 Node comes from `.nvmrc` (24). Dependencies: `pnpm install` at the root.
 
-Start each app in its own tmux session from the repo root and leave it running:
+Start each app in its own tmux session (`example-<app>`) from the repo root and leave it running:
 
 ```bash
 tmux -f /exec-daemon/tmux.portal.conf new-session -d -s example-tanstack-start -c "$PWD" -- bash -l
@@ -32,9 +33,9 @@ tmux -f /exec-daemon/tmux.portal.conf send-keys -t example-tanstack-start:0.0 'p
 
 No env vars, no database: data is an in-memory mock seeded when the server process starts.
 
-Ready means `curl -sL localhost:3005/issues` returns issue rows (`Change status` is in the HTML). `/issues` answers 307 to `/prefetch/issues`, which answers with `?sort=newest&status=all` added; follow redirects. The first request after a start compiles routes and can take 10-20 s.
+Ready means `curl -sL localhost:<port>/issues` returns issue rows (`Change status` is in the HTML). `/issues` redirects to `/prefetch/issues` (TanStack Start: 307, then a second redirect that adds `?sort=newest&status=all`; React Router: 302, no search); follow redirects. The first request after a start compiles routes and can take 10-20 s.
 
-To check a production build instead of dev: `pnpm --filter @examples/tanstack-start build && pnpm --filter @examples/tanstack-start start`, same port. The build is what Vercel deploys and has no dev-only console noise.
+To check a production build instead of dev: `pnpm --filter @examples/<app> build && pnpm --filter @examples/<app> start`, same port. The build is what Vercel deploys and has no dev-only console noise.
 
 Then start the browser:
 
@@ -90,7 +91,7 @@ Each app's production deployment is on Vercel ([`.agent-docs/decisions/vercel-pr
 $CE chrome stop
 ```
 
-This stops only the Chrome the helper started and deletes its profile. Stop dev servers you started by killing their tmux session (`tmux -f /exec-daemon/tmux.portal.conf kill-session -t example-tanstack-start`), never by process name. Leave servers you didn't start running. Restarting a server reseeds its data, which undoes every write. Evidence stays where you wrote it.
+This stops only the Chrome the helper started and deletes its profile. Stop dev servers you started by killing their tmux session (`tmux -f /exec-daemon/tmux.portal.conf kill-session -t example-<app>`), never by process name. Leave servers you didn't start running. Restarting a server reseeds its data, which undoes every write. Evidence stays where you wrote it.
 
 ## Helpers
 

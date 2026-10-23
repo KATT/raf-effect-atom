@@ -33,7 +33,7 @@ Commands:
 
 - **Redirects.** `curl -s -o /dev/null -w '%{redirect_url}\n' $U/issues/3` is `$U/prefetch/issues/3`; `curl -s -o /dev/null -w '%{http_code}\n' $U/bogus/issues/3` is `404`.
 - **Switch verb.** `$CE open "$U/prefetch/issues?status=open&sort=newest"; $CE select --name Loader --value ensure; $CE wait --text "registry doesn't have"`. `$CE eval 'location.pathname + location.search'` is `/ensure/issues?status=open&sort=newest`, and `$CE snapshot | grep 'link "#'` rows link to `/ensure/issues/<id>`.
-- **First HTML.** `curl -s -b db-latency=0 $U/ensure/issues/3 | grep -o animate-pulse | wc -l` is lower than under `/prefetch/` (the issue's own skeleton is gone; the comments and assignee are prefetched in both).
+- **First HTML.** `curl -s -b db-latency=0 $U/ensure/issues/3 | grep -o animate-pulse | wc -l` is lower than under `/prefetch/` (the issue's own skeleton is gone; the comments and assignee are prefetched in both). On React Router the counts are equal (see Gotchas); compare when the response starts instead: `curl -s -A Mozilla/5.0 -o /dev/null -w '%{time_starttransfer}\n' -b db-latency=3000 $U/<verb>/issues/3` is under a second for `prefetch` and about 1.5-4.5 s for `ensure` and `fetch`.
 - **prefetch opens at once.** `$CE open $U/prefetch/issues; $CE wait --role link --name '/^#41 /'; $CE click --role link --name '/^#41 /'; $CE eval "$PAGE"` is `issue` right away; the title fills in about 3 s later.
 - **ensure waits once.** Same with `/ensure/`: `list` right after the click, `issue` once the data lands. Then `$CE click --role link --name Issues --exact`, wait for the rows, note `$CE eval "$RPC"`, click `#41` again: `issue` at once, and `$RPC` hasn't grown.
 - **fetch waits every time.** Same with `/fetch/`: the second click on `#41` shows `list` again until the refresh lands, and `$RPC` grows.
@@ -41,6 +41,8 @@ Commands:
 ## Gotchas
 
 - The URL changes as soon as you click, before `ensure` or `fetch` finish: check what's on screen (`$PAGE`), not `location.pathname`.
-- The router reruns a revisited route's loader before showing it (`defaultStaleReloadMode: "blocking"`, `defaultPreloadStaleTime: 0`). Without that it would show the route's last loader data and rerun the loader behind it, and `fetch` would never wait.
+- TanStack Start: the router reruns a revisited route's loader before showing it (`defaultStaleReloadMode: "blocking"`, `defaultPreloadStaleTime: 0`). Without that it would show the route's last loader data and rerun the loader behind it, and `fetch` would never wait.
+- React Router: loaders run on the server for every navigation, each in a new request registry, so `ensure` never finds a result and waits every time, like `fetch`. **ensure waits once** doesn't hold there: the second click on `#41` shows `list` again until `<path>.data` lands. The data comes in `.data` responses, so `$RPC` doesn't grow under any verb; count `performance.getEntriesByType("resource").filter(e => new URL(e.name).pathname.endsWith(".data")).length` instead.
+- React Router: an `ensure` or `fetch` page's first HTML still has skeletons for sections whose data was ready: React outlines finished sections once the shell passes 12.8 KB (see [server rendering](server-rendering.md)). The content follows in the same response, so assert on when the response starts, as in **First HTML**.
 - A missing issue is not a 404 under any verb: `ensure` and `fetch` settle with the `IssueNotFound` failure and the page's boundary shows it (see [error boundaries](error-boundaries.md)).
 - Scrolling far down the list can load its next page; those row skeletons belong to the list, not to the next page.
