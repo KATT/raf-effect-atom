@@ -53,8 +53,10 @@ export interface CardAssets {
 }
 
 /**
- * The orbit behind the text: the logo's, drawn at the card's scale. The
- * electron sits on the outer orbit, where it clears the text.
+ * The orbit behind the text: the logo's, drawn at the card's scale, at half
+ * opacity and fading out toward the text on the left. The electron sits on
+ * the outer orbit, where it clears the text. The fade is drawn here rather
+ * than as a CSS mask on the card, which resvg would composite on every card.
  */
 export const orbitSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
 	<defs>
@@ -66,13 +68,22 @@ export const orbitSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12
 			<stop offset="0" stop-color="${colors.violet}" stop-opacity="0.55" />
 			<stop offset="1" stop-color="${colors.violet}" stop-opacity="0" />
 		</radialGradient>
+		<linearGradient id="fade" x1="1200" y1="0" x2="0" y2="0" gradientUnits="userSpaceOnUse">
+			<stop offset="0.2" stop-color="#fff" />
+			<stop offset="0.7" stop-color="#fff" stop-opacity="0" />
+		</linearGradient>
+		<mask id="fade-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="1200" height="630">
+			<rect width="1200" height="630" fill="url(#fade)" />
+		</mask>
 	</defs>
-	<g transform="rotate(-35 930 315)">
-		<ellipse cx="930" cy="315" rx="400" ry="160" fill="none" stroke="url(#orbit)" stroke-width="4" />
-		<ellipse cx="930" cy="315" rx="300" ry="110" fill="none" stroke="url(#orbit)" stroke-width="2" stroke-opacity="0.45" />
+	<g mask="url(#fade-mask)" opacity="0.5">
+		<g transform="rotate(-35 930 315)">
+			<ellipse cx="930" cy="315" rx="400" ry="160" fill="none" stroke="url(#orbit)" stroke-width="4" />
+			<ellipse cx="930" cy="315" rx="300" ry="110" fill="none" stroke="url(#orbit)" stroke-width="2" stroke-opacity="0.45" />
+		</g>
+		<circle cx="1128" cy="360" r="70" fill="url(#electron-glow)" />
+		<circle cx="1128" cy="360" r="15" fill="${colors.violet}" stroke="${colors.background}" stroke-width="5" />
 	</g>
-	<circle cx="1128" cy="360" r="70" fill="url(#electron-glow)" />
-	<circle cx="1128" cy="360" r="15" fill="${colors.violet}" stroke="${colors.background}" stroke-width="5" />
 </svg>`;
 
 /** The fonts carry Latin only: emoji would render as a missing glyph. Code spans lose their backticks. */
@@ -121,8 +132,6 @@ const backdrop = (assets: CardAssets) => [
 		src: assets.orbit,
 		style: {
 			left: 0,
-			maskImage: "linear-gradient(to left, white 20%, transparent 70%)",
-			opacity: 0.5,
 			position: "absolute",
 			top: 0,
 		},
