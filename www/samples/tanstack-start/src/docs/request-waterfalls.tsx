@@ -83,8 +83,10 @@ function AssigneeCell(props: { issueId: IssueId }) {
 		useIssueBoundary().wrap(useWaterfall(assignee(props.issueId))),
 	);
 	if (AsyncResult.isFailure(result)) {
-		// RpcClientError: the boundaries took IssueNotFound and Unauthorized.
-		return <td>Couldn't load the assignee.</td>;
+		// useAtomResult throws defects, so a failure it returns has a typed error.
+		const error = Option.getOrThrow(AsyncResult.error(result));
+		//    ^?
+		return <td>Couldn't load the assignee: {error.reason.message}</td>;
 	}
 	return <td>{result.value.name}</td>;
 }
