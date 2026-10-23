@@ -56,6 +56,11 @@
 				"config": ["release-it/*.json"],
 			},
 		},
+		"examples/.shared/ui": {
+			// `package.json` exports are the shadcn kit. Components are added
+			// with the CLI and stay available to the apps.
+			"includeEntryExports": false,
+		},
 		"examples/.shared/backend": {
 			// Its entry is for the example apps' server-only RPC routes, which
 			// don't exist yet. Remove this once the first app imports it.
