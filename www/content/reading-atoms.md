@@ -17,7 +17,7 @@ A component that reads an atom takes its handle as a prop, not the id it was bui
 
 A handle is plain data, so it goes through loader data and server component props unchanged. In development, `useAtomResult` throws when the atom the source makes from the handle's arguments has a different key from the handle's, such as a handle passed with the wrong source.
 
-An event handler makes a handle with `Loader.make(registry).prefetch(source, ...args)`, and keeps it in state for the component that reads it. A value that exists only in render, such as a debounced query, gets one from [`useWaterfall`](./request-waterfalls.md#render-time-inputs-usewaterfall).
+An event handler makes a handle with `Loader.make(registry).prefetch(source, ...args)`, and keeps it in state for the component that reads it. A value that exists only in render, such as an id read from another atom's result, gets one from [`useWaterfall`](./request-waterfalls.md#render-time-inputs-usewaterfall).
 
 ## Failures
 

@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RpcRouteImport } from './routes/rpc'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as IssuesIdRouteImport } from './routes/issues.$id'
 
 const RpcRoute = RpcRouteImport.update({
   id: '/rpc',
   path: '/rpc',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IssuesIdRoute = IssuesIdRouteImport.update({
@@ -25,27 +31,31 @@ const IssuesIdRoute = IssuesIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/rpc': typeof RpcRoute
+  '/search': typeof SearchRoute
   '/issues/$id': typeof IssuesIdRoute
 }
 export interface FileRoutesByTo {
   '/rpc': typeof RpcRoute
+  '/search': typeof SearchRoute
   '/issues/$id': typeof IssuesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/rpc': typeof RpcRoute
+  '/search': typeof SearchRoute
   '/issues/$id': typeof IssuesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/rpc' | '/issues/$id'
+  fullPaths: '/rpc' | '/search' | '/issues/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/rpc' | '/issues/$id'
-  id: '__root__' | '/rpc' | '/issues/$id'
+  to: '/rpc' | '/search' | '/issues/$id'
+  id: '__root__' | '/rpc' | '/search' | '/issues/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   RpcRoute: typeof RpcRoute
+  SearchRoute: typeof SearchRoute
   IssuesIdRoute: typeof IssuesIdRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/rpc'
       fullPath: '/rpc'
       preLoaderRoute: typeof RpcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/issues/$id': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   RpcRoute: RpcRoute,
+  SearchRoute: SearchRoute,
   IssuesIdRoute: IssuesIdRoute,
 }
 export const routeTree = rootRouteImport

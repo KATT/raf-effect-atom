@@ -100,6 +100,16 @@ Loaders start what the URL names. The example apps' issue list keeps its status 
 > [!TIP]
 > A page number, a filter, the selected item or a dialog that shows data goes in the URL: in search params ([TanStack Router](https://tanstack.com/router/latest/docs/framework/react/guide/search-params), [Next.js](https://nextjs.org/docs/app/api-reference/file-conventions/page#searchparams-optional), [React Router](https://reactrouter.com/api/hooks/useSearchParams)), or for a dialog, in a route of its own, shown over the page with [route masking](https://tanstack.com/router/latest/docs/framework/react/guide/route-masking) in TanStack Router or [parallel](https://nextjs.org/docs/app/api-reference/file-conventions/parallel-routes#modals) and [intercepting routes](https://nextjs.org/docs/app/api-reference/file-conventions/intercepting-routes) in Next.js. The loader then starts its atoms with the page's, and a link opens it, a reload keeps it and the back button closes it.
 
+### Search as you type
+
+A search box's text is URL state too. Keep it in a search param, start the search in the loader, and have the input replace the param:
+
+```sample
+tanstack-start/src/routes/search.tsx#search
+```
+
+Each keystroke navigates, and the loader starts the search for the text the URL holds. To search less often, debounce the [`navigate`](https://tanstack.com/router/latest/docs/framework/react/guide/navigation#usenavigate) call.
+
 ## Inputs only the browser has
 
 Some inputs never reach the server: a one-time token in the URL's fragment, or an OAuth callback the browser erases from the address bar before anything reads it. A loader on the server can't start what they pick, and setting them in an atom after hydration starts the read during a render instead.
@@ -115,21 +125,15 @@ tanstack-start/src/docs/request-waterfalls.tsx#browser-only
 
 ## Escape hatches
 
-What's left is state that shouldn't be in the URL, such as each keystroke in a search box. Two escape hatches start its atoms, and both start the request later than a loader would.
+What's left is an input no loader can know: a choice a click or a submit makes that doesn't belong in the URL, or an id only a render finds.
 
 ### Event handlers
 
-When an event handler changes the state that picks the data, it can start the atom before the state change that renders its reader. `Loader.make(registry)` gives a handler the same verbs a loader has, so a click or a submit calls `prefetch` in its handler. Search-as-you-type debounces instead: the URL can hold a submitted query, but not every keystroke, so a timer starts each search once the typing stops:
-
-```sample
-tanstack-start/src/docs/request-waterfalls.tsx#event-handler
-```
-
-The timer starts after the render that shows the keystroke, so the request starts after a render, but before the one that renders its reader. The effect's cleanup resets the timer on each keystroke and on unmount, and the transition keeps the previous results on screen until the next ones are in.
+When a click or a submit picks the data, the handler starts the atom with `Loader.make(registry).prefetch`, which gives it the same verbs a loader has, and keeps the handle in state for the component that reads it. The request starts with the event, before the render that shows it, so it isn't a waterfall.
 
 ### Render-time inputs: useWaterfall
 
-When an input exists only in render, such as a value a hook debounces, no loader or handler can start the atom. `useWaterfall(source, ...args)` starts it during render, like `prefetch`, and returns its handle, so the read looks like one fed by a loader:
+When an input exists only in render, such as an id a component reads from another atom's result, no loader or handler can start the atom. `useWaterfall(source, ...args)` starts it during render, like `prefetch`, and returns its handle, so the read looks like one fed by a loader:
 
 ```sample
 tanstack-start/src/docs/request-waterfalls.tsx#use-waterfall
@@ -137,7 +141,7 @@ tanstack-start/src/docs/request-waterfalls.tsx#use-waterfall
 
 It starts the atom only if nothing has, so re-renders don't request it again, and it waits for a result the server is still streaming. Pass it the source a loader would, not a boundary's `wrap` of it: the wrapped atoms have no serialization key, so the server couldn't send them.
 
-The name is the warning: each call is a round trip after the render that found the input. Search a codebase for `useWaterfall` and you have a list of its waterfalls.
+The name is the warning: each call is a round trip after the render that found the input. Search a codebase for `useWaterfall` and you have a list of its waterfalls. It isn't for typed input, where it would start a request for every value the input passes through: put that [in the URL](#search-as-you-type).
 
 ## Finding waterfalls in development
 
@@ -170,9 +174,9 @@ Lazy route components are another waterfall: the code has to download before it 
 ## Summary
 
 - Start atoms in loaders and server components, never in render, and pass their handles to the components that read them.
-- Put the state that picks data in the URL: search params, and routes for dialogs.
+- Put the state that picks data in the URL: search params, a search box's text included, and routes for dialogs.
 - Start every atom before awaiting any, and give `Effect.all` a `concurrency`.
 - Shape data so a route's inputs come from the URL, not from other atoms.
 - Start what browser-only inputs pick, such as a token in the URL's fragment, in a client-only route's loader.
-- For state that can't be in the URL, start atoms in the event handler that changes it, or with `useWaterfall`, and treat each one as a known cost.
+- Start an atom a click or a submit picks in its handler, and one whose input only a render finds with `useWaterfall`, a known cost.
 - Keep `<WaterfallDetection mode="throw">` in the root layout, so development finds the rest.

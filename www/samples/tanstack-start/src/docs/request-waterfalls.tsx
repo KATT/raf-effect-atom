@@ -11,11 +11,11 @@ import {
 	useAtomResult,
 	useWaterfall,
 } from "raf-effect-atom";
-import { startTransition, Suspense, use, useEffect, useState } from "react";
-import { RegistryContext, useAtomSuspense } from "@effect/atom-react";
+import { Suspense } from "react";
+import { useAtomSuspense } from "@effect/atom-react";
 
-import { useAuthBoundary } from "~/boundaries.tsx";
-import { assignee, issue, searchIssues } from "~/issues.ts";
+import { useAuthBoundary, useIssueBoundary } from "~/boundaries.tsx";
+import { assignee, issue } from "~/issues.ts";
 
 declare const atoms: Loader.Loader;
 declare const id: IssueId;
@@ -23,8 +23,6 @@ declare const id: IssueId;
 declare const connection: (token: string) => ReturnType<typeof issue>;
 /** A user by id, from an API the app can't reshape. */
 declare const user: (id: UserId) => ReturnType<typeof assignee>;
-/** `value`, once it has stopped changing for `ms`. */
-declare function useDebouncedValue<A>(value: A, ms: number): A;
 
 // #region fetch-on-render
 // Each component builds its atom from an id with Effect Atom's own hook, so
@@ -125,97 +123,25 @@ function Connection(props: { connection: Handle<typeof connection> }) {
 }
 // #endregion browser-only
 
-// #region event-handler
-// Each keystroke doesn't belong in the URL, so a debounce starts the search
-// once the text stops changing, then renders its handle in a transition,
-// which keeps the previous results on screen until the new ones are in.
-function IssueSearch() {
-	const registry = use(RegistryContext);
-	const [text, setText] = useState("");
-	const [search, setSearch] = useState<Handle<typeof searchIssues>>();
-	useEffect(() => {
-		const timeout = setTimeout(() => {
-			startTransition(() => {
-				setSearch(
-					text === ""
-						? undefined
-						: Loader.make(registry).prefetch(searchIssues, text),
-				);
-			});
-		}, 300);
-		return () => clearTimeout(timeout);
-	}, [registry, text]);
+// #region use-waterfall
+// The user's id is in the issue, so only a render that has the issue knows it.
+function IssueAssignee(props: { issue: Handle<typeof issue> }) {
+	const result = useAtomResult(useIssueBoundary().wrap(issue), props.issue);
 	return (
-		<search>
-			<input
-				aria-label="Search issues"
-				onChange={(event) => {
-					setText(event.target.value);
-				}}
-				type="search"
-				value={text}
-			/>
-			{search === undefined ? null : (
-				<Suspense fallback={<p>Searching…</p>}>
-					<SearchResults search={search} />
-				</Suspense>
-			)}
-		</search>
+		<Suspense fallback={<p>Loading the user…</p>}>
+			<UserName id={result.value.assigneeId} />
+		</Suspense>
 	);
 }
 
-function SearchResults(props: { search: Handle<typeof searchIssues> }) {
-	// The app and auth boundaries claim RpcClientError and Unauthorized.
+function UserName(props: { id: UserId }) {
+	// The issue, auth and app boundaries claim IssueNotFound, Unauthorized and
+	// RpcClientError.
 	const result = useAtomResult(
 		//    ^?
-		useAuthBoundary().wrap(searchIssues),
-		props.search,
+		useIssueBoundary().wrap(user),
+		useWaterfall(user, props.id),
 	);
-	return (
-		<ul>
-			{result.value.map((found) => (
-				<li key={found.id}>{found.title}</li>
-			))}
-		</ul>
-	);
-}
-// #endregion event-handler
-
-// #region use-waterfall
-// The query exists only in render: it's the input's text, debounced.
-function DebouncedSearch() {
-	const [text, setText] = useState("");
-	const query = useDebouncedValue(text, 300);
-	return (
-		<search>
-			<input
-				aria-label="Search issues"
-				onChange={(event) => {
-					setText(event.target.value);
-				}}
-				type="search"
-				value={text}
-			/>
-			{query === "" ? null : (
-				<Suspense fallback={<p>Searching…</p>}>
-					<DebouncedResults query={query} />
-				</Suspense>
-			)}
-		</search>
-	);
-}
-
-function DebouncedResults(props: { query: string }) {
-	const result = useAtomResult(
-		useAuthBoundary().wrap(searchIssues),
-		useWaterfall(searchIssues, props.query),
-	);
-	return (
-		<ul>
-			{result.value.map((found) => (
-				<li key={found.id}>{found.title}</li>
-			))}
-		</ul>
-	);
+	return <p>{result.value.name}</p>;
 }
 // #endregion use-waterfall
