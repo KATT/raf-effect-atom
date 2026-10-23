@@ -59,8 +59,10 @@ describe("loadOgRenderer", () => {
 					url: "https://raf-effect-atom.katt.dev/docs/loader-verbs",
 				}),
 			];
-			for (const card of cards) {
-				const png = yield* render(card);
+			const pngs = yield* Effect.forEach(cards, render, {
+				concurrency: "unbounded",
+			});
+			for (const png of pngs) {
 				expect(pngSize(png)).toEqual({ height: 630, width: 1200 });
 			}
 		}).pipe(Effect.provide(NodeServices.layer)),
