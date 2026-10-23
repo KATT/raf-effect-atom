@@ -19,3 +19,11 @@
 - Project settings live in Vercel, as in raf-query: GitHub `KATT/raf-effect-atom`, `ENABLE_EXPERIMENTAL_COREPACK=1` in every environment (so Vercel's install uses `packageManager`'s pnpm), "skip unaffected projects" on, no Vercel Authentication. Pushes to `main` deploy to production.
 - The TanStack Start apps build with Nitro's `nitro()` Vite plugin, which writes Vercel Build Output on Vercel. `www` is fully prerendered, so it serves from the CDN with no functions.
 - Planned hostnames (the human sets them): `raf-effect-atom.katt.dev` (docs), `tanstack-start.raf-effect-atom.katt.dev`, `nextjs.raf-effect-atom.katt.dev`, `react-router.raf-effect-atom.katt.dev`. Verify against the project settings before linking any of them.
+- Projects that exist, in the `trpc` team (checked 2026-10-23 with the Vercel API and against the live hostnames):
+
+  | App                       | Vercel project                   | Production hostname                       |
+  | ------------------------- | -------------------------------- | ----------------------------------------- |
+  | `www`                     | `raf-effect-atom`                | `raf-effect-atom.katt.dev`                |
+  | `examples/tanstack-start` | `raf-effect-atom-tanstack-start` | `tanstack-start.raf-effect-atom.katt.dev` |
+
+  Add a row when a project is created. Each project's other hostnames are Vercel's own `*.vercel.app` ones.
