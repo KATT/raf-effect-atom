@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, Pencil } from "lucide-react";
+import { ArrowLeft, ArrowRight, Code, Pencil } from "lucide-react";
 import { useAtomResult } from "raf-effect-atom";
 
 import { DocBody } from "~/components/doc-body.tsx";
@@ -96,12 +96,22 @@ function DocPage() {
 				</header>
 				<DocBody segments={doc.segments} />
 				<footer className="mt-12 grid gap-6 border-t pt-6">
-					<a
-						className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-						href={`${site.github}/edit/main/www/content/${doc.slug}.md`}
-					>
-						<Pencil className="size-3.5" /> Edit this page on GitHub
-					</a>
+					{doc.generatedFrom === undefined ? (
+						<a
+							className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+							href={`${site.github}/edit/main/www/content/${doc.slug}.md`}
+						>
+							<Pencil className="size-3.5" /> Edit this page on GitHub
+						</a>
+					) : (
+						<a
+							className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+							href={`${site.github}/tree/main/${doc.generatedFrom}`}
+						>
+							<Code className="size-3.5" /> Generated from the JSDoc in{" "}
+							{doc.generatedFrom}
+						</a>
+					)}
 					<nav aria-label="Pagination" className="grid gap-3 sm:grid-cols-2">
 						{around.previous ? (
 							<Link

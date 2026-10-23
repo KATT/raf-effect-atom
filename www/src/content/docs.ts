@@ -1,5 +1,6 @@
 import { Effect, Schema } from "effect";
 import { AsyncResult, Atom } from "effect/reactivity";
+import { pages as apiPages } from "virtual:docs-api";
 import { sections } from "virtual:docs-manifest";
 
 import { Doc, type DocMeta } from "./types.ts";
@@ -43,7 +44,7 @@ const DocResult = AsyncResult.Schema({ error: Schema.Never, success: Doc });
 function makeDocAtom(slug: string) {
 	return Atom.make(
 		Effect.promise(async () => {
-			const load = pages[`/content/${slug}.md`];
+			const load = pages[`/content/${slug}.md`] ?? apiPages[slug];
 			if (!load) {
 				throw new Error(`No page "${slug}"`);
 			}

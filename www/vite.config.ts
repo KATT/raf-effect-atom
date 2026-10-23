@@ -16,6 +16,8 @@ import { sections, site } from "./src/site.ts";
 
 const contentDir = new URL("content", import.meta.url).pathname;
 const samplesDir = new URL("samples", import.meta.url).pathname;
+const packagesDir = new URL("../packages", import.meta.url).pathname;
+const repoRoot = new URL("..", import.meta.url).pathname;
 const demosDir = new URL("src/demos", import.meta.url).pathname;
 // Vercel keeps `node_modules` between builds, and CI caches this dir.
 const twoslashCacheDir = new URL(
@@ -24,7 +26,9 @@ const twoslashCacheDir = new URL(
 ).pathname;
 const lockfile = new URL("../pnpm-lock.yaml", import.meta.url).pathname;
 const pages = await Effect.runPromise(
-	docPages({ contentDir, samplesDir }).pipe(Effect.provide(NodeServices.layer)),
+	docPages({ contentDir, packagesDir, repoRoot, samplesDir }).pipe(
+		Effect.provide(NodeServices.layer),
+	),
 );
 
 /** The site's HTML pages: the home page and each docs page. */
@@ -37,6 +41,8 @@ export default defineConfig({
 			contentDir,
 			demosDir,
 			demosUrl: `${site.github}/blob/main/www/src/demos`,
+			packagesDir,
+			repoRoot,
 			samplesDir,
 			sections,
 			siteUrl: site.url,

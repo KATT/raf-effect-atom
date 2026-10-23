@@ -1,4 +1,4 @@
-import { Schema } from "effect";
+import { Predicate, Schema } from "effect";
 import MiniSearch, { type Options, type SearchResult } from "minisearch";
 import { stemmer } from "stemmer";
 
@@ -19,6 +19,12 @@ export interface SearchPage {
 	}>;
 	readonly slug: string;
 	readonly title: string;
+	/**
+	 * Scales the scores of the page and its headings, 1 by default. The API
+	 * reference's pages weigh less, so a guide that explains a word ranks
+	 * above the exports whose names hold it.
+	 */
+	readonly weight?: number | undefined;
 }
 
 /** A page, or a heading on one. */
@@ -36,6 +42,7 @@ interface SearchDocument extends SearchHit {
 	readonly description: string;
 	/** The page's title, on its headings. */
 	readonly page: string;
+	readonly weight: number | undefined;
 }
 
 const stopWords = new Set(
@@ -93,13 +100,15 @@ const indexOptions: Options<SearchDocument> = {
 	processTerm: (word) => [...processIndexedTerm(word)],
 	searchOptions: {
 		boost: { body: 1, description: 2, page: 0.5, title: 6 },
-		boostDocument: (id: string) => (id.includes("#") ? 1 : 1.5),
+		boostDocument: (id: string, _term, stored) =>
+			(Predicate.isNumber(stored?.["weight"]) ? stored["weight"] : 1) *
+			(id.includes("#") ? 1 : 1.5),
 		fuzzy: (term) => maxTypos(term) || false,
 		prefix: (term) => term.length >= 3,
 		processTerm,
 		tokenize: (text) => [...words(text)],
 	},
-	storeFields: ["context", "hash", "slug", "title"],
+	storeFields: ["context", "hash", "slug", "title", "weight"],
 	// Identifiers are indexed whole and by part, so `error` finds
 	// `RpcClientError` and `useAtomResult` finds itself.
 	tokenize: (text) =>
@@ -123,6 +132,7 @@ export function buildSearchIndex(pages: ReadonlyArray<SearchPage>): string {
 					page: "",
 					slug: page.slug,
 					title: page.title,
+					weight: page.weight,
 				},
 				...page.headings.map((heading) => ({
 					body: body(heading.id),
@@ -133,6 +143,7 @@ export function buildSearchIndex(pages: ReadonlyArray<SearchPage>): string {
 					page: page.title,
 					slug: page.slug,
 					title: heading.text,
+					weight: page.weight,
 				})),
 			];
 		}),
@@ -321,6 +332,19 @@ function toHit(result: SearchResult): SearchHit {
 }
 
 /**
+ * The API name a query spells, such as `useAtomResult` or `Loader.make()`,
+ * lowercased: a heading with that title ranks first. A lone lowercase word
+ * (`ensure`) is a search for the concept as much as for the name.
+ */
+function nameOf(query: string): string | undefined {
+	const name = query.trim().replace(/\(\)$/, "");
+	return /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(name) &&
+		/[A-Z.]/.test(name)
+		? name.toLowerCase()
+		: undefined;
+}
+
+/**
  * Pages and headings for `query`, best first. Every part of it must match, by
  * its stem, a typo, its start, or a synonym; when no hit matches them all,
  * hits that match any are ranked by their sum.
@@ -353,8 +377,13 @@ export function searchDocs(
 	};
 	const all = combine(true);
 	const results = all.length > 0 ? all : combine(false);
+	const named = nameOf(query);
+	const names = (hit: { readonly result: SearchResult }) =>
+		named !== undefined && String(hit.result["title"]).toLowerCase() === named
+			? 1
+			: 0;
 	return results
-		.toSorted((a, b) => b.score - a.score)
+		.toSorted((a, b) => names(b) - names(a) || b.score - a.score)
 		.slice(0, limit)
 		.map((hit) => toHit(hit.result));
 }

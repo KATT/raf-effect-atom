@@ -18,6 +18,13 @@ declare module "sample:*" {
 	export default sample;
 }
 
+declare module "virtual:docs-api" {
+	import type { Doc } from "~/content/types.ts";
+
+	/** The API reference's pages, which have no file, by slug. */
+	export const pages: Record<string, () => Promise<{ default: Doc }>>;
+}
+
 declare module "virtual:docs-search" {
 	/** The search index's JSON, for `loadSearchIndex`. */
 	const index: string;

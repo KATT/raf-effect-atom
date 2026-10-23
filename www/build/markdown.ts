@@ -4,7 +4,7 @@ import {
 	rendererRich,
 	type TwoslashShikiFunction,
 } from "@shikijs/twoslash/core";
-import { Effect, FileSystem, Path } from "effect";
+import { Effect, FileSystem, Path, Predicate } from "effect";
 import GithubSlugger from "github-slugger";
 import type { Element, ElementContent, Root as HastRoot } from "hast";
 import { toHtml } from "hast-util-to-html";
@@ -12,9 +12,11 @@ import { toString } from "hast-util-to-string";
 import type {
 	Blockquote,
 	Code,
+	Heading,
 	Link,
 	Root as MdastRoot,
 	Paragraph,
+	Parent as MdastParent,
 } from "mdast";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
@@ -30,6 +32,7 @@ import { visit } from "unist-util-visit";
 
 import type { DocHeading, DocSegment } from "../src/content/types.ts";
 import { site } from "../src/site.ts";
+import type { ApiLinks } from "./api-pages.ts";
 import { collapseRegions } from "./collapse.ts";
 import { ContentError, messageOf } from "./content-error.ts";
 import { appOf, sampleApps } from "./sample-apps.ts";
@@ -101,11 +104,93 @@ function remarkAlerts() {
 function remarkDocLinks() {
 	return (tree: MdastRoot) => {
 		visit(tree, "link", (node: Link) => {
-			const match = /^(?:\.\/)?([\w-]+)\.md(#[\w-]+)?$/.exec(node.url);
+			const match = /^(?:\.\/)?([\w-]+)\.md(#[\w.-]+)?$/.exec(node.url);
 			if (match) {
 				node.url = `/docs/${match[1]}${match[2] ?? ""}`;
 			}
 		});
+	};
+}
+
+/**
+ * A heading ending in `{#id}` gets that id instead of one from its text, so
+ * the API reference's anchors are the names they document: `#Loader.ensure`.
+ */
+function remarkHeadingIds() {
+	return (tree: MdastRoot) => {
+		visit(tree, "heading", (node: Heading) => {
+			const last = node.children.at(-1);
+			const match =
+				last?.type === "text" ? /\s*\{#([\w.-]+)\}\s*$/.exec(last.value) : null;
+			if (!last || last.type !== "text" || !match) {
+				return;
+			}
+			last.value = last.value.slice(0, match.index);
+			if (!last.value) {
+				node.children.pop();
+			}
+			node.data = {
+				...node.data,
+				hProperties: { ...node.data?.hProperties, id: match[1] },
+			};
+		});
+	};
+}
+
+/** `useAtomResult`, `Loader.ensure()`, `<AtomErrorBoundary>`: the name in it. */
+const apiMention =
+	/^<?([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)(?:\(\))?(?:\s*\/?>)?$/;
+
+/**
+ * Links inline code that names an export to its entry in the API reference:
+ * its first mention on a page, or in each section with `perSection`. Code in
+ * headings and links stays as it is, and so does a section's own name.
+ */
+function remarkApiLinks(links: ApiLinks | undefined, perSection: boolean) {
+	return () => (tree: MdastRoot) => {
+		if (!links?.size) {
+			return;
+		}
+		let linked = new Set<string>();
+		let section: unknown;
+		const walk = (parent: MdastParent) => {
+			for (const [index, node] of parent.children.entries()) {
+				if (node.type === "link" || node.type === "linkReference") {
+					continue;
+				}
+				if (node.type === "inlineCode") {
+					const name = apiMention.exec(node.value)?.[1];
+					// A lone lowercase word, such as `fetch` or `ensure`, is as often
+					// the browser's `fetch` or a verb in prose: a page links those
+					// itself.
+					const url =
+						name === undefined || /^[a-z]+$/.test(name)
+							? undefined
+							: links.get(name);
+					if (
+						name !== undefined &&
+						url !== undefined &&
+						!linked.has(name) &&
+						url.split("#")[1] !== section
+					) {
+						linked.add(name);
+						parent.children[index] = { children: [node], type: "link", url };
+					}
+				} else if ("children" in node) {
+					walk(node);
+				}
+			}
+		};
+		for (const child of tree.children) {
+			if (child.type === "heading") {
+				if (perSection) {
+					linked = new Set();
+				}
+				section = child.data?.hProperties?.["id"];
+			} else if ("children" in child) {
+				walk(child);
+			}
+		}
 	};
 }
 
@@ -162,7 +247,9 @@ function rehypeHeadings(headings: Array<DocHeading>) {
 				return;
 			}
 			const text = toString(node).trim();
-			const id = slugger.slug(text);
+			const id = Predicate.isString(node.properties.id)
+				? node.properties.id
+				: slugger.slug(text);
 			node.properties.id = id;
 			headings.push({ depth: node.tagName === "h2" ? 2 : 3, id, text });
 			node.children = [
@@ -264,6 +351,12 @@ function rehypeExternalLinks() {
 	};
 }
 
+/** An export's kind, category and source link in the API reference. */
+function isApiMeta(node: Element) {
+	const className = node.properties.className;
+	return Array.isArray(className) && className.includes("api-meta");
+}
+
 interface TextSection {
 	readonly id: string | undefined;
 	readonly text: string;
@@ -279,7 +372,11 @@ function rehypeSections(sections: Array<TextSection>) {
 			{ id: undefined, texts: [] },
 		];
 		for (const node of tree.children) {
-			if (node.type !== "element" || node.tagName === "pre") {
+			if (
+				node.type !== "element" ||
+				node.tagName === "pre" ||
+				isApiMeta(node)
+			) {
 				continue;
 			}
 			if (node.tagName === "h2" || node.tagName === "h3") {
@@ -625,6 +722,10 @@ const twoslashTransformer = Effect.fn("twoslashTransformer")(function* (
 });
 
 export interface RenderOptions {
+	/** Where the API names the page's inline code may mention are documented. */
+	readonly apiLinks?: ApiLinks | undefined;
+	/** Link an API name's first mention in each section, not only the page's. */
+	readonly apiLinksPerSection?: boolean | undefined;
 	/** The dir of the sample apps the code blocks compile in. */
 	readonly samplesDir: string;
 	/** Where compiled blocks are kept between renders and builds. */
@@ -649,7 +750,9 @@ export const renderMarkdown = Effect.fn("renderMarkdown")(function* (
 		.use(remarkParse)
 		.use(remarkGfm)
 		.use(remarkAlerts)
+		.use(remarkHeadingIds)
 		.use(remarkDocLinks)
+		.use(remarkApiLinks(options.apiLinks, options.apiLinksPerSection ?? false))
 		.use(remarkDemos(demos))
 		.use(remarkCodeMeta)
 		.use(remarkRehype, { allowDangerousHtml: true })

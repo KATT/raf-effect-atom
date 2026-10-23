@@ -17,6 +17,8 @@ const docMetaFields = {
 	/** Ids of the demos the page embeds, so its loader can prefetch them. */
 	demos: Schema.Array(Schema.String),
 	description: Schema.String,
+	/** For the API reference: what the page is generated from, from the repository's root. */
+	generatedFrom: Schema.optional(Schema.String),
 	headings: Schema.Array(DocHeading),
 	/** ISO date of the source file's last commit, when git knows it. */
 	lastModified: Schema.optional(Schema.String),

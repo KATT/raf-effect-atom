@@ -23,11 +23,11 @@ tanstack-start/src/docs/loader-verbs.ts#derived
 
 [`Atom.swr`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/reactivity/Atom.ts) points at the atom it wraps the same way, so over a query with `reactivityKeys`, assign `initialValueTarget: query` to what it returns. `Atom.setIdleTTL`, `Atom.keepAlive` and `Atom.withLabel` copy the atom, serialization key included. An atom that picks between a value the page already has and a live query takes `Atom.serializable` itself, and the server sends whichever it picked.
 
-| Verb       | Starts the atom                          | Waits                             | When the atom has a result | Returns         |
-| ---------- | ---------------------------------------- | --------------------------------- | -------------------------- | --------------- |
-| `prefetch` | if it isn't in the registry              | never                             | leaves it alone            | a handle        |
-| `ensure`   | if it isn't in the registry              | only while the atom has no result | returns it at once         | a loaded handle |
-| `fetch`    | yes, and refreshes it if it has a result | until the new result settles      | refreshes it, then waits   | a loaded handle |
+| Verb                                                   | Starts the atom                          | Waits                             | When the atom has a result | Returns         |
+| ------------------------------------------------------ | ---------------------------------------- | --------------------------------- | -------------------------- | --------------- |
+| [`prefetch`](./api-raf-effect-atom.md#Loader.prefetch) | if it isn't in the registry              | never                             | leaves it alone            | a handle        |
+| [`ensure`](./api-raf-effect-atom.md#Loader.ensure)     | if it isn't in the registry              | only while the atom has no result | returns it at once         | a loaded handle |
+| [`fetch`](./api-raf-effect-atom.md#Loader.fetch)       | yes, and refreshes it if it has a result | until the new result settles      | refreshes it, then waits   | a loaded handle |
 
 - Use `prefetch` for data the route needs but its loader doesn't: it streams in while the page renders.
 - Use `ensure` when the loader needs the result, or the page shouldn't render without it.

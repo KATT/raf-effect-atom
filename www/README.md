@@ -52,6 +52,10 @@ Each compiled block is kept in `node_modules/.cache/twoslash` and reused while n
 
 Code outside the pages imports a region instead of writing a fence: `import hero from "sample:tanstack-start/src/routes/issues.$id.tsx#hero"` (the homepage does this).
 
+## API reference
+
+The API reference (`/docs/api` and a page per entrypoint) is generated on every build from the packages' `exports`, types and JSDoc (`build/api-reference.ts`, `build/api-pages.ts`); it has no files in `content/`. Each export's anchor is its name (`/docs/api-raf-effect-atom#Loader.ensure`), and inline code in any page that names an export links to it at its first mention. `pnpm test` fails when a public export has no JSDoc.
+
 ## Demos
 
 A fenced `demo` block embeds a live demo:

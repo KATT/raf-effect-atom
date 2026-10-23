@@ -8,6 +8,8 @@ import { parse as parseYaml } from "yaml";
 import type { Doc, DocMeta, DocSection, Sample } from "../src/content/types.ts";
 import { buildSearchIndex, type SearchPage } from "../src/search/docs-index.ts";
 import { site } from "../src/site.ts";
+import { apiLinks, apiPages, apiSection, type ApiLinks } from "./api-pages.ts";
+import { readApiReference } from "./api-reference.ts";
 import { stripCollapseMarkers } from "./collapse.ts";
 import { ContentError, messageOf } from "./content-error.ts";
 import { generateRouteTrees, generateRouteTypes } from "./sample-apps.ts";
@@ -21,6 +23,10 @@ import {
 export interface ContentDirs {
 	/** Directory of the `.md` pages, as an absolute path. */
 	readonly contentDir: string;
+	/** Directory of the packages the API reference documents. */
+	readonly packagesDir: string;
+	/** The repository's root, for the API reference's source links. */
+	readonly repoRoot: string;
 	/** Directory of the sample apps the pages' code blocks compile in. */
 	readonly samplesDir: string;
 }
@@ -59,8 +65,13 @@ type Frontmatter = typeof Frontmatter.Type;
 const decodeFrontmatter = Schema.decodeUnknownEffect(Frontmatter);
 
 interface Source {
+	/** The page's file, or `api:<slug>` for a page of the API reference. */
 	readonly file: string;
 	readonly frontmatter: Frontmatter;
+	/** For the API reference: what the page is generated from, from the repository's root. */
+	readonly generatedFrom?: string | undefined;
+	/** The path whose last commit is the page's last change. */
+	readonly history: string;
 	/** With `sample` fences expanded into `twoslash` blocks. */
 	readonly markdown: string;
 	readonly slug: string;
@@ -86,6 +97,12 @@ const resolvedManifestId = `\0${manifestId}`;
 /** The search index, a separate chunk the search dialog loads when it opens. */
 const searchId = "virtual:docs-search";
 const resolvedSearchId = `\0${searchId}`;
+/**
+ * The API reference's pages, which have no file: `virtual:docs-api` maps
+ * each slug to an import of `virtual:docs-api/<slug>`, its own chunk.
+ */
+const apiId = "virtual:docs-api";
+const resolvedApiId = `\0${apiId}`;
 
 /**
  * `import hero from "sample:<app>/<path>#region"` renders that region of a
@@ -128,6 +145,7 @@ const parseSource = Effect.fn("parseSource")(function* (
 	return {
 		file,
 		frontmatter,
+		history: file,
 		markdown: expanded.markdown,
 		slug: path.basename(file, ".md"),
 		snippets: expanded.files,
@@ -166,12 +184,50 @@ const readSources = Effect.fn("readSources")(function* (dirs: ContentDirs) {
 	);
 });
 
+/**
+ * The API reference's pages, generated from the packages, and the links the
+ * other pages' API names get.
+ */
+const readApiSources = Effect.fn("readApiSources")(function* (
+	dirs: ContentDirs,
+) {
+	const path = yield* Path.Path;
+	const reference = yield* readApiReference(dirs);
+	if (reference.undocumented.length) {
+		yield* Effect.logWarning(
+			`API reference: exports with no JSDoc: ${reference.undocumented.join(", ")}`,
+		);
+	}
+	const links = apiLinks(reference);
+	const sources = apiPages(reference, links).map((page): Source => ({
+		file: `api:${page.slug}`,
+		frontmatter: {
+			description: page.description,
+			order: page.order,
+			section: apiSection,
+			title: page.title,
+		},
+		generatedFrom: page.sourcePath,
+		history: path.join(
+			dirs.repoRoot,
+			page.sourcePath.endsWith(".ts") || page.sourcePath.endsWith(".tsx")
+				? path.dirname(page.sourcePath)
+				: page.sourcePath,
+		),
+		markdown: page.markdown,
+		slug: page.slug,
+		snippets: [],
+	}));
+	return { links, sources };
+});
+
 /** Pages for prerendering, the sitemap and the social cards. */
 export const docPages = Effect.fn("docPages")(function* (dirs: ContentDirs) {
+	const api = yield* readApiSources(dirs);
 	return yield* Effect.forEach(
-		yield* readSources(dirs),
+		[...(yield* readSources(dirs)), ...api.sources],
 		(source) =>
-			Effect.map(lastModified(source.file), (date) => ({
+			Effect.map(lastModified(source.history), (date) => ({
 				description: source.frontmatter.description,
 				lastModified: date,
 				path: `/docs/${source.slug}`,
@@ -181,6 +237,56 @@ export const docPages = Effect.fn("docPages")(function* (dirs: ContentDirs) {
 		{ concurrency: "unbounded" },
 	);
 });
+
+/**
+ * Fails on two headings with one id, and on a link to a page or a heading
+ * that doesn't exist, such as an anchor of an export the API reference no
+ * longer has.
+ */
+function checkLinks(docs: ReadonlyArray<Doc>) {
+	const anchors = new Map(
+		docs.map((doc) => [
+			doc.slug,
+			new Set(doc.headings.map((heading) => heading.id)),
+		]),
+	);
+	const duplicates = docs.flatMap((doc) => {
+		const ids = doc.headings.map((heading) => heading.id);
+		return ids
+			.filter((id, index) => ids.indexOf(id) !== index)
+			.map((id) => `${doc.slug}: two headings with the id "${id}"`);
+	});
+	const broken = docs.flatMap((doc) =>
+		doc.segments.flatMap((segment) =>
+			segment.kind === "html"
+				? Array.from(
+						segment.html.matchAll(/href="\/docs\/([\w-]+)(?:#([^"]*))?"/g),
+						([link, slug = "", hash]) => {
+							const ids = anchors.get(slug);
+							return ids &&
+								(hash === undefined || ids.has(decodeURIComponent(hash)))
+								? []
+								: [`${doc.slug}: ${link}`];
+						},
+					).flat()
+				: [],
+		),
+	);
+	if (duplicates.length || broken.length) {
+		throw new ContentError({
+			message: [
+				...duplicates,
+				...broken.map((link) => `${link} links to no page or heading`),
+			].join("\n"),
+		});
+	}
+}
+
+/**
+ * The search weight of the API reference's pages: an export whose name holds
+ * a word ranks below the guides about it, and still first for its own name.
+ */
+const apiWeight = 0.3;
 
 /** Runs a build step from one of Vite's hooks. */
 function run<A, E>(effect: Effect.Effect<A, E, NodeServices.NodeServices>) {
@@ -206,13 +312,33 @@ export function docsContent(options: ContentOptions): Plugin {
 	const twoslashCache =
 		options.twoslashCache && makeTwoslashCache(options.twoslashCache);
 	const rendered = new Map<string, Promise<Rendered>>();
+	let api:
+		| Promise<{
+				readonly links: ApiLinks;
+				readonly sources: ReadonlyArray<Source>;
+		  }>
+		| undefined;
+	const readApi = () => (api ??= run(readApiSources(options)));
+	/** The pages in `contentDir`, then the API reference's. */
+	async function allSources() {
+		const [pages, reference] = await Promise.all([
+			run(readSources(options)),
+			readApi(),
+		]);
+		return [...pages, ...reference.sources];
+	}
 	/** Each page's `twoslash` types, by file, for its markdown. */
 	const typeQueries = new Map<string, ReadonlyArray<ReadonlyArray<string>>>();
 
-	const renderDoc = Effect.fn("renderDoc")(function* (source: Source) {
+	const renderDoc = Effect.fn("renderDoc")(function* (
+		source: Source,
+		links: ApiLinks,
+	) {
 		const fs = yield* FileSystem.FileSystem;
 		const path = yield* Path.Path;
 		const result = yield* renderMarkdown(source.markdown, {
+			apiLinks: links,
+			apiLinksPerSection: source.generatedFrom !== undefined,
 			samplesDir,
 			twoslashCache,
 		}).pipe(
@@ -236,8 +362,9 @@ export function docsContent(options: ContentOptions): Plugin {
 			doc: {
 				demos: result.demos,
 				description: source.frontmatter.description,
+				generatedFrom: source.generatedFrom,
 				headings: result.headings,
-				lastModified: yield* lastModified(source.file),
+				lastModified: yield* lastModified(source.history),
 				section: source.frontmatter.section,
 				segments: result.segments,
 				slug: source.slug,
@@ -276,14 +403,16 @@ export function docsContent(options: ContentOptions): Plugin {
 		if (cached) {
 			return cached;
 		}
-		const doc = run(renderDoc(source));
+		const doc = readApi().then((reference) =>
+			run(renderDoc(source, reference.links)),
+		);
 		rendered.set(source.file, doc);
 		return doc;
 	}
 
 	/** Every page, rendered, by section in sidebar order. */
 	async function renderedSections() {
-		const sources = await run(readSources(options));
+		const sources = await allSources();
 		for (const source of sources) {
 			if (!options.sections.includes(source.frontmatter.section)) {
 				throw new Error(
@@ -297,6 +426,7 @@ export function docsContent(options: ContentOptions): Plugin {
 				order: source.frontmatter.order,
 			})),
 		);
+		checkLinks(pages.map((page) => page.doc));
 		return options.sections.map((title) => ({
 			pages: pages
 				.filter((page) => page.doc.section === title)
@@ -310,6 +440,7 @@ export function docsContent(options: ContentOptions): Plugin {
 			docs: section.pages.map((entry): DocMeta => ({
 				demos: entry.doc.demos,
 				description: entry.doc.description,
+				generatedFrom: entry.doc.generatedFrom,
 				headings: entry.doc.headings,
 				lastModified: entry.doc.lastModified,
 				section: entry.doc.section,
@@ -331,6 +462,7 @@ export function docsContent(options: ContentOptions): Plugin {
 					sections: page.sections,
 					slug: page.doc.slug,
 					title: page.doc.title,
+					weight: page.doc.generatedFrom === undefined ? undefined : apiWeight,
 				})),
 			),
 		);
@@ -368,8 +500,9 @@ export function docsContent(options: ContentOptions): Plugin {
 					return `\`\`\`${lang}${`${before.trimEnd()}${after}`.trimEnd()}\n${removeTwoslashNotations(withTypes(code, queries))}\`\`\``;
 				},
 			)
+			.replaceAll(/^(#{1,6} .*?)\s*\{#[\w.-]+\}$/gm, "$1")
 			.replaceAll(
-				/\]\((?:\.\/)?([\w-]+)\.md(#[\w-]+)?\)/g,
+				/\]\((?:\.\/)?([\w-]+)\.md(#[\w.-]+)?\)/g,
 				(link, slug, hash) =>
 					`](${options.siteUrl}/docs/${slug}.md${hash ?? ""})`,
 			)
@@ -421,7 +554,7 @@ export function docsContent(options: ContentOptions): Plugin {
 	async function agentFiles() {
 		const sections = await manifest();
 		const sources = new Map(
-			(await run(readSources(options))).map((source) => [source.slug, source]),
+			(await allSources()).map((source) => [source.slug, source]),
 		);
 		const pages = sections
 			.flatMap((section) => section.docs)
@@ -520,17 +653,31 @@ export function docsContent(options: ContentOptions): Plugin {
 			}
 		},
 		hotUpdate(context) {
+			// A package's change can change every page: the API reference and
+			// the API names the other pages link.
+			const apiChanged =
+				context.file.startsWith(options.packagesDir) &&
+				/\/src\/.*\.tsx?$|\/package\.json$/.test(context.file);
 			if (
 				!context.file.startsWith(options.contentDir) &&
-				!context.file.startsWith(samplesDir)
+				!context.file.startsWith(samplesDir) &&
+				!apiChanged
 			) {
 				return undefined;
 			}
-			rendered.delete(context.file);
+			if (apiChanged) {
+				api = undefined;
+				rendered.clear();
+			} else {
+				rendered.delete(context.file);
+			}
 			const graph = this.environment.moduleGraph;
 			const stale = [...graph.idToModuleMap].flatMap(([id, module]) =>
 				id === resolvedManifestId ||
 				id === resolvedSearchId ||
+				(apiChanged &&
+					(id.startsWith(resolvedApiId) ||
+						id.startsWith(options.contentDir))) ||
 				(context.file.startsWith(samplesDir) &&
 					id.startsWith(resolvedSamplePrefix))
 					? [module]
@@ -556,6 +703,24 @@ export function docsContent(options: ContentOptions): Plugin {
 			if (id === resolvedSearchId) {
 				return `export default ${JSON.stringify(await searchIndex())};`;
 			}
+			if (id === resolvedApiId) {
+				const reference = await readApi();
+				const imports = reference.sources.map(
+					(source) =>
+						`${JSON.stringify(source.slug)}: () => import(${JSON.stringify(`${apiId}/${source.slug}`)})`,
+				);
+				return `export const pages = {\n${imports.join(",\n")}\n};`;
+			}
+			if (id.startsWith(`${resolvedApiId}/`)) {
+				const slug = id.slice(resolvedApiId.length + 1);
+				const source = (await readApi()).sources.find(
+					(candidate) => candidate.slug === slug,
+				);
+				if (!source) {
+					throw new Error(`${id}: no API reference page "${slug}"`);
+				}
+				return `export default ${JSON.stringify((await render(source)).doc)};`;
+			}
 			if (id !== resolvedManifestId) {
 				return undefined;
 			}
@@ -569,6 +734,9 @@ export function docsContent(options: ContentOptions): Plugin {
 			}
 			if (id === searchId) {
 				return resolvedSearchId;
+			}
+			if (id === apiId || id.startsWith(`${apiId}/`)) {
+				return `\0${id}`;
 			}
 			return id === manifestId ? resolvedManifestId : undefined;
 		},

@@ -55,6 +55,7 @@
 		"github-slugger": "2.0.0",
 		"hast-util-to-html": "9.0.5",
 		"hast-util-to-string": "3.0.1",
+		"oxfmt": "0.74.0",
 		"rehype-raw": "7.0.0",
 		"remark-gfm": "4.0.1",
 		"remark-parse": "11.0.0",

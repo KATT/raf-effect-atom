@@ -14,5 +14,6 @@ export const sections = [
 	"effect-atom-boundary",
 	"raf-effect-atom",
 	"Together",
+	"API reference",
 	"Project",
 ] as const;

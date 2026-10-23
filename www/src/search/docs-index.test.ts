@@ -103,7 +103,30 @@ const pages: ReadonlyArray<SearchPage> = [
 	},
 ];
 
-const index = loadSearchIndex(buildSearchIndex(pages));
+/** A page of the API reference, which weighs less than the guides. */
+const reference: SearchPage = {
+	description: "Every export of raf-effect-atom.",
+	headings: [
+		{ id: "useAtomResult", text: "useAtomResult" },
+		{ id: "HydrationBoundary", text: "HydrationBoundary" },
+	],
+	section: "API reference",
+	sections: [
+		{
+			id: "useAtomResult",
+			text: "Reads a handle through React Suspense: a result hydrated from the server.",
+		},
+		{
+			id: "HydrationBoundary",
+			text: "Hydrates a dehydrated registry's state in place.",
+		},
+	],
+	slug: "api-raf-effect-atom",
+	title: "raf-effect-atom",
+	weight: 0.3,
+};
+
+const index = loadSearchIndex(buildSearchIndex([...pages, reference]));
 
 function ids(query: string) {
 	return searchDocs(index, query).map((hit) => hit.id);
@@ -141,7 +164,8 @@ describe("searchDocs", () => {
 	});
 
 	it("finds API names whole, by part, and from concepts", () => {
-		expect(ids("useAtomResult")[0]).toBe("reading-atoms");
+		expect(ids("useAtomResult")[0]).toBe("api-raf-effect-atom#useAtomResult");
+		expect(ids("useAtomResult")[1]).toBe("reading-atoms");
 		expect(ids("use atom result")[0]).toBe("reading-atoms");
 		expect(ids("useatomres")[0]).toBe("reading-atoms");
 		expect(ids("client error")[0]).toBe("reading-atoms#failures");
@@ -163,6 +187,14 @@ describe("searchDocs", () => {
 			"error-boundaries#what-a-boundary-doesnt-catch",
 		);
 		expect(ids("prefetch")[0]).toBe("loader-verbs");
+	});
+
+	it("ranks the guides above the API reference for a concept", () => {
+		expect(ids("hydration")[0]).toBe("hydration");
+		expect(ids("hydration")).toContain("api-raf-effect-atom#HydrationBoundary");
+		expect(ids("HydrationBoundary")[0]).toBe(
+			"api-raf-effect-atom#HydrationBoundary",
+		);
 	});
 
 	it("needs every word, unless no hit has them all", () => {

@@ -107,4 +107,59 @@ describe("renderMarkdown", () => {
 			]);
 		}).pipe(Effect.provide(NodeServices.layer)),
 	);
+
+	it.effect("takes a heading's id from a trailing `{#id}`", () =>
+		Effect.gen(function* () {
+			const samplesDir = yield* samples;
+			const markdown = [
+				"## `Loader` {#Loader}",
+				"",
+				"### `Loader.ensure` {#Loader.ensure}",
+				"",
+				"## Plain heading",
+			].join("\n");
+			const rendered = yield* renderMarkdown(markdown, { samplesDir });
+			expect(rendered.headings).toEqual([
+				{ depth: 2, id: "Loader", text: "Loader" },
+				{ depth: 3, id: "Loader.ensure", text: "Loader.ensure" },
+				{ depth: 2, id: "plain-heading", text: "Plain heading" },
+			]);
+		}).pipe(Effect.provide(NodeServices.layer)),
+	);
+
+	it.effect("links an API name's first mention to the API reference", () =>
+		Effect.gen(function* () {
+			const samplesDir = yield* samples;
+			const apiLinks = new Map([
+				["useAtomResult", "/docs/api-raf-effect-atom#useAtomResult"],
+				[
+					"AtomErrorBoundary",
+					"/docs/api-effect-atom-boundary#AtomErrorBoundary",
+				],
+				["fetch", "/docs/api-raf-effect-atom#Loader.fetch"],
+			]);
+			const markdown = [
+				"## Reading `useAtomResult`",
+				"",
+				"Read with `useAtomResult()`, then `useAtomResult` again, and `fetch`.",
+				"",
+				"Wrap it in `<AtomErrorBoundary>`, or [`AtomErrorBoundary`](./error-boundaries.md).",
+			].join("\n");
+			const rendered = yield* renderMarkdown(markdown, {
+				apiLinks,
+				samplesDir,
+			});
+			const html = rendered.segments
+				.map((segment) => (segment.kind === "html" ? segment.html : ""))
+				.join("");
+			expect(html.match(/href="\/docs\/api-/g)).toHaveLength(2);
+			expect(html).toContain(
+				'<a href="/docs/api-raf-effect-atom#useAtomResult"><code>useAtomResult()</code></a>',
+			);
+			expect(html).toContain(
+				'<a href="/docs/api-effect-atom-boundary#AtomErrorBoundary"><code>&#x3C;AtomErrorBoundary></code></a>',
+			);
+			expect(html).toContain("<code>fetch</code>.");
+		}).pipe(Effect.provide(NodeServices.layer)),
+	);
 });
