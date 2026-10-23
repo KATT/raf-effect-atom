@@ -107,12 +107,9 @@ export const WaterfallDetection = (props: {
  * - `useAtomResult` doesn't report an atom started this way.
  * - The handle is a prefetched one: its reader suspends until the result
  *   settles, as for a handle from a loader's `prefetch`.
- *
- * **Gotchas**
- *
- * Pass it the source a loader would start, not an error boundary's
- * `wrap(source)`: the wrapper's atoms aren't serializable, so the server
- * couldn't send them to the browser. Read the handle through the wrapper.
+ * - A derived source, such as an error boundary's `wrap(source)`, starts
+ *   the serializable atom its `initialValueTarget` chain points at, as
+ *   `Loader.prefetch` does.
  *
  * **Example**
  *
@@ -137,7 +134,7 @@ export const useWaterfall = <S extends Source>(
 ): Handle<S> => {
 	const registry = React.useContext(RegistryContext);
 	const atom = Handles.atomOf(source, args);
-	const target = hydrated(atom);
+	const target = hydrated(Handles.sourceOf(atom));
 	const key = Leases.keyOf(target);
 	const streamed =
 		Predicate.isString(key) && Pending.get(registry, key) !== undefined;

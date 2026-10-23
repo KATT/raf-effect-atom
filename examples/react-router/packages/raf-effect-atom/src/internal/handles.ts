@@ -19,9 +19,27 @@ export const atomOf = (
 ): Atom.Atom<AsyncResult.AsyncResult<any, any>> =>
 	Atom.isAtom(source) ? source : source(...args);
 
-/** The registry key a handle records: the atom's serialization key. */
+/**
+ * The atom the loader starts and the server sends for `atom`: the first
+ * serializable atom in its `initialValueTarget` chain, starting with `atom`.
+ * An AtomRpc query is serializable itself, though it points at an inner atom.
+ */
+export const sourceOf = (atom: Atom.Atom<unknown>): Atom.Atom<unknown> => {
+	for (
+		let target: Atom.Atom<unknown> | undefined = atom;
+		target !== undefined;
+		target = target.initialValueTarget
+	) {
+		if (Atom.isSerializable(target)) {
+			return target;
+		}
+	}
+	return atom;
+};
+
+/** The registry key a handle records: its source atom's serialization key. */
 const keyOf = <S>(atom: Atom.Atom<unknown>): HandleKey<S> | undefined => {
-	const key = Leases.keyOf(atom);
+	const key = Leases.keyOf(sourceOf(atom));
 	if (!Predicate.isString(key)) {
 		return undefined;
 	}

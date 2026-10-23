@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "@effect/vitest";
 import { screen } from "@testing-library/react";
 import * as Option from "effect/Option";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
-import * as Atom from "effect/reactivity/Atom";
 import * as Schema from "effect/Schema";
 import { createErrorBoundary } from "effect-atom-boundary";
 import * as React from "react";
@@ -19,7 +18,13 @@ import {
 	settle,
 	silenceCaughtErrors,
 } from "./fixtures/browser.tsx";
-import { issue, IssueNotFound, Issues, serve } from "./fixtures/issues.ts";
+import {
+	issue,
+	IssueNotFound,
+	Issues,
+	serve,
+	titled,
+} from "./fixtures/issues.ts";
 import { load } from "./fixtures/server.ts";
 
 const isIssueNotFound = Schema.is(IssueNotFound);
@@ -161,26 +166,15 @@ describe("useAtomResult after server rendering", () => {
 	});
 });
 
-/** A derived atom pointing at its source, as a boundary's wrapper is. */
-const titled = Atom.family((id: number) =>
-	Object.assign(
-		Atom.transform(issue(id), (get) =>
-			AsyncResult.map(get(issue(id)), (found) => ({
-				...found,
-				title: `Titled ${found.title}`,
-			})),
-		),
-		{ initialValueTarget: issue(id) },
-	),
-);
-
-function DerivedTitle(props: { readonly issue: IssueHandle }) {
+function DerivedTitle(props: {
+	readonly issue: IssueHandle | Handle<typeof titled>;
+}) {
 	const result = useAtomResult(titled, props.issue);
 	return <p>{AsyncResult.isSuccess(result) ? result.value.title : "Failed"}</p>;
 }
 
 const DerivedPage = (props: {
-	readonly issue: IssueHandle;
+	readonly issue: IssueHandle | Handle<typeof titled>;
 	readonly state?: Parameters<typeof HydrationBoundary>[0]["state"];
 }) => (
 	<HydrationBoundary state={props.state}>
@@ -215,6 +209,19 @@ describe("useAtomResult on a derived atom", () => {
 		await settle(100);
 		expect(screen.getByText("Titled Issue 2")).toBeDefined();
 		expect(server.requests(2)).toBe(1);
+	});
+
+	it("reads what a loader's prefetch of the derived atom streamed, one request", async () => {
+		using server = serve();
+		using rendered = await load(Loader.prefetch(titled, 4));
+		using app = mount();
+		await app.render(
+			<DerivedPage issue={rendered.handles} state={rendered.state} />,
+			true,
+		);
+		await settle(100);
+		expect(screen.getByText("Titled Issue 4")).toBeDefined();
+		expect(server.requests(4)).toBe(1);
 	});
 
 	it("ends the loader's lease on its source", async () => {

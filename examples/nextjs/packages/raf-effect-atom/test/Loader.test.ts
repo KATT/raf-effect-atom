@@ -7,8 +7,9 @@ import * as Option from "effect/Option";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
+import * as EffectHydration from "effect/reactivity/Hydration";
 
-import { Loader, RequestRegistry } from "../src/index.ts";
+import { Hydration, Loader, RequestRegistry } from "../src/index.ts";
 import {
 	counter,
 	gated,
@@ -19,6 +20,7 @@ import {
 	later,
 	requestName,
 	serve,
+	titled,
 	unkeyedIssue,
 	viewer,
 	welcome,
@@ -232,6 +234,50 @@ describe("request registries", () => {
 			);
 			assert.strictEqual(server.requests(1), 0);
 		}).pipe(Effect.provide(RequestRegistry.layer)),
+	);
+
+	it.live("start the serializable atom a derived atom points at", () =>
+		Effect.gen(function* () {
+			using server = serve();
+			const registry = yield* AtomRegistry.AtomRegistry;
+			const prefetched = yield* Loader.prefetch(titled, 2);
+			const ensured = yield* Loader.ensure(titled, 1);
+			const result = Loader.result(ensured);
+			assert.isTrue(
+				AsyncResult.isSuccess(result) &&
+					result.value.title === "Titled Issue 1",
+			);
+			assert.strictEqual(prefetched.key, "AtomRpc:GetIssue:2");
+			assert.strictEqual(ensured.key, "AtomRpc:GetIssue:1");
+			const sent = EffectHydration.toValues(Hydration.dehydrate(registry)).map(
+				(entry) => entry.key,
+			);
+			assert.includeMembers(sent, ["AtomRpc:GetIssue:1", "AtomRpc:GetIssue:2"]);
+			assert.strictEqual(server.requests(1), 1);
+			assert.strictEqual(server.requests(2), 1);
+		}).pipe(Effect.provide(RequestRegistry.layer)),
+	);
+
+	it.live("refuse a derived atom that points at nothing serializable", () =>
+		Effect.gen(function* () {
+			using _server = serve();
+			const derived = Atom.transform(unkeyedIssue(1), (get) =>
+				get(unkeyedIssue(1)),
+			);
+			const exit = yield* Effect.exit(Loader.prefetch(derived));
+			assert.isTrue(Exit.hasDies(exit));
+		}).pipe(Effect.provide(RequestRegistry.layer)),
+	);
+
+	it.live("refresh a derived atom's source on fetch", () =>
+		Effect.gen(function* () {
+			using server = serve();
+			yield* Loader.ensure(titled, 1);
+			yield* Loader.ensure(titled, 1);
+			assert.strictEqual(server.requests(1), 1);
+			yield* Loader.fetch(titled, 1);
+			assert.strictEqual(server.requests(1), 2);
+		}).pipe(Effect.provide(browser())),
 	);
 
 	it.live("allow it in the browser", () =>

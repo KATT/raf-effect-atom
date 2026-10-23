@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.4](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.3...raf-effect-atom%400.2.4) (2026-10-23)
+
+### Features
+
+- **raf-effect-atom:** start a request registry with initialValues, readable atoms included ([67cf767](https://github.com/KATT/raf-effect-atom/commit/67cf767e121e76b385ff0808a087efc6662aed89))
+
+### Documentation
+
+- correct the generated changelogs' cut-off breaking change and bogus issue links ([c21f64c](https://github.com/KATT/raf-effect-atom/commit/c21f64cad3b4638f2341968aa2e10af5a19904c1))
+
 ## [0.2.3](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.2...raf-effect-atom%400.2.3) (2026-10-23)
 
 ### Features

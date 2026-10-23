@@ -89,21 +89,27 @@ const start = Effect.fnUntraced(function* <A, E>(
 		yield* Effect.promise(() => seed);
 	}
 	const request = isRequestRegistry(registry);
-	if (request && !Atom.isSerializable(atom) && (yield* isDevelopment)) {
+	const source = Handles.sourceOf(atom);
+	if (request && !Atom.isSerializable(source) && (yield* isDevelopment)) {
 		return yield* Effect.die(
 			new Error(
-				`raf-effect-atom: a loader started ${String(atom)}, which isn't serializable, so the browser would request it again. Give it a serialization key, such as AtomRpc's serializationKey option.`,
+				`raf-effect-atom: a loader started ${String(atom)}, which isn't serializable and doesn't point at a serializable atom with initialValueTarget, so the browser would request it again. Give it a serialization key, such as AtomRpc's serializationKey option.`,
 			),
 		);
 	}
 	const ttl = request ? undefined : Duration.toMillis(yield* LeaseTTL);
-	const target = hydrated(atom);
+	const target = hydrated(source);
 	const key = Leases.keyOf(target);
 	const existed =
 		registry.getNodes().has(key) ||
 		(Predicate.isString(key) && registry.preloadedSerializable.has(key));
+	// The lease builds the source's node from the hydrated copy, before a
+	// derived atom's read builds it from the source and runs it again.
 	Leases.take(registry, target, ttl);
-	return { existed, registry, request, target };
+	// What the verb waits for: the atom's own result, which for a derived
+	// atom is its own, not its source's.
+	const read = source === atom ? hydrated(atom) : atom;
+	return { existed, read, registry, request, target };
 });
 
 const isSettled = <A, E>(
@@ -158,10 +164,24 @@ const rejectDefects = <A, E>(
  *
  * **Details**
  *
- * Starts the atom if it isn't in the registry, and leaves it alone if it is.
- * Takes a lease either way. The component that reads the handle suspends
- * until the result settles. On a request registry whose async seed is still
- * running, it waits for the seed first.
+ * - Starts the atom if it isn't in the registry, and leaves it alone if it
+ *   is. Takes a lease either way. The component that reads the handle
+ *   suspends until the result settles. On a request registry whose async
+ *   seed is still running, it waits for the seed first.
+ * - A derived atom that isn't serializable, such as an error boundary's
+ *   `wrap(source)`, starts the first serializable atom its
+ *   `initialValueTarget` chain points at, the one `useAtomResult` reads it
+ *   through: the lease, the handle's key and what the server sends are
+ *   that atom's. `ensure` and `fetch` wait for the derived atom's own
+ *   result.
+ *
+ * **Gotchas**
+ *
+ * The server sends a result still loading as a promise only when the atom
+ * it sends holds an `AsyncResult`. A derived atom whose serializable atom
+ * holds another value, such as an `Option` snapshot, crosses with the value
+ * it has when the registry is dehydrated: point it at an `AsyncResult`
+ * atom, or `ensure` it.
  *
  * **Example**
  *
@@ -240,7 +260,7 @@ export const ensure = <S extends Source>(
 		const started = yield* start(atom);
 		const result = yield* settled(
 			started.registry,
-			started.target,
+			started.read,
 			started.request ? isSettled : AsyncResult.isNotInitial,
 		);
 		return loaded<S>(args, atom, result);
@@ -273,15 +293,15 @@ export const fetch = <S extends Source>(
 	Effect.gen(function* () {
 		const atom = Handles.atomOf(source, args);
 		const started = yield* start(atom);
-		const { registry, target } = started;
-		if (started.existed && isSettled(registry.get(target))) {
+		const { read, registry, target } = started;
+		if (started.existed && isSettled(registry.get(read))) {
 			// An `Atom.family` makes a member again once the garbage collector
 			// takes it, such as an AtomRpc query: its refresh reaches inner atoms
 			// the registry doesn't run, so refresh the atom its node runs.
 			const node = registry.getNodes().get(Leases.keyOf(target));
-			registry.refresh(node?.atom ?? target);
+			registry.refresh(read === target ? (node?.atom ?? target) : read);
 		}
-		const result = yield* settled(registry, target, isSettled);
+		const result = yield* settled(registry, read, isSettled);
 		return loaded<S>(args, atom, result);
 	});
 
