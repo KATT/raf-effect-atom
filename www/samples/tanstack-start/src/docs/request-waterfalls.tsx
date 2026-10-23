@@ -84,34 +84,47 @@ const userHandle = AsyncResult.isSuccess(found)
 
 // #region event-handler
 // Each keystroke doesn't belong in the URL, so the debounced handler starts
-// the search, then renders its handle in a transition, which keeps the
-// previous results on screen until the new ones are in.
+// the search from the latest text, then renders its handle in a transition,
+// which keeps the previous results on screen until the new ones are in.
 function IssueSearch() {
 	const registry = use(RegistryContext);
-	const [search, setSearch] = useState<Handle<typeof searchIssues>>();
+	const [query, setQuery] = useState<{
+		readonly text: string;
+		readonly search?: Handle<typeof searchIssues>;
+	}>({ text: "" });
 	const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+	// One ref callback for the component's life: React runs its cleanup on
+	// unmount, not on each render as it would for an inline one.
+	const [clearOnUnmount] = useState(
+		() => () => () => clearTimeout(timeout.current),
+	);
 	return (
 		<search>
 			<input
 				aria-label="Search issues"
 				onChange={(event) => {
-					const next = event.target.value;
+					const text = event.target.value;
+					setQuery((previous) => ({ ...previous, text }));
 					clearTimeout(timeout.current);
 					timeout.current = setTimeout(() => {
-						const started =
-							next === ""
-								? undefined
-								: Loader.make(registry).prefetch(searchIssues, next);
 						startTransition(() => {
-							setSearch(started);
+							setQuery((latest) => ({
+								text: latest.text,
+								search:
+									latest.text === ""
+										? undefined
+										: Loader.make(registry).prefetch(searchIssues, latest.text),
+							}));
 						});
 					}, 300);
 				}}
+				ref={clearOnUnmount}
 				type="search"
+				value={query.text}
 			/>
-			{search === undefined ? null : (
+			{query.search === undefined ? null : (
 				<Suspense fallback={<p>Searching…</p>}>
-					<SearchResults search={search} />
+					<SearchResults search={query.search} />
 				</Suspense>
 			)}
 		</search>
@@ -121,6 +134,7 @@ function IssueSearch() {
 function SearchResults(props: { search: Handle<typeof searchIssues> }) {
 	// The app and auth boundaries claim RpcClientError and Unauthorized.
 	const result = useAtomResult(
+		//    ^?
 		useAuthBoundary().wrap(searchIssues),
 		props.search,
 	);

@@ -112,7 +112,7 @@ When an event handler changes the state that picks the data, it can start the at
 tanstack-start/src/docs/request-waterfalls.tsx#event-handler
 ```
 
-The request starts with the state change, not after the render it causes, and the transition keeps the previous results on screen until the next ones are in.
+The request starts with the state change, not after the render it causes, and the transition keeps the previous results on screen until the next ones are in. The timer reads the text inside the state update, so it searches whatever the box holds when it fires, and each keystroke and the unmount clear it.
 
 ### Render-time inputs: useWaterfall
 
