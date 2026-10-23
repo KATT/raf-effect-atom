@@ -126,6 +126,25 @@ html[data-announcement-dismissed] .announcement-bar {
 	text-decoration-color: currentColor;
 }
 
+/* Links leaving the site, marked at build time */
+.external-link-tail {
+	white-space: nowrap;
+}
+
+.external-link-icon {
+	display: inline-block;
+	width: 0.75em;
+	height: 0.75em;
+	margin-inline-start: 0.125em;
+	vertical-align: -0.05em;
+	color: var(--muted-foreground);
+	transition: color 120ms;
+}
+
+.external-link:hover .external-link-icon {
+	color: inherit;
+}
+
 .prose :where(h2, h3) {
 	scroll-margin-top: 5rem;
 	letter-spacing: -0.01em;

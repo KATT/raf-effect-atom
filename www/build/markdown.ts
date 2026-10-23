@@ -29,6 +29,7 @@ import { unified } from "unified";
 import { visit } from "unist-util-visit";
 
 import type { DocHeading, DocSegment } from "../src/content/types.ts";
+import { site } from "../src/site.ts";
 import { collapseRegions } from "./collapse.ts";
 import { ContentError, messageOf } from "./content-error.ts";
 import { appOf, sampleApps } from "./sample-apps.ts";
@@ -170,6 +171,93 @@ function rehypeHeadings(headings: Array<DocHeading>) {
 					type: "element",
 				},
 			];
+		});
+	};
+}
+
+const siteHost = new URL(site.url).hostname;
+
+/** Links leaving the site; the example apps' subdomains are part of it. */
+function isExternalHref(href: string): boolean {
+	const url = /^(?:https?:)?\/\//i.test(href) && URL.parse(href, site.url);
+	return (
+		!!url && url.hostname !== siteHost && !url.hostname.endsWith(`.${siteHost}`)
+	);
+}
+
+/** Lucide's `arrow-up-right`. */
+function externalLinkIcon(): Element {
+	return {
+		children: [
+			{
+				children: [],
+				properties: { d: "M7 7h10v10" },
+				tagName: "path",
+				type: "element",
+			},
+			{
+				children: [],
+				properties: { d: "M7 17 17 7" },
+				tagName: "path",
+				type: "element",
+			},
+		],
+		properties: {
+			ariaHidden: "true",
+			className: ["external-link-icon"],
+			fill: "none",
+			focusable: "false",
+			stroke: "currentColor",
+			strokeLinecap: "round",
+			strokeLinejoin: "round",
+			strokeWidth: "2",
+			viewBox: "0 0 24 24",
+		},
+		tagName: "svg",
+		type: "element",
+	};
+}
+
+/**
+ * Marks each external link with an arrow after its text. The arrow and the
+ * link's last word (or its last element, such as a `<code>`) share a
+ * no-wrap span, so the arrow never starts a line on its own.
+ */
+function rehypeExternalLinks() {
+	return (tree: HastRoot) => {
+		visit(tree, "element", (node: Element) => {
+			const href = node.properties.href;
+			if (node.tagName !== "a" || !href || !isExternalHref(String(href))) {
+				return;
+			}
+			node.properties.className = [
+				...(Array.isArray(node.properties.className)
+					? node.properties.className
+					: []),
+				"external-link",
+			];
+			const tail: Array<ElementContent> = [];
+			const last = node.children.at(-1);
+			if (last?.type === "text") {
+				const match = /\S+\s*$/.exec(last.value);
+				if (match) {
+					last.value = last.value.slice(0, match.index);
+					tail.push({ type: "text", value: match[0].trimEnd() });
+					if (!last.value) {
+						node.children.pop();
+					}
+				}
+			} else if (last?.type === "element") {
+				node.children.pop();
+				tail.push(last);
+			}
+			node.children.push({
+				children: [...tail, externalLinkIcon()],
+				properties: { className: ["external-link-tail"] },
+				tagName: "span",
+				type: "element",
+			});
+			return "skip";
 		});
 	};
 }
@@ -531,6 +619,7 @@ export const renderMarkdown = Effect.fn("renderMarkdown")(function* (
 		.use(remarkRehype, { allowDangerousHtml: true })
 		.use(rehypeRaw)
 		.use(rehypeHeadings(headings))
+		.use(rehypeExternalLinks)
 		.use(rehypeShiki, {
 			defaultColor: false,
 			// Loading all of Shiki's languages took seconds per process, so

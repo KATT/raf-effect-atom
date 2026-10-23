@@ -50,4 +50,31 @@ describe("renderMarkdown", () => {
 			]);
 		}).pipe(Effect.provide(NodeServices.layer)),
 	);
+
+	it.effect("marks only links that leave the site", () =>
+		Effect.gen(function* () {
+			const samplesDir = yield* samples;
+			const markdown = [
+				"[Effect Atom docs](https://effect.website/docs)",
+				"[`Atom.make`](https://effect.website/atom)",
+				"[home](https://raf-effect-atom.katt.dev/docs/overview)",
+				"[example](https://nextjs.raf-effect-atom.katt.dev)",
+				"[caching](./caching.md#keys)",
+				"[below](#below)",
+			].join("\n\n");
+			const rendered = yield* renderMarkdown(markdown, { samplesDir });
+			const html = rendered.segments
+				.map((segment) => (segment.kind === "html" ? segment.html : ""))
+				.join("");
+			const icon =
+				'<svg aria-hidden="true" class="external-link-icon" fill="none" focusable="false" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg>';
+			expect(html).toContain(
+				`<a href="https://effect.website/docs" class="external-link">Effect Atom <span class="external-link-tail">docs${icon}</span></a>`,
+			);
+			expect(html).toContain(
+				`<a href="https://effect.website/atom" class="external-link"><span class="external-link-tail"><code>Atom.make</code>${icon}</span></a>`,
+			);
+			expect(html.match(/external-link-icon/g)).toHaveLength(2);
+		}).pipe(Effect.provide(NodeServices.layer)),
+	);
 });
