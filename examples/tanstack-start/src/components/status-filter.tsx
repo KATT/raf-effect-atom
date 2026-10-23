@@ -19,7 +19,7 @@ export function StatusFilter(props: {
 	readonly current: IssueListInput;
 	readonly verb: LoaderVerb;
 }) {
-	const result = useAtomResult(issueCounts, useAuthBoundary());
+	const result = useAtomResult(useAuthBoundary().wrap(issueCounts));
 	if (!AsyncResult.isSuccess(result)) {
 		return <LoadFailed result={result} />;
 	}

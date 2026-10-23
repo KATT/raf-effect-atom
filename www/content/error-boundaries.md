@@ -13,13 +13,13 @@ The idea comes from [result-rpc](https://result-rpc.com/), whose [Shells](https:
 
 ## One boundary for one atom
 
-`AtomErrorBoundary` guards one atom. The read under it, `useAtomResult`, suspends like `useAtomSuspense` and throws the atom's typed failures, so the component gets the success value:
+`AtomErrorBoundary` guards one atom. The read under it reads `AtomErrorBoundary.claim(atom)`: the same atom with its typed failures turned into defects, recorded with the atom, so [`useAtomSuspense`](https://github.com/Effect-TS/effect/tree/effect%404.0.6/packages/atom/react) throws them to the boundary and the component gets the success value:
 
 ```sample
 tanstack-start/src/docs/error-boundaries.tsx#boundary
 ```
 
-A failure whose tag has a handler renders the handler in place of the children. `reset` refreshes the atom that failed and renders the children again; while the atom refreshes, the read suspends instead of throwing the old failure again.
+A failure whose tag has a handler renders the handler in place of the children. `reset` refreshes the atom that failed and renders the children again. Pass `suspendOnWaiting: true`, so the read waits for that refresh instead of throwing the old failure again. `raf-effect-atom`'s `useAtomResult` does that on its own.
 
 A handler renders as a component, so it can call hooks. A handler written inline is a new component each time the component around the boundary renders, so it mounts again and loses its state: give a handler with state a name outside the render.
 
@@ -45,5 +45,6 @@ tanstack-start/src/docs/error-boundaries.tsx#misspelled
 
 - A failure whose tag has no handler, and a failure of another atom read under the boundary, go to the error boundaries above it.
 - A defect or an interruption isn't a typed error: the read throws `Cause.squash(cause)` to the app's own error boundary.
+- A claimed failure is a defect inside the wrapped atom's value, so code that inspects that value, such as `AsyncResult.error`, sees no typed error. Read the atom itself to inspect its failure.
 
 For failures that belong to the app rather than to one atom, such as being signed out, use a [shared boundary](./shared-boundaries.md).

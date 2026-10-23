@@ -17,15 +17,18 @@ npm install effect-atom-boundary effect @effect/atom-react react
 
 ## Usage
 
-`AtomErrorBoundary` guards one atom. The read under it, `useAtomResult`, suspends like `useAtomSuspense` and throws the atom's typed failures to the boundary:
+`AtomErrorBoundary` guards one atom. The read under it reads `AtomErrorBoundary.claim(atom)`, the same atom with its typed failures turned into defects, so `useAtomSuspense` throws them to the boundary:
 
 ```tsx
-import { AtomErrorBoundary, useAtomResult } from "effect-atom-boundary";
+import { useAtomSuspense } from "@effect/atom-react";
+import { AtomErrorBoundary } from "effect-atom-boundary";
 
 // issue: (id: number) => Atom<AsyncResult<Issue, IssueNotFound | Unauthorized | RpcClientError>>
 
 function IssuePage(props: { readonly id: number }) {
-	const result = useAtomResult(issue(props.id));
+	const result = useAtomSuspense(AtomErrorBoundary.claim(issue(props.id)), {
+		suspendOnWaiting: true,
+	});
 	return <h1>{result.value.title}</h1>;
 }
 
@@ -43,10 +46,11 @@ function IssuePage(props: { readonly id: number }) {
 </AtomErrorBoundary>;
 ```
 
-`createErrorBoundary` makes a shared boundary for failures that belong to the app, such as being signed out. `errors` names what the errors come from: an `AtomRpc` client, an atom, or an atom family. A read through the boundary's hook gets a result typed without what the boundaries above it claim:
+`createErrorBoundary` makes a shared boundary for failures that belong to the app, such as being signed out. `errors` names what the errors come from: an `AtomRpc` client, an atom, or an atom family. The hook's `wrap(atom)` turns what the boundary and the ones above it claim into defects, so a read that returns typed failures and throws defects, such as [`raf-effect-atom`](https://github.com/KATT/raf-effect-atom/tree/main/packages/raf-effect-atom)'s `useAtomResult`, gets a result typed without them:
 
 ```tsx
-import { createErrorBoundary, useAtomResult } from "effect-atom-boundary";
+import { createErrorBoundary } from "effect-atom-boundary";
+import { useAtomResult } from "raf-effect-atom";
 
 const [AuthBoundary, useAuthBoundary] = createErrorBoundary({
 	name: "Auth",
@@ -55,12 +59,12 @@ const [AuthBoundary, useAuthBoundary] = createErrorBoundary({
 });
 
 function IssueTitle(props: { readonly id: number }) {
-	const result = useAtomResult(issue(props.id), useAuthBoundary());
+	const result = useAtomResult(useAuthBoundary().wrap(issue(props.id)));
 	// AsyncResult<Issue, IssueNotFound | RpcClientError>: Unauthorized is claimed
 }
 ```
 
-`reset` refreshes the atom that failed and renders the children again. `claim(atom, registry, result, claims)` is the claiming step on its own, for a read hook of your own.
+`reset` refreshes the atom that failed and renders the children again.
 
 ## Credits
 

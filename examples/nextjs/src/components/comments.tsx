@@ -45,8 +45,7 @@ function CommentPage(props: {
 	readonly issueId: IssueId;
 }) {
 	const result = useAtomResult(
-		commentPage(props.issueId, props.cursor),
-		useIssueBoundary(),
+		useIssueBoundary().wrap(commentPage(props.issueId, props.cursor)),
 	);
 	const [more, setMore] = useState(false);
 	if (!AsyncResult.isSuccess(result)) {

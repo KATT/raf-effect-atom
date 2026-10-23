@@ -11,7 +11,9 @@ import { assignee } from "~/issues.ts";
 
 /** `GetIssueAssignee` loads beside the issue, by the issue's id. */
 export function AssigneeCard(props: { readonly issueId: IssueId }) {
-	const result = useAtomResult(assignee(props.issueId), useIssueBoundary());
+	const result = useAtomResult(
+		useIssueBoundary().wrap(assignee(props.issueId)),
+	);
 	return AsyncResult.isSuccess(result) ? (
 		<AssigneeCardView user={result.value} />
 	) : (

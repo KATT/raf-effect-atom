@@ -31,13 +31,13 @@ export async function loader(args: LoaderArgs) {
 }
 ```
 
-A component reads the atom with `useAtomResult`, which waits for a streamed result instead of starting the atom again. Pass an `effect-atom-boundary` boundary's claims to throw its errors to it:
+A component reads the atom with `useAtomResult`, which waits for a streamed result instead of starting the atom again, and returns typed failures. Read the atom an [`effect-atom-boundary`](https://github.com/KATT/raf-effect-atom/tree/main/packages/effect-atom-boundary) boundary's claims wrap to throw its errors to it:
 
 ```tsx
 import { useAtomResult } from "raf-effect-atom";
 
 function IssueTitle(props: { readonly id: number }) {
-	const result = useAtomResult(issue(props.id), useNotFoundBoundary());
+	const result = useAtomResult(useNotFoundBoundary().wrap(issue(props.id)));
 	// AsyncResult<Issue, Unauthorized | RpcClientError>: IssueNotFound is claimed
 }
 ```

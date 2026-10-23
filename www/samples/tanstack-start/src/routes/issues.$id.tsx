@@ -34,7 +34,7 @@ export const Route = createFileRoute("/issues/$id")({
 function IssuePage() {
 	const { id } = Route.useParams();
 	// IssueNotFound and Unauthorized go to their boundaries.
-	const result = useAtomResult(issue(id), useIssueBoundary());
+	const result = useAtomResult(useIssueBoundary().wrap(issue(id)));
 	if (AsyncResult.isFailure(result)) {
 		return <p>Couldn't reach the server.</p>;
 	}
@@ -49,7 +49,9 @@ function IssuePage() {
 }
 
 function Assignee(props: { issueId: IssueId }) {
-	const result = useAtomResult(assignee(props.issueId), useIssueBoundary());
+	const result = useAtomResult(
+		useIssueBoundary().wrap(assignee(props.issueId)),
+	);
 	return AsyncResult.isSuccess(result) ? <p>{result.value.name}</p> : null;
 }
 // #endregion component

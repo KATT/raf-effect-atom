@@ -15,7 +15,7 @@ import { issue, refreshIssues, updateBody, updateTitle } from "~/issues.ts";
 
 /** The issue's title, status, date and description, each editable in place. */
 export function IssueDetail(props: { readonly id: IssueId }) {
-	const result = useAtomResult(issue(props.id), useIssueBoundary());
+	const result = useAtomResult(useIssueBoundary().wrap(issue(props.id)));
 	if (!AsyncResult.isSuccess(result)) {
 		return <LoadFailed result={result} />;
 	}

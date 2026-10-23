@@ -1,11 +1,8 @@
 import { Button } from "@examples/ui/components/button";
 import { Skeleton } from "@examples/ui/components/skeleton";
 import { IssueId, IssueNotFound, Unauthorized } from "@examples/contract";
-import {
-	AtomErrorBoundary,
-	type CatchTagProps,
-	useAtomResult,
-} from "effect-atom-boundary";
+import { useAtomSuspense } from "@effect/atom-react";
+import { AtomErrorBoundary, type CatchTagProps } from "effect-atom-boundary";
 import { Suspense, useState } from "react";
 
 import { AppBoundary } from "~/demo-kit/app-boundary.tsx";
@@ -21,7 +18,9 @@ const ids = [1, 2, 3, 404].map((id) => IssueId.make(id));
 
 function IssueTitle(props: { readonly id: IssueId }) {
 	// Suspends while loading, throws every typed failure to the boundary.
-	const result = useAtomResult(issue(props.id));
+	const result = useAtomSuspense(AtomErrorBoundary.claim(issue(props.id)), {
+		suspendOnWaiting: true,
+	});
 	return (
 		<div className="grid gap-1">
 			<p className="font-mono text-xs text-muted-foreground">#{props.id}</p>

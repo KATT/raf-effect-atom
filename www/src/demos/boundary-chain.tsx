@@ -1,12 +1,9 @@
 import { Button } from "@examples/ui/components/button";
 import { Skeleton } from "@examples/ui/components/skeleton";
 import { IssueId, IssueNotFound, Unauthorized } from "@examples/contract";
-import {
-	type CatchTagProps,
-	createErrorBoundary,
-	useAtomResult,
-} from "effect-atom-boundary";
+import { type CatchTagProps, createErrorBoundary } from "effect-atom-boundary";
 import { AsyncResult } from "effect/reactivity";
+import { useAtomResult } from "raf-effect-atom";
 import { Suspense, useState } from "react";
 
 import { AppBoundary } from "~/demo-kit/app-boundary.tsx";
@@ -68,7 +65,7 @@ const [IssueBoundary, useIssueBoundary] = createErrorBoundary({
  * `Unauthorized` to `<AuthBoundary>`, and what's left is returned.
  */
 function useIssue(id: IssueId) {
-	return useAtomResult(issue(id), useIssueBoundary());
+	return useAtomResult(useIssueBoundary().wrap(issue(id)));
 }
 
 function IssueTitle(props: { readonly id: IssueId }) {

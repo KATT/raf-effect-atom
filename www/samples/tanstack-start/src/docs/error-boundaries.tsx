@@ -1,5 +1,6 @@
 import type { IssueId } from "@examples/contract";
-import { AtomErrorBoundary, useAtomResult } from "effect-atom-boundary";
+import { useAtomSuspense } from "@effect/atom-react";
+import { AtomErrorBoundary } from "effect-atom-boundary";
 import { Suspense } from "react";
 
 import { issue } from "~/issues.ts";
@@ -28,8 +29,10 @@ export function IssuePanel(props: { id: IssueId }) {
 }
 
 function IssueTitle(props: { id: IssueId }) {
-	// Suspends while loading, throws a failure to the boundaries above.
-	const result = useAtomResult(issue(props.id));
+	// Suspends while loading, throws a typed failure to the boundaries above.
+	const result = useAtomSuspense(AtomErrorBoundary.claim(issue(props.id)), {
+		suspendOnWaiting: true,
+	});
 	return <h1>{result.value.title}</h1>;
 }
 // #endregion boundary

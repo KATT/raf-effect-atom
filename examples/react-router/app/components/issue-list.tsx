@@ -46,8 +46,7 @@ function IssuePage(props: {
 	readonly verb: LoaderVerb;
 }) {
 	const result = useAtomResult(
-		issuePage(props.input, props.cursor),
-		useAuthBoundary(),
+		useAuthBoundary().wrap(issuePage(props.input, props.cursor)),
 	);
 	const [more, setMore] = useState(false);
 	if (!AsyncResult.isSuccess(result)) {

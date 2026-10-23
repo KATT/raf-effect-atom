@@ -1,5 +1,6 @@
 import type { IssueId } from "@examples/contract";
-import { createErrorBoundary, useAtomResult } from "effect-atom-boundary";
+import { createErrorBoundary } from "effect-atom-boundary";
+import { useAtomResult } from "raf-effect-atom";
 
 import { AuthBoundary, useAuthBoundary } from "~/boundaries.tsx";
 import { IssuesClient } from "~/issues-client.ts";
@@ -9,7 +10,7 @@ declare const id: IssueId;
 
 // #region narrowed
 function IssueTitle(props: { id: IssueId }) {
-	const result = useAtomResult(issue(props.id), useAuthBoundary());
+	const result = useAtomResult(useAuthBoundary().wrap(issue(props.id)));
 	result;
 	// ^?
 	return null;

@@ -15,7 +15,7 @@ tanstack-start/src/boundaries.tsx#auth
 
 ## Reads under the boundary
 
-A read with the boundary's hook throws what the boundary claims, and returns a result typed without it:
+`useAuthBoundary().wrap(atom)` returns the same atom with the failures the boundary claims turned into defects, recorded with the atom. A read that returns typed failures and throws defects, such as `raf-effect-atom`'s `useAtomResult`, throws them to the boundary and returns a result typed without them:
 
 ```sample
 tanstack-start/src/docs/shared-boundaries.tsx#narrowed
@@ -35,13 +35,13 @@ tanstack-start/src/docs/shared-boundaries.tsx#misspelled
 
 ## Chained boundaries
 
-`parent` puts a boundary under another one. A read with the child's hook throws the tags either boundary claims, each to the nearest boundary that claims it, and the claimed tags add up along the chain:
+`parent` puts a boundary under another one. An atom wrapped by the child's claims throws the tags either boundary claims, each to the nearest boundary that claims it, and the claimed tags add up along the chain:
 
 ```sample
 tanstack-start/src/boundaries.tsx#issue
 ```
 
-A read with `useIssueBoundary()` throws `IssueNotFound` to `<IssueBoundary>` and `Unauthorized` to `<AuthBoundary>`, and returns a result whose only failure left is `RpcClientError`. `<IssueBoundary>` throws when `<AuthBoundary>` isn't mounted above it.
+A read of `useIssueBoundary().wrap(atom)` throws `IssueNotFound` to `<IssueBoundary>` and `Unauthorized` to `<AuthBoundary>`, and returns a result whose only failure left is `RpcClientError`. `<IssueBoundary>` throws when `<AuthBoundary>` isn't mounted above it.
 
 ```demo
 boundary-chain
@@ -49,8 +49,10 @@ boundary-chain
 
 ## Matching is by tag
 
-A shared boundary catches a claimed tag from any atom read under it, not only from the reads that used its hook. `reset` refreshes the atom whose read threw the failure.
+A shared boundary catches a claimed tag from any atom read under it, not only from the atoms its claims wrapped. `reset` refreshes the atom whose read threw the failure.
 
-## Claiming without the hook
+## Reading a wrapped atom
 
-`claim(atom, registry, result, claims)` is the claiming step on its own: it throws a claimed failure to its boundary and returns the rest of the result, narrowed. `useAtomResult` is that step inside a hook, and `raf-effect-atom`'s read hook calls it through the claims you pass it.
+The wrapper is a derived atom with no serialization key: start the atom itself in loaders, and read the wrapper in components. It points at the atom with Effect's `initialValueTarget`, which `raf-effect-atom`'s `useAtomResult` follows to hydrate the atom and wait for its streamed result.
+
+`useAtomSuspense` with `includeFailure` returns claimed failures instead of throwing them, and without it throws every failure, including the ones left. Under a shared boundary, use a read that throws only defects: `raf-effect-atom`'s `useAtomResult`, or your own over `useAtomSuspense(atom, { includeFailure: true, suspendOnWaiting: true })`.
