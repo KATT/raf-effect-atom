@@ -1,4 +1,5 @@
 import * as Effect from "effect/Effect";
+import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
 import * as AtomRpc from "effect/reactivity/AtomRpc";
 import * as Schema from "effect/Schema";
@@ -104,6 +105,30 @@ export const remadeIssue = (id: number) =>
 
 /** A query atom without a `serializationKey`, which never hydrates. */
 export const unkeyedIssue = (id: number) => Issues.query("GetIssue", { id });
+
+/**
+ * Who sent the page request, as the example apps' request cookie atom. A
+ * request registry's seed sets it.
+ */
+export const viewer = Atom.make<string | undefined>(undefined).pipe(
+	Atom.keepAlive,
+);
+
+/** A serializable query that reads `viewer`, as one that sends the cookie. */
+export const greeting = Atom.make((get) =>
+	Effect.succeed(`Hello, ${get(viewer) ?? "stranger"}`).pipe(
+		Effect.delay("5 millis"),
+	),
+).pipe(
+	Atom.serializable({
+		key: "greeting",
+		schema: AsyncResult.Schema({ success: Schema.String }),
+	}),
+);
+
+/** Resolves after `millis`, as a seed that reads request data does. */
+export const later = (millis: number) =>
+	new Promise<void>((resolve) => setTimeout(resolve, millis));
 
 /** A plain effect atom, for the verbs outside RPC. */
 export const counter = Atom.make(Effect.succeed(1));

@@ -28,7 +28,7 @@ import {
 } from "../../src/index.ts";
 import { setupRouterAtoms } from "../../src/TanStackRouter.tsx";
 import { mount, settle } from "./browser.tsx";
-import { issue, IssueNotFound } from "./issues.ts";
+import { greeting, issue, IssueNotFound } from "./issues.ts";
 
 const isIssueNotFound = Schema.is(IssueNotFound);
 
@@ -84,7 +84,23 @@ const prefetchRoute = createRoute({
 	path: "/streamed/$id",
 });
 
-const routeTree = rootRoute.addChildren([ensureRoute, prefetchRoute]);
+/** `/greeting` starts the greeting, which reads what the seed sets. */
+const greetingRoute = createRoute({
+	component: function GreetingPage() {
+		const data = greetingRoute.useLoaderData();
+		const result = useAtomResult(greeting, data.greeting);
+		return <p>{AsyncResult.isSuccess(result) ? result.value : "Failed"}</p>;
+	},
+	getParentRoute: () => rootRoute,
+	loader: (match) => ({ greeting: match.context.atoms.prefetch(greeting) }),
+	path: "/greeting",
+});
+
+const routeTree = rootRoute.addChildren([
+	ensureRoute,
+	prefetchRoute,
+	greetingRoute,
+]);
 
 /**
  * A router with its own `Wrap`, `dehydrate` and `hydrate`, as an app's might
@@ -115,8 +131,11 @@ const makeRouter = (
  * Renders a URL on a server router, as TanStack Start does for one request,
  * and returns the streamed response's HTML with its hydration scripts.
  */
-export const renderOnServer = async (url: string) => {
-	const registry = RequestRegistry.make();
+export const renderOnServer = async (
+	url: string,
+	options?: RequestRegistry.Options,
+) => {
+	const registry = RequestRegistry.make(options);
 	const router = makeRouter(url, registry, true);
 	attachRouterServerSsrUtils({ manifest: undefined, router });
 	await router.load();

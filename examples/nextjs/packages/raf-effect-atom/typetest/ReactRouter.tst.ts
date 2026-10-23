@@ -1,6 +1,7 @@
 import { hole } from "effect";
 import type * as AsyncResult from "effect/reactivity/AsyncResult";
 import type * as Atom from "effect/reactivity/Atom";
+import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as EffectHydration from "effect/reactivity/Hydration";
 import {
 	createContext,
@@ -27,6 +28,17 @@ describe("raf-effect-atom/react-router", () => {
 			MiddlewareFunction<Response>
 		>();
 		expect(atomsMiddleware).type.not.toBeCallableWith(createContext<number>());
+	});
+
+	it("seeds each request's registry from the request", () => {
+		expect(
+			atomsMiddleware(atomsContext, {
+				seed: async (registry, request) => {
+					expect(registry).type.toBe<AtomRegistry.AtomRegistry>();
+					expect(request).type.toBe<Request>();
+				},
+			}),
+		).type.toBeAssignableTo<MiddlewareFunction<Response>>();
 	});
 
 	it("gives loaders the request's verbs and dehydrate", async () => {

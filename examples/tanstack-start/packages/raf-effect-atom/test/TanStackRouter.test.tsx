@@ -6,7 +6,7 @@ import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 
 import { RequestRegistry } from "../src/index.ts";
 import { makeRegistry, setupRouterAtoms } from "../src/TanStackRouter.tsx";
-import { counter, serve } from "./fixtures/issues.ts";
+import { counter, later, serve, viewer } from "./fixtures/issues.ts";
 import { renderInBrowser, renderOnServer } from "./fixtures/router.tsx";
 
 describe("setupRouterAtoms", () => {
@@ -53,6 +53,18 @@ describe("setupRouterAtoms", () => {
 		using app = await renderInBrowser("/issues/1", response.html);
 		assert.isDefined(document.querySelector("main"));
 		assert.deepStrictEqual(app.hydrated, ["state"]);
+	});
+
+	it("dehydrates an atom a loader started while the registry's async seed ran", async () => {
+		const response = await renderOnServer("/greeting", {
+			seed: async (registry) => {
+				await later(10);
+				registry.set(viewer, "ada");
+			},
+		});
+		assert.include(response.html, "Hello, ada");
+		using _app = await renderInBrowser("/greeting", response.html);
+		assert.isDefined(screen.getByText("Hello, ada"));
 	});
 
 	it("disposes the request registry when the response finishes", async () => {

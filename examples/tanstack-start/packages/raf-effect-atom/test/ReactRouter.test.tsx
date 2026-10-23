@@ -13,14 +13,27 @@ import {
 	RouterContextProvider,
 } from "react-router";
 
-import { type Handle, HydrationBoundary, useAtomResult } from "../src/index.ts";
+import {
+	type Handle,
+	HydrationBoundary,
+	Loader,
+	useAtomResult,
+} from "../src/index.ts";
 import {
 	atomsMiddleware,
 	RegistryProvider,
 	type RequestAtoms,
 } from "../src/ReactRouter.ts";
 import { settle } from "./fixtures/browser.tsx";
-import { counter, issue, IssueNotFound, serve } from "./fixtures/issues.ts";
+import {
+	counter,
+	greeting,
+	issue,
+	IssueNotFound,
+	later,
+	serve,
+	viewer,
+} from "./fixtures/issues.ts";
 import { wire } from "./fixtures/wire.ts";
 
 const atomsContext = createContext<RequestAtoms>();
@@ -179,6 +192,49 @@ describe("atomsMiddleware", () => {
 		const second = await handle("/issues/5");
 		assert.notStrictEqual(first.data.registry, second.data.registry);
 		await Promise.all([first.response.text(), second.response.text()]);
+	});
+});
+
+describe("atomsMiddleware's seed", () => {
+	const seeded = createStaticHandler([
+		{
+			id: "root",
+			loader: async (args) => {
+				const atoms = args.context.get(atomsContext);
+				return Loader.result(await atoms.ensure(greeting));
+			},
+			middleware: [
+				atomsMiddleware(atomsContext, {
+					seed: async (registry, request) => {
+						await later(5);
+						registry.set(viewer, request.headers.get("x-viewer") ?? undefined);
+					},
+				}),
+			],
+			path: "/",
+		},
+	]);
+
+	it("runs on the request's registry before the loaders", async () => {
+		const request = new Request("http://localhost/", {
+			headers: { "x-viewer": "ada" },
+		});
+		let greeted: unknown;
+		await seeded.query(request, {
+			generateMiddlewareResponse: async (query) => {
+				const context = await query(request);
+				if ("loaderData" in context) {
+					greeted = context.loaderData.root;
+				}
+				return new Response("done");
+			},
+			requestContext: new RouterContextProvider(),
+		});
+		assert.isTrue(
+			AsyncResult.isAsyncResult(greeted) &&
+				AsyncResult.isSuccess(greeted) &&
+				greeted.value === "Hello, ada",
+		);
 	});
 });
 

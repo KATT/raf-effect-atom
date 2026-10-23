@@ -14,7 +14,7 @@ import {
 } from "./ReactHydration.tsx";
 
 /**
- * Hydrates the state a server component dehydrated with `dehydrate()`,
+ * Hydrates the state a server component dehydrated with `await dehydrate()`,
  * streamed results included.
  *
  * **Details**
@@ -31,7 +31,7 @@ import {
  * export default async function IssuePage(props: { params: Promise<{ id: string }> }) {
  *   const handle = await ensure(issue, Number((await props.params).id))
  *   return (
- *     <HydrateAtoms state={dehydrate()}>
+ *     <HydrateAtoms state={await dehydrate()}>
  *       <Issue issue={handle} />
  *     </HydrateAtoms>
  *   )

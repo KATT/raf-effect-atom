@@ -47,6 +47,7 @@ import { hydrated } from "./Hydration.ts";
 import { isDevelopment } from "./internal/development.ts";
 import * as Handles from "./internal/handles.ts";
 import * as Leases from "./internal/leases.ts";
+import * as Seeds from "./internal/seeds.ts";
 import { isRequestRegistry } from "./RequestRegistry.ts";
 
 /**
@@ -83,6 +84,10 @@ const start = Effect.fnUntraced(function* <A, E>(
 	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
 ) {
 	const registry = yield* AtomRegistry.AtomRegistry;
+	const seed = Seeds.pending(registry);
+	if (seed !== undefined) {
+		yield* Effect.promise(() => seed);
+	}
 	const request = isRequestRegistry(registry);
 	if (request && !Atom.isSerializable(atom) && (yield* isDevelopment)) {
 		return yield* Effect.die(
@@ -155,7 +160,8 @@ const rejectDefects = <A, E>(
  *
  * Starts the atom if it isn't in the registry, and leaves it alone if it is.
  * Takes a lease either way. The component that reads the handle suspends
- * until the result settles.
+ * until the result settles. On a request registry whose async seed is still
+ * running, it waits for the seed first.
  *
  * **Example**
  *
@@ -344,7 +350,11 @@ export interface Loader {
 		source: S,
 		...args: ArgsOf<S>
 	) => Promise<LoadedHandle<S>>;
-	/** {@link prefetch}, run at once. */
+	/**
+	 * {@link prefetch}, run at once. On a request registry whose async seed is
+	 * still running, it returns the handle at once and starts the atom once
+	 * the seed resolves.
+	 */
 	readonly prefetch: <S extends Source>(
 		source: S,
 		...args: ArgsOf<S>
@@ -401,7 +411,12 @@ export const make = (
 			Effect.runPromise(provide(ensure(source, ...args))),
 		fetch: (source, ...args) =>
 			Effect.runPromise(provide(fetch(source, ...args))),
-		prefetch: (source, ...args) =>
-			Effect.runSync(provide(prefetch(source, ...args))),
+		prefetch: <S extends Source>(source: S, ...args: ArgsOf<S>) => {
+			const atom = Handles.atomOf(source, args);
+			Seeds.afterSeed(registry, () => {
+				Effect.runSync(provide(start(atom)));
+			});
+			return Handles.make<S>(args, atom);
+		},
 	};
 };

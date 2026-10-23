@@ -35,9 +35,10 @@ const httpClient =
 			);
 
 /**
- * The page request's `cookie` header, set in each request's registry by
- * `forwardCookie`, so the backend reads the same session and latency as when
- * the browser calls it. Unset in the browser, which sends its own cookies.
+ * The page request's `cookie` header, set in each request's registry by the
+ * seed in `atoms.server.ts`, so the backend reads the same session and
+ * latency as when the browser calls it. Unset in the browser, which sends its
+ * own cookies.
  */
 export const requestCookie = Atom.make<string | undefined>(undefined).pipe(
 	Atom.keepAlive,

@@ -13,9 +13,17 @@ import {
 
 import type { LoadedHandle } from "../src/Handle.ts";
 import * as Hydration from "../src/Hydration.ts";
-import * as Next from "../src/internal/next.ts";
+import * as NextInternal from "../src/internal/next.ts";
 import * as Pending from "../src/internal/pending.ts";
-import { counter, issue, IssueNotFound, serve } from "./fixtures/issues.ts";
+import {
+	counter,
+	greeting,
+	issue,
+	IssueNotFound,
+	later,
+	serve,
+	viewer,
+} from "./fixtures/issues.ts";
 
 const reference = {
 	chunks: [],
@@ -87,6 +95,8 @@ const renderPayload = async (page: React.ReactNode) => {
 const streamOf = (entry: EffectHydration.DehydratedAtom) =>
 	"resultPromise" in entry ? entry.resultPromise : undefined;
 
+const Next = NextInternal.make();
+
 const resultOf = (registry: AtomRegistry.AtomRegistry, id: number) =>
 	registry.get(Hydration.hydrated(issue(id)));
 
@@ -96,7 +106,7 @@ describe("raf-effect-atom/next in a server component render", () => {
 		vi.stubGlobal("__webpack_require__", () => clientModule);
 		async function IssuePage() {
 			await Next.ensure(issue, 1);
-			return <HydrateAtoms state={Next.dehydrate()} />;
+			return <HydrateAtoms state={await Next.dehydrate()} />;
 		}
 		const rendered = await renderPayload(<IssuePage />);
 		const registry = AtomRegistry.make();
@@ -114,9 +124,9 @@ describe("raf-effect-atom/next in a server component render", () => {
 	it("streams a prefetched result as a promise in the payload", async () => {
 		using server = serve({});
 		vi.stubGlobal("__webpack_require__", () => clientModule);
-		function IssuePage() {
+		async function IssuePage() {
 			Next.prefetch(issue, 2);
-			return <HydrateAtoms state={Next.dehydrate()} />;
+			return <HydrateAtoms state={await Next.dehydrate()} />;
 		}
 		const rendered = await renderPayload(<IssuePage />);
 		assert.match(rendered.payload, /"resultPromise":"\$@\w+"/);
@@ -134,9 +144,9 @@ describe("raf-effect-atom/next in a server component render", () => {
 	it("holds a prefetched result that's still streaming, so the browser waits for it", async () => {
 		using server = serve({});
 		vi.stubGlobal("__webpack_require__", () => clientModule);
-		function IssuePage() {
+		async function IssuePage() {
 			Next.prefetch(issue, 4);
-			return <HydrateAtoms state={Next.dehydrate()} />;
+			return <HydrateAtoms state={await Next.dehydrate()} />;
 		}
 		const registry = AtomRegistry.make();
 		Hydration.hydrate(registry, await decode(render(<IssuePage />)));
@@ -159,11 +169,11 @@ describe("raf-effect-atom/next in a server component render", () => {
 			seen.push(Next.getRegistry());
 			return null;
 		}
-		function IssuePage() {
+		async function IssuePage() {
 			seen.push(Next.getRegistry());
 			Next.prefetch(issue, 3);
 			return (
-				<HydrateAtoms state={Next.dehydrate()}>
+				<HydrateAtoms state={await Next.dehydrate()}>
 					<Comments />
 				</HydrateAtoms>
 			);
@@ -176,6 +186,29 @@ describe("raf-effect-atom/next in a server component render", () => {
 		for (const registry of seen) {
 			assert.throws(() => registry.get(counter), /disposed/);
 		}
+	});
+
+	it("seeds each render's registry, and dehydrates what started while an async seed ran", async () => {
+		vi.stubGlobal("__webpack_require__", () => clientModule);
+		const seeded = NextInternal.make({
+			seed: async (registry) => {
+				await later(10);
+				registry.set(viewer, "ada");
+			},
+		});
+		async function GreetingPage() {
+			seeded.prefetch(greeting);
+			return <HydrateAtoms state={await seeded.dehydrate()} />;
+		}
+		const rendered = await renderPayload(<GreetingPage />);
+		const registry = AtomRegistry.make();
+		Hydration.hydrate(registry, rendered.state);
+		await Promise.all(rendered.state.map(streamOf));
+		const result = registry.get(Hydration.hydrated(greeting));
+		assert.isTrue(
+			AsyncResult.isSuccess(result) && result.value === "Hello, ada",
+		);
+		registry.dispose();
 	});
 
 	it("sends a verb's handle to a client component as a prop", async () => {

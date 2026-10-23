@@ -21,6 +21,18 @@ describe("raf-effect-atom/next", () => {
 
 	it("returns the request's registry and its dehydrated state", () => {
 		expect(Next.getRegistry()).type.toBe<AtomRegistry.AtomRegistry>();
-		expect(Next.dehydrate()).type.toBe<Array<EffectHydration.DehydratedAtom>>();
+		expect(Next.dehydrate()).type.toBe<
+			Promise<Array<EffectHydration.DehydratedAtom>>
+		>();
+	});
+
+	it("makes the verbs over a seeded registry, async seeds included", () => {
+		const atoms = Next.makeRequestAtoms({
+			seed: async (registry) => {
+				expect(registry).type.toBe<AtomRegistry.AtomRegistry>();
+			},
+		});
+		expect(atoms.prefetch(issue, 1)).type.toBe<Handle<typeof issue>>();
+		expect(atoms).type.toBe<Next.RequestAtoms>();
 	});
 });

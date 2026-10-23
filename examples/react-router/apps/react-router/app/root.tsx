@@ -42,17 +42,12 @@ export const meta: Route.MetaFunction = () =>
 	exampleAppMeta(exampleApps["react-router"]);
 
 export const middleware: Array<Route.MiddlewareFunction> = [
-	atomsMiddleware(atomsContext),
-	// The backend reads the session and latency from cookies: atoms that run
-	// in this request's registry send the page request's.
-	(args) => {
-		args.context
-			.get(atomsContext)
-			.registry.set(
-				requestCookie,
-				args.request.headers.get("cookie") ?? undefined,
-			);
-	},
+	atomsMiddleware(atomsContext, {
+		// The backend reads the session and latency from cookies: atoms that
+		// run in this request's registry send the page request's.
+		seed: (registry, request) =>
+			registry.set(requestCookie, request.headers.get("cookie") ?? undefined),
+	}),
 ];
 
 export function loader(args: Route.LoaderArgs) {

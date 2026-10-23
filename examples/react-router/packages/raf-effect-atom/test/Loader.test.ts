@@ -10,11 +10,14 @@ import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import { Loader, RequestRegistry } from "../src/index.ts";
 import {
 	counter,
+	greeting,
 	issue,
 	IssueNotFound,
 	remadeIssue,
+	later,
 	serve,
 	unkeyedIssue,
+	viewer,
 } from "./fixtures/issues.ts";
 
 /** A browser registry with a short idle TTL, disposed with the test. */
@@ -243,6 +246,77 @@ describe("request registries", () => {
 	it("are marked, and browser registries aren't", () => {
 		assert.isTrue(RequestRegistry.isRequestRegistry(RequestRegistry.make()));
 		assert.isFalse(RequestRegistry.isRequestRegistry(AtomRegistry.make()));
+	});
+});
+
+describe("seeded request registries", () => {
+	const seeded = () =>
+		RequestRegistry.make({
+			seed: async (registry) => {
+				await later(10);
+				registry.set(viewer, "ada");
+			},
+		});
+
+	const rejection = (promise: Promise<unknown>) =>
+		promise.then(() => assert.fail("it resolved"), String);
+
+	const started = (registry: AtomRegistry.AtomRegistry) =>
+		registry.getNodes().has("greeting");
+
+	it("run a sync seed before any verb", async () => {
+		const registry = RequestRegistry.make({
+			seed: (fresh) => fresh.set(viewer, "ada"),
+		});
+		const handle = await Loader.make(registry).ensure(greeting);
+		const result = Loader.result(handle);
+		assert.isTrue(
+			AsyncResult.isSuccess(result) && result.value === "Hello, ada",
+		);
+		registry.dispose();
+	});
+
+	it("make ensure and fetch wait for an async seed", async () => {
+		const registry = seeded();
+		const loader = Loader.make(registry);
+		const ensured = Loader.result(await loader.ensure(greeting));
+		assert.isTrue(
+			AsyncResult.isSuccess(ensured) && ensured.value === "Hello, ada",
+		);
+		const fetched = Loader.result(await loader.fetch(greeting));
+		assert.isTrue(
+			AsyncResult.isSuccess(fetched) && fetched.value === "Hello, ada",
+		);
+		registry.dispose();
+	});
+
+	it("start a prefetch after the seed, and settled waits for it", async () => {
+		const registry = seeded();
+		Loader.make(registry).prefetch(greeting);
+		assert.isFalse(started(registry));
+		await RequestRegistry.settled(registry);
+		assert.isTrue(started(registry));
+		const result = Loader.result(await Loader.make(registry).ensure(greeting));
+		assert.isTrue(
+			AsyncResult.isSuccess(result) && result.value === "Hello, ada",
+		);
+		registry.dispose();
+	});
+
+	it("reject the verbs and settled once a seed fails", async () => {
+		const registry = RequestRegistry.make({
+			seed: () => Promise.reject(new Error("no cookie")),
+		});
+		const loader = Loader.make(registry);
+		loader.prefetch(greeting);
+		assert.include(await rejection(loader.ensure(greeting)), "no cookie");
+		assert.include(
+			await rejection(RequestRegistry.settled(registry)),
+			"no cookie",
+		);
+		assert.include(await rejection(loader.fetch(greeting)), "no cookie");
+		assert.isFalse(started(registry));
+		registry.dispose();
 	});
 });
 

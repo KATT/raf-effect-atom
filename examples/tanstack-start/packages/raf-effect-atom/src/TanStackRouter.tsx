@@ -78,14 +78,23 @@ export interface RouterAtomsOptions<TRouter extends AnyRouter> {
  *   default registry does. An atom's own `Atom.setIdleTTL` or
  *   `Atom.keepAlive` wins. The server's request registry lives for one
  *   request, so it has none.
+ * - `seed` runs on the server's request registry before the loaders start
+ *   atoms in it, as `RequestRegistry.make`'s does: set what the request's
+ *   atoms need, such as its cookie. It can be async. The browser's registry
+ *   isn't seeded.
  *
  * **Example**
  *
  * ```ts
+ * import { getRequestHeader } from "@tanstack/react-start/server"
  * import { makeRegistry } from "raf-effect-atom/tanstack-router"
  *
- * // Keeps an issue the user navigated away from for a minute.
- * const registry = makeRegistry({ defaultIdleTTL: 60_000 })
+ * const registry = makeRegistry({
+ *   // Keeps an issue the user navigated away from for a minute.
+ *   defaultIdleTTL: 60_000,
+ *   // In-process RPC calls send the page request's cookie.
+ *   seed: (registry) => registry.set(requestCookie, getRequestHeader("cookie"))
+ * })
  * ```
  *
  * @stability unstable
@@ -94,6 +103,7 @@ export interface RouterAtomsOptions<TRouter extends AnyRouter> {
  */
 export const makeRegistry = (options?: {
 	readonly defaultIdleTTL?: number | undefined;
+	readonly seed?: RequestRegistry.Seed | undefined;
 }): AtomRegistry.AtomRegistry => Registry.make(options);
 
 const hasRouterAtoms = (value: unknown): value is DehydratedRouterAtoms =>
@@ -165,6 +175,7 @@ export const setupRouterAtoms = <TRouter extends AnyRouter>(
 		const dehydrate = router.options.dehydrate;
 		router.options.dehydrate = async () => {
 			const dehydrated: unknown = await dehydrate?.();
+			await RequestRegistry.settled(registry);
 			if (disposed) {
 				return dehydrated;
 			}

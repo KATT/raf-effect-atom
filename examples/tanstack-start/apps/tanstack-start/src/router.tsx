@@ -15,8 +15,11 @@ import {
 
 export function getRouter() {
 	// A request registry on the server, the browser's registry in the browser.
-	const registry = makeRegistry();
-	registry.set(requestCookie, readRequestCookie());
+	const registry = makeRegistry({
+		// The backend reads the session and latency from cookies: atoms that
+		// run in this request's registry send the page request's.
+		seed: (server) => server.set(requestCookie, readRequestCookie()),
+	});
 	const router = createRouter({
 		context: { atoms: Loader.make(registry) },
 		defaultPreload: toDefaultPreload(readPrefetch()),

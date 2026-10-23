@@ -10,31 +10,39 @@ import * as RequestRegistry from "../RequestRegistry.ts";
 // Server components evaluate this module, so it must not import
 // `@effect/atom-react`, which needs React's client APIs.
 
-export const getRegistry: () => AtomRegistry.AtomRegistry = React.cache(() => {
-	const registry = RequestRegistry.make();
-	// SAFETY: React's cacheSignal returns an AbortSignal during a server
-	// component render, which @types/react declares as an empty interface.
-	const signal = React.cacheSignal() as AbortSignal | null;
-	signal?.addEventListener("abort", () => registry.dispose(), { once: true });
-	return registry;
-});
+export interface RequestAtoms extends Loader.Loader {
+	readonly dehydrate: () => Promise<Array<EffectHydration.DehydratedAtom>>;
+	readonly getRegistry: () => AtomRegistry.AtomRegistry;
+}
 
-const getLoader = React.cache(() => Loader.make(getRegistry()));
-
-export const prefetch = <S extends Source>(
-	source: S,
-	...args: ArgsOf<S>
-): Handle<S> => getLoader().prefetch(source, ...args);
-
-export const ensure = <S extends Source>(
-	source: S,
-	...args: ArgsOf<S>
-): Promise<LoadedHandle<S>> => getLoader().ensure(source, ...args);
-
-export const fetch = <S extends Source>(
-	source: S,
-	...args: ArgsOf<S>
-): Promise<LoadedHandle<S>> => getLoader().fetch(source, ...args);
-
-export const dehydrate = (): Array<EffectHydration.DehydratedAtom> =>
-	Hydration.dehydrate(getRegistry());
+export const make = (options?: RequestRegistry.Options): RequestAtoms => {
+	const getRegistry = React.cache(() => {
+		const registry = RequestRegistry.make(options);
+		// SAFETY: React's cacheSignal returns an AbortSignal during a server
+		// component render, which @types/react declares as an empty interface.
+		const signal = React.cacheSignal() as AbortSignal | null;
+		signal?.addEventListener("abort", () => registry.dispose(), {
+			once: true,
+		});
+		return registry;
+	});
+	const getLoader = React.cache(() => Loader.make(getRegistry()));
+	return {
+		dehydrate: async () => {
+			const registry = getRegistry();
+			await RequestRegistry.settled(registry);
+			return Hydration.dehydrate(registry);
+		},
+		ensure: <S extends Source>(
+			source: S,
+			...args: ArgsOf<S>
+		): Promise<LoadedHandle<S>> => getLoader().ensure(source, ...args),
+		fetch: <S extends Source>(
+			source: S,
+			...args: ArgsOf<S>
+		): Promise<LoadedHandle<S>> => getLoader().fetch(source, ...args),
+		getRegistry,
+		prefetch: <S extends Source>(source: S, ...args: ArgsOf<S>): Handle<S> =>
+			getLoader().prefetch(source, ...args),
+	};
+};

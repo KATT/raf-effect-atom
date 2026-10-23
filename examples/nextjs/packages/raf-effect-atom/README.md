@@ -52,7 +52,7 @@ function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
 Each framework has a subpath that gives every server request its own registry and sends it to the browser:
 
 - `raf-effect-atom/tanstack-router`, for TanStack Router and TanStack Start: `setupRouterAtoms({ router, registry })` in `getRouter`, with `Loader.make(registry)` on the router context.
-- `raf-effect-atom/next`, for the App Router: `prefetch`, `ensure` and `fetch` in server components, which pass the handles to client components as props, and `<HydrateAtoms state={dehydrate()}>` around them.
+- `raf-effect-atom/next`, for the App Router: `prefetch`, `ensure` and `fetch` in server components, which pass the handles to client components as props, and `<HydrateAtoms state={await dehydrate()}>` around them. `makeRequestAtoms({ seed })` makes the same functions over a registry seeded from the request, such as with its cookie.
 - `raf-effect-atom/react-router`, for Framework Mode: `atomsMiddleware(atomsContext)` as the root middleware, loaders that return `atoms.dehydrate()` with their handles, and `HydrationBoundary` in the route component.
 
 In development, `useAtomResult` reports a read that starts an atom nothing started, a request waterfall. `<WaterfallDetection mode="throw">` at the root makes it throw to the nearest error boundary. `useWaterfall(source, ...args)` starts an atom whose input exists only in render, marks it as a known waterfall, and returns its handle.
