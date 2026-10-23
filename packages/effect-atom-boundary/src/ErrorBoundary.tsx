@@ -11,6 +11,7 @@
 "use client";
 
 import { RegistryContext } from "@effect/atom-react";
+import * as Option from "effect/Option";
 import * as Predicate from "effect/Predicate";
 import type * as AsyncResult from "effect/reactivity/AsyncResult";
 import type * as Atom from "effect/reactivity/Atom";
@@ -24,6 +25,7 @@ import {
 	type Variance,
 } from "./Claim.ts";
 import * as FailedReads from "./internal/failedReads.ts";
+import * as Prerender from "./internal/prerender.tsx";
 import { variance } from "./internal/variance.ts";
 import * as Wrap from "./internal/wrap.ts";
 
@@ -94,8 +96,21 @@ const handlerFor = (
 	return undefined;
 };
 
+const caughtBy = (
+	handlers: Handlers,
+	error: Option.Option<unknown>,
+): Prerender.Caught | undefined => {
+	if (Option.isNone(error)) {
+		return undefined;
+	}
+	const Handler = handlerFor(handlers, error.value);
+	return Handler === undefined ? undefined : { error: error.value, Handler };
+};
+
 interface CatcherProps {
 	readonly children?: React.ReactNode | undefined;
+	/** Finds the failure it catches during server rendering. */
+	readonly find: Prerender.Find;
 	readonly handlers: Handlers;
 	/**
 	 * `AtomErrorBoundary`'s atom: a failure another atom's read threw goes to
@@ -133,7 +148,11 @@ class Catcher extends React.Component<CatcherProps, CatcherState> {
 	override render(): React.ReactNode {
 		const caught = this.state.caught;
 		if (caught === undefined) {
-			return this.props.children;
+			return (
+				<Prerender.Prerendered find={this.props.find}>
+					{this.props.children}
+				</Prerender.Prerendered>
+			);
 		}
 		const error = caught.error;
 		const own = this.props.own;
@@ -199,6 +218,12 @@ const claimEvery = Wrap.make<string>(
  * handler renders that handler; its `reset` refreshes the atom and renders
  * the children again. A new `atom` clears a caught failure.
  *
+ * React runs no error boundaries on the server, so during server rendering
+ * it reads `atom` before its children, from the registry or its hydrated
+ * state, and renders the handler for a failure that has settled. The
+ * browser keeps that HTML while it hydrates, then renders the children,
+ * which throw the failure to it again.
+ *
  * **Gotchas**
  *
  * A failure without a handler, or one thrown by a read of another atom, goes
@@ -234,8 +259,22 @@ const claimEvery = Wrap.make<string>(
 export const AtomErrorBoundary: AtomErrorBoundaryComponent = Object.assign(
 	<A, E>(props: AtomErrorBoundaryProps<A, E>): React.ReactNode => {
 		const registry = React.useContext(RegistryContext);
+		const handlers: Handlers = props.catchTags;
+		const atom = props.atom;
 		return (
-			<Catcher handlers={props.catchTags} own={{ atom: props.atom, registry }}>
+			<Catcher
+				find={(current) =>
+					caughtBy(
+						handlers,
+						Option.flatMap(
+							Prerender.peek(current, atom),
+							Prerender.settledError,
+						),
+					)
+				}
+				handlers={handlers}
+				own={{ atom, registry }}
+			>
 				{props.children}
 			</Catcher>
 		);
@@ -363,10 +402,19 @@ const isMounted = (at: Mounted | undefined, boundary: Internal): boolean => {
  * of `errors`' error type, so a misspelled tag is a type error and each
  * handler's `error` is typed.
  *
+ * React runs no error boundaries on the server, so during server rendering
+ * it looks through the registry's atoms before rendering its children, and
+ * renders its handler for a settled failure it catches. It only sees atoms
+ * that already ran in that registry, such as the loaders' on TanStack
+ * Start, or under `raf-effect-atom`'s `HydrationBoundary` on React Router.
+ * A failure it doesn't see is thrown on the server and caught in the
+ * browser.
+ *
  * **Gotchas**
  *
  * A boundary matches `_tag` only: a failure with a claimed tag from any atom
- * under it is caught. The boundary throws without its `parent` mounted above
+ * under it is caught. During server rendering, that's any atom in the
+ * registry, read under it or not. The boundary throws without its `parent` mounted above
  * it, and the hook throws outside its boundary. A read that returns the
  * failures left and throws defects, such as `raf-effect-atom`'s
  * `useAtomResult`, gets the narrowed result; `useAtomSuspense` throws every
@@ -414,9 +462,21 @@ export const createErrorBoundary = <
 		claims,
 		displayName: `${options.name}Boundary`,
 	};
+	const find: Prerender.Find = (registry) => {
+		for (const node of registry.getNodes().values()) {
+			const caught = caughtBy(
+				handlers,
+				Option.flatMap(node.valueOption(), Prerender.settledError),
+			);
+			if (caught !== undefined) {
+				return caught;
+			}
+		}
+		return undefined;
+	};
 
-	// React Compiler compiles `Boundary` as if `options`, `handlers` and
-	// `boundary` were module-level values, and moves a closure over them out
+	// React Compiler compiles `Boundary` as if `options`, `handlers`, `find`
+	// and `boundary` were module-level values, and moves a closure over them out
 	// of this function, so `Boundary` creates no closures.
 	const Boundary = (props: {
 		readonly children?: React.ReactNode | undefined;
@@ -428,7 +488,7 @@ export const createErrorBoundary = <
 			);
 		}
 		return (
-			<Catcher handlers={handlers}>
+			<Catcher find={find} handlers={handlers}>
 				<MountedBoundaries value={{ boundary, parent: above }}>
 					{props.children}
 				</MountedBoundaries>

@@ -1,4 +1,5 @@
 import * as Effect from "effect/Effect";
+import * as Atom from "effect/reactivity/Atom";
 import * as AtomRpc from "effect/reactivity/AtomRpc";
 import * as Schema from "effect/Schema";
 import * as Rpc from "effect/rpc/Rpc";
@@ -78,6 +79,31 @@ export class Issues extends AtomRpc.Service<Issues>()("Issues", {
 }) {}
 
 export const issue = (id: number) => Issues.query("GetIssue", { id });
+
+/**
+ * `issue` with a serialization key that keeps its hydrated value on its
+ * first read, as `raf-effect-atom`'s `hydrated` copy does.
+ */
+export const hydratedIssue = Atom.family((id: number) => {
+	const atom = Issues.query(
+		"GetIssue",
+		{ id },
+		{ serializationKey: String(id) },
+	);
+	if (!Atom.isSerializable(atom)) {
+		return atom;
+	}
+	// SAFETY: a copy of `atom` with the same prototype and fields, as
+	// `Atom.serializable` makes its own.
+	const copy = Object.assign(Object.create(Object.getPrototypeOf(atom)), {
+		...atom,
+		[Atom.SerializableTypeId]: {
+			...atom[Atom.SerializableTypeId],
+			skipInitialRun: true,
+		},
+	}) as typeof atom;
+	return copy;
+});
 
 export const user = (name: string) => Issues.query("GetUser", { name });
 

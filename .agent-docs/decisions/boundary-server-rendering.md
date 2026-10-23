@@ -1,0 +1,24 @@
+# Boundaries render their handler on the server by checking first
+
+- **Why a check, not a catch:** React's server renderer (Fizz) runs no error boundaries. A read that throws calls `onError`. React Router's default `entry.server` turns any `onError` before the shell is ready into a 500, and waits for the whole page for bots. TanStack Start and Next.js answer 200 with the boundary missing from the HTML. So the boundary decides before its children render.
+- **The check:**
+  - `AtomErrorBoundary` peeks its atom: the node's value, or failing that the hydrated encoding decoded with the atom's schema.
+  - A `createErrorBoundary` boundary scans `registry.getNodes()` for a settled typed failure it has its own handler for.
+  - Neither starts an atom.
+- **Server output:** `<Suspense fallback={null}><template id={useId()}/><Handler error reset={noop}/></Suspense>` (`src/internal/prerender.tsx`). "Server" means no `window`.
+- **Hydration:**
+  - The `template` id marks a pre-rendered boundary.
+  - During hydration the same `Suspense` suspends on a promise that never resolves, so React keeps the server HTML without comparing it.
+  - After hydration the children render, the read throws, and the `Catcher` catches it with a working `reset`.
+  - Without the marker, the children render as usual.
+- **React Router:** raf's `Hydration.dehydrate` remembers its source registry in a WeakMap keyed by the returned array. React Router hands loader data to the server render without serializing it. So raf's `HydrationBoundary` on the server provides the loader's request registry to its children instead of hydrating a copy, and the nodes exist when the boundary checks. In the browser the array is a deserialized copy, so it hydrates as before.
+- **Limits accepted:**
+  - A failure that settles after the boundary renders, such as one a loader `prefetch`ed, still throws on the server.
+  - A shared boundary above the route's `HydrationBoundary` sees an empty registry. That covers the React Router example's root `AuthBoundary`: signed out is still a 500.
+  - On Next.js, client components' server render only has encodings, and a shared boundary has no atom to decode them with. Only `AtomErrorBoundary` pre-renders there.
+  - The shared scan can't tell which atoms its children read. During server rendering, any settled failure with a claimed tag in the registry shows the handler; after hydration it corrects itself.
+- **Rejected:**
+  - Suspending the boundary until in-flight atoms settle: it blocks streaming for the whole subtree.
+  - Throwing a never-resolving promise from the read: the stream never finishes.
+  - Decoding encodings by tag without the atom: errors encode differently from how they decode.
+  - Finding React Router's request registry from the root via `useMatches()` or a custom `entry.server`: app wiring or too much magic. It's left for later, if signed-out pages should be 200 on React Router.

@@ -19,7 +19,17 @@ tanstack-start/src/boundaries.tsx#issue
 tanstack-start/src/routes/issues.$id.tsx#hero
 ```
 
-The server sends the failed result with the page. The browser hydrates it, the read throws it, and the boundary renders its handler, all without a request. `reset` refreshes the atom in the browser.
+The server renders the boundary's handler and sends the failed result with the page. The browser keeps the handler's HTML while it hydrates, then the read throws the hydrated failure and the boundary catches it, all without a request. `reset` refreshes the atom in the browser.
+
+### During server rendering
+
+React runs no error boundaries on the server: a read that throws there fails the response, or leaves that part of the page to the browser. So a boundary checks the registry before it renders its children, and renders its handler in their place for a failure it catches that has settled.
+
+- `AtomErrorBoundary` reads its own atom, from the registry or from the state the page hydrated, under every framework.
+- A shared boundary looks through the atoms that already ran in the registry it reads: the loaders' on TanStack Start, and on React Router, the request's under `HydrationBoundary`. A shared boundary above a route's `HydrationBoundary`, or in a Next.js client component, doesn't see them.
+- A failure that settles after the boundary rendered, such as one a loader `prefetch`ed, streams to the browser instead.
+
+A failure the boundary doesn't see is thrown on the server, and the browser renders the handler. On React Router, a throw before the page's shell is ready makes the response a 500.
 
 ## In the loader
 
