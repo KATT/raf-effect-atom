@@ -7,14 +7,7 @@ import {
 	useAtomResult,
 	useWaterfall,
 } from "raf-effect-atom";
-import {
-	startTransition,
-	Suspense,
-	use,
-	useEffect,
-	useRef,
-	useState,
-} from "react";
+import { startTransition, Suspense, use, useEffect, useState } from "react";
 import { RegistryContext, useAtomSuspense } from "@effect/atom-react";
 
 import { useAuthBoundary } from "~/boundaries.tsx";
@@ -90,43 +83,38 @@ const userHandle = AsyncResult.isSuccess(found)
 // #endregion dependent
 
 // #region event-handler
-// Each keystroke doesn't belong in the URL, so the debounced handler starts
-// the search from the latest text, then renders its handle in a transition,
+// Each keystroke doesn't belong in the URL, so a debounce starts the search
+// once the text stops changing, then renders its handle in a transition,
 // which keeps the previous results on screen until the new ones are in.
 function IssueSearch() {
 	const registry = use(RegistryContext);
-	const [query, setQuery] = useState<{
-		readonly text: string;
-		readonly search?: Handle<typeof searchIssues>;
-	}>({ text: "" });
-	const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
-	useEffect(() => () => clearTimeout(timeout.current), []);
+	const [text, setText] = useState("");
+	const [search, setSearch] = useState<Handle<typeof searchIssues>>();
+	useEffect(() => {
+		const timeout = setTimeout(() => {
+			startTransition(() => {
+				setSearch(
+					text === ""
+						? undefined
+						: Loader.make(registry).prefetch(searchIssues, text),
+				);
+			});
+		}, 300);
+		return () => clearTimeout(timeout);
+	}, [registry, text]);
 	return (
 		<search>
 			<input
 				aria-label="Search issues"
 				onChange={(event) => {
-					const text = event.target.value;
-					setQuery((previous) => ({ ...previous, text }));
-					clearTimeout(timeout.current);
-					timeout.current = setTimeout(() => {
-						startTransition(() => {
-							setQuery((latest) => ({
-								text: latest.text,
-								search:
-									latest.text === ""
-										? undefined
-										: Loader.make(registry).prefetch(searchIssues, latest.text),
-							}));
-						});
-					}, 300);
+					setText(event.target.value);
 				}}
 				type="search"
-				value={query.text}
+				value={text}
 			/>
-			{query.search === undefined ? null : (
+			{search === undefined ? null : (
 				<Suspense fallback={<p>Searching…</p>}>
-					<SearchResults search={query.search} />
+					<SearchResults search={search} />
 				</Suspense>
 			)}
 		</search>

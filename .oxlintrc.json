@@ -702,9 +702,9 @@
 			}
 		},
 		{
-			// The search-as-you-type sample clears its debounce timer on unmount:
-			// readers copy it into apps that may not run React Compiler, where a
-			// plain effect is the cleanup that works.
+			// The search-as-you-type sample debounces with an effect, whose cleanup
+			// resets the timer on each keystroke and on unmount: the shape readers
+			// know and copy.
 			"files": ["www/samples/tanstack-start/src/docs/request-waterfalls.tsx"],
 			"rules": {
 				"workspace/no-use-effect": "off"

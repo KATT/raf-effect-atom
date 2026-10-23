@@ -106,13 +106,13 @@ What's left is state that shouldn't be in the URL, such as each keystroke in a s
 
 ### Event handlers
 
-When an event handler changes the state that picks the data, it can start the atom before the state change that renders its reader. Search-as-you-type is the case: the URL can hold a submitted query, but not every keystroke, so the debounced handler starts each search. `Loader.make(registry)` gives a handler the same verbs a loader has:
+When an event handler changes the state that picks the data, it can start the atom before the state change that renders its reader. `Loader.make(registry)` gives a handler the same verbs a loader has, so a click or a submit calls `prefetch` in its handler. Search-as-you-type debounces instead: the URL can hold a submitted query, but not every keystroke, so a timer starts each search once the typing stops:
 
 ```sample
 tanstack-start/src/docs/request-waterfalls.tsx#event-handler
 ```
 
-The request starts with the state change, not after the render it causes, and the transition keeps the previous results on screen until the next ones are in. The timer reads the text inside the state update, so it searches whatever the box holds when it fires, and each keystroke and the unmount clear it.
+The timer starts after the render that shows the keystroke, so the request starts after a render, but before the one that renders its reader. The effect's cleanup resets the timer on each keystroke and on unmount, and the transition keeps the previous results on screen until the next ones are in.
 
 ### Render-time inputs: useWaterfall
 
