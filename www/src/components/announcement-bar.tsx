@@ -19,21 +19,9 @@ const announcements = {
 			</>
 		),
 	},
-	unpublished: {
-		id: "not-on-npm",
-		message: (
-			<>
-				<strong className="font-semibold">Not on npm yet.</strong>{" "}
-				<code className="font-mono">raf-effect-atom</code> and{" "}
-				<code className="font-mono">effect-atom-boundary</code> aren’t
-				published, and both can still change between minor releases.
-			</>
-		),
-	},
 } satisfies Record<string, { id: string; message: ReactNode }>;
 
-/** Switch to `announcements.early` with the packages' first npm release. */
-const announcement = announcements.unpublished;
+const announcement = announcements.early;
 
 /** Set on `<html>` once dismissed; `styles.css` hides the bar under it. */
 const dismissedAttribute = "data-announcement-dismissed";
