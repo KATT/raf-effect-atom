@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.1](https://github.com/KATT/raf-effect-atom/compare/effect-atom-boundary%400.1.0...effect-atom-boundary%400.1.1) (2026-10-23)
+
+### Bug Fixes
+
+- **effect-atom-boundary:** keep a failed read's record in the registry it ran in ([520f60c](https://github.com/KATT/raf-effect-atom/commit/520f60c2fad9a6ca8ee34cb5f581e19d7ef04d7c))
+
 ## 0.1.0 (2026-10-23)
 
 ### ⚠ BREAKING CHANGES

@@ -2,18 +2,16 @@ import { IssueId } from "@examples/contract";
 import { notFound } from "@tanstack/react-router";
 import { Option, Schema } from "effect";
 
-const decodeIssueId = Schema.decodeUnknownOption(
-	Schema.NumberFromString.pipe(Schema.decodeTo(IssueId)),
-);
+/** The issue routes' params: `$issueId` is an `IssueId` in the URL. */
+const IssueParams = Schema.Struct({
+	issueId: Schema.NumberFromString.pipe(Schema.decodeTo(IssueId)),
+});
 
-/** `$issueId` as an `IssueId`; anything else is the router's not-found. */
+const decodeIssueParams = Schema.decodeOption(IssueParams);
+
+/** A `$issueId` that isn't an `IssueId` is the router's not-found. */
 export const issueIdParams = {
-	parse: (raw: { readonly issueId: string }) => ({
-		issueId: Option.getOrThrowWith(decodeIssueId(raw.issueId), () =>
-			notFound(),
-		),
-	}),
-	stringify: (params: { readonly issueId: IssueId }) => ({
-		issueId: String(params.issueId),
-	}),
+	parse: (raw: typeof IssueParams.Encoded) =>
+		Option.getOrThrowWith(decodeIssueParams(raw), notFound),
+	stringify: Schema.encodeSync(IssueParams),
 };
