@@ -40,6 +40,11 @@ import * as Registry from "./internal/registry.ts";
 import * as RequestRegistry from "./RequestRegistry.ts";
 
 /**
+ * @since 0.1.0
+ */
+export * as RouteLoader from "./RouteLoader.ts";
+
+/**
  * The key `setupRouterAtoms` adds to the router's dehydrated state.
  *
  * @stability unstable

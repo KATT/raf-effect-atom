@@ -26,14 +26,14 @@ import {
 	RequestRegistry,
 	useAtomResult,
 } from "../../src/index.ts";
-import { setupRouterAtoms } from "../../src/TanStackRouter.tsx";
+import { RouteLoader, setupRouterAtoms } from "../../src/TanStackRouter.tsx";
 import { mount, settle } from "./browser.tsx";
 import { issue, IssueNotFound } from "./issues.ts";
 
 const isIssueNotFound = Schema.is(IssueNotFound);
 
 function IssuePage() {
-	// SAFETY: both routes below return `{ issue }`, the issue's handle.
+	// SAFETY: every route below returns `{ issue }`, the issue's handle.
 	const data = useLoaderData({ strict: false }) as {
 		readonly issue: Handle<typeof issue>;
 	};
@@ -62,6 +62,7 @@ const rootRoute = createRootRouteWithContext<{
 			<Outlet />
 		</React.Suspense>
 	),
+	notFoundComponent: () => <p>Router not found</p>,
 });
 
 /** `/issues/$id` waits for the issue in its loader. */
@@ -84,7 +85,27 @@ const prefetchRoute = createRoute({
 	path: "/streamed/$id",
 });
 
-const routeTree = rootRoute.addChildren([ensureRoute, prefetchRoute]);
+/**
+ * `/checked/$id` waits for the issue in an Effect loader, and turns
+ * `IssueNotFound` into the router's not-found.
+ */
+const checkedRoute = createRoute({
+	component: IssuePage,
+	getParentRoute: () => rootRoute,
+	loader: (match) =>
+		RouteLoader.all(match, {
+			issue: Loader.ensure(issue, Number(match.params.id)).pipe(
+				Loader.catchTags({ IssueNotFound: () => RouteLoader.notFound() }),
+			),
+		}),
+	path: "/checked/$id",
+});
+
+const routeTree = rootRoute.addChildren([
+	checkedRoute,
+	ensureRoute,
+	prefetchRoute,
+]);
 
 /**
  * A router with its own `Wrap`, `dehydrate` and `hydrate`, as an app's might

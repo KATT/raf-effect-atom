@@ -1,6 +1,8 @@
 import { IssueListInput } from "@examples/contract";
 import { createFileRoute } from "@tanstack/react-router";
 import { Schema } from "effect";
+import { Loader } from "raf-effect-atom";
+import { RouteLoader } from "raf-effect-atom/tanstack-router";
 
 import { IssuesPage } from "~/components/pages.tsx";
 import { issueCounts, issuePage } from "~/issues.ts";
@@ -8,14 +10,12 @@ import { issueCounts, issuePage } from "~/issues.ts";
 export const Route = createFileRoute("/fetch/issues/")({
 	validateSearch: Schema.toStandardSchemaV1(IssueListInput),
 	loaderDeps: (args) => args.search,
-	loader: async (args) => {
+	loader: (args) =>
 		// Waits for fresh results, refreshing any the registry holds.
-		const [counts, page] = await Promise.all([
-			args.context.atoms.fetch(issueCounts),
-			args.context.atoms.fetch(issuePage, args.deps, 0),
-		]);
-		return { counts, page };
-	},
+		RouteLoader.all(args, {
+			counts: Loader.fetch(issueCounts),
+			page: Loader.fetch(issuePage, args.deps, 0),
+		}),
 	component: Page,
 });
 
