@@ -2,6 +2,7 @@ import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import { envPrefix } from "@examples/kit/lib/skew-protection";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite-plus";
 
@@ -18,6 +19,7 @@ export default defineConfig((env) => ({
 			},
 		},
 	},
+	envPrefix,
 	// Tests import the app's modules directly, without the Start build.
 	plugins:
 		env.mode === "test"
@@ -25,7 +27,11 @@ export default defineConfig((env) => ({
 			: [
 					tailwindcss(),
 					tanstackStart(),
-					nitro(),
+					// Nitro's Skew Protection sets `__vdpl` on `/`, which also pins
+					// documents to the deployment that set it: a reload never gets
+					// the latest one. `pinAssets` and the RPC transport pin the
+					// page's own requests instead.
+					nitro({ vercel: { skewProtection: false } }),
 					react(),
 					babel({
 						exclude: [/[/\\]node_modules[/\\]/, /^\0rolldown\/runtime\.js$/],

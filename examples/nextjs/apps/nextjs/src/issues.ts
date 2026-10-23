@@ -22,6 +22,8 @@ import { RpcClient, RpcSerialization } from "effect/rpc";
 export interface RpcTransport {
 	/** Replaces `globalThis.fetch`. */
 	readonly fetch?: typeof globalThis.fetch;
+	/** Sent with every request. */
+	readonly headers?: Readonly<Record<string, string>>;
 	readonly url: string;
 }
 
@@ -56,7 +58,10 @@ export class IssuesClient extends AtomRpc.Service<IssuesClient>()(
 				// Next.js redirects to `/rpc` (308), so the request gets the whole
 				// URL instead.
 				transformClient: HttpClient.mapRequest((request) => {
-					const sent = HttpClientRequest.setUrl(request, rpcTransport.url);
+					const sent = HttpClientRequest.setHeaders(
+						HttpClientRequest.setUrl(request, rpcTransport.url),
+						rpcTransport.headers ?? {},
+					);
 					return cookie === undefined
 						? sent
 						: HttpClientRequest.setHeader(sent, "cookie", cookie);

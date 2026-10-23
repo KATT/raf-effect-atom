@@ -6,6 +6,7 @@ import { ThemeProvider } from "@examples/kit/components/theme-provider";
 import { exampleAppMeta, exampleApps } from "@examples/kit/lib/example-apps";
 import { loaderVerbOf } from "@examples/kit/lib/loader-verb";
 import { logoUrl } from "@examples/kit/lib/logo";
+import { deploymentOf, pinAssets } from "@examples/kit/lib/skew-protection";
 import { Toaster } from "@examples/ui/components/sonner";
 import { WaterfallDetection } from "raf-effect-atom";
 import {
@@ -36,6 +37,9 @@ import "./app.css";
 export const links: Route.LinksFunction = () => [
 	{ href: logoUrl, rel: "icon", type: "image/svg+xml" },
 ];
+
+// The browser runs this module before it loads any other route's.
+pinAssets(deploymentOf(import.meta.env));
 
 // No route below exports `meta`, so every page has the root's.
 export const meta: Route.MetaFunction = () =>
