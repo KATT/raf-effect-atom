@@ -27,6 +27,9 @@ const pages = await Effect.runPromise(
 	docPages({ contentDir, samplesDir }).pipe(Effect.provide(NodeServices.layer)),
 );
 
+/** The site's HTML pages: the home page and each docs page. */
+const canonicalPaths = new Set(["/", ...pages.map((page) => page.path)]);
+
 export default defineConfig({
 	plugins: [
 		docsContent({
@@ -83,8 +86,17 @@ export default defineConfig({
 				crawlLinks: true,
 				enabled: true,
 				failOnError: true,
-				// `/docs` redirects to the first page.
-				filter: (page) => page.path !== "/docs" && !page.path.includes("#"),
+				filter: (page) => {
+					// Start adds the routes it discovers and every crawled link to
+					// `pages` before this runs, and the sitemap lists every page it
+					// doesn't exclude. Only the HTML pages declared above belong in
+					// it, not `/docs`, anchors, the `.md` routes or `llms.txt`.
+					if (!canonicalPaths.has(page.path)) {
+						page.sitemap = { exclude: true };
+					}
+					// `/docs` redirects to the first page.
+					return page.path !== "/docs" && !page.path.includes("#");
+				},
 			},
 			sitemap: { enabled: true, host: site.url },
 		}),
