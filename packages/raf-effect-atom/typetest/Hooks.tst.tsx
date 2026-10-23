@@ -1,12 +1,7 @@
 import { hole } from "effect";
-import type * as AsyncResult from "effect/reactivity/AsyncResult";
+import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
 import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
-import {
-	type ClaimedResult,
-	createErrorBoundary,
-	type ErrorBoundaryClaims,
-} from "effect-atom-boundary";
 import { describe, expect, it } from "tstyche";
 
 import {
@@ -15,42 +10,31 @@ import {
 	type Loader,
 	useAtomResult,
 } from "../src/index.ts";
-import { issue, Issues } from "../test/fixtures/issues.ts";
+import { issue } from "../test/fixtures/issues.ts";
 
 type IssueError = Atom.Failure<ReturnType<typeof issue>>;
 type Issue = Atom.Success<ReturnType<typeof issue>>;
 
-const [, useAuthBoundary] = createErrorBoundary({
-	catchTags: { Unauthorized: () => null },
-	errors: Issues,
-	name: "Auth",
-});
-
 describe("useAtomResult", () => {
-	it("returns the settled result without claims", () => {
+	it("returns the settled result, typed failures included", () => {
 		expect(useAtomResult(issue(1))).type.toBe<
 			Loader.SettledResult<Issue, IssueError>
 		>();
 	});
 
-	it("narrows the result to the errors its claims don't own", () => {
-		const result = useAtomResult(issue(1), useAuthBoundary());
-		expect(result).type.toBe<
-			ClaimedResult<Issue, IssueError, "Unauthorized">
-		>();
-		expect<
-			AsyncResult.Failure<
-				Issue,
-				Exclude<IssueError, { readonly _tag: "Unauthorized" }>
-			>
-		>().type.toBeAssignableTo<typeof result>();
-	});
-
-	it("takes the claims of any boundary", () => {
-		expect(useAtomResult).type.toBeCallableWith(
+	it("reads an atom derived with an initialValueTarget", () => {
+		const titled = Atom.transform(
 			issue(1),
-			hole<ErrorBoundaryClaims<"IssueNotFound" | "Unauthorized">>(),
+			(get) =>
+				AsyncResult.map(get(issue(1)), (found) => ({
+					...found,
+					title: `Titled ${found.title}`,
+				})),
+			{ initialValueTarget: issue(1) },
 		);
+		expect(useAtomResult(titled)).type.toBe<
+			Loader.SettledResult<Issue, IssueError>
+		>();
 	});
 
 	it("rejects an atom that isn't an AsyncResult", () => {

@@ -14,7 +14,7 @@ declare const id: IssueId;
 // No loader started these atoms, so each read starts its own request.
 function IssuePage(props: { issueId: IssueId }) {
 	// Starts GetIssue, and suspends until it settles.
-	const result = useAtomResult(issue(props.issueId), useIssueBoundary());
+	const result = useAtomResult(useIssueBoundary().wrap(issue(props.issueId)));
 	if (AsyncResult.isFailure(result)) {
 		return <p>Couldn't reach the server.</p>;
 	}
@@ -30,7 +30,9 @@ function IssuePage(props: { issueId: IssueId }) {
 }
 
 function Assignee(props: { issueId: IssueId }) {
-	const result = useAtomResult(assignee(props.issueId), useIssueBoundary());
+	const result = useAtomResult(
+		useIssueBoundary().wrap(assignee(props.issueId)),
+	);
 	return AsyncResult.isSuccess(result) ? <p>{result.value.name}</p> : null;
 }
 // #endregion fetch-on-render

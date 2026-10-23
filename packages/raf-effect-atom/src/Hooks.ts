@@ -13,7 +13,6 @@ import * as Option from "effect/Option";
 import * as Predicate from "effect/Predicate";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
-import type { ClaimedResult, ErrorBoundaryClaims } from "effect-atom-boundary";
 import * as React from "react";
 
 import { hydrated } from "./Hydration.ts";
@@ -48,8 +47,9 @@ const sourceOf = (atom: Atom.Atom<unknown>): Atom.Atom<unknown> => {
  *
  * **When to use**
  *
- * Use for every atom a loader starts or the server renders. Pass the claims
- * of an `effect-atom-boundary` boundary to throw its errors to it.
+ * Use for every atom a loader starts or the server renders, or for an atom
+ * derived from one with `initialValueTarget` pointing at it, such as an error
+ * boundary's wrapper.
  *
  * **Details**
  *
@@ -61,9 +61,8 @@ const sourceOf = (atom: Atom.Atom<unknown>): Atom.Atom<unknown> => {
  * - A derived atom is read through the first serializable atom its
  *   `initialValueTarget` chain points at: that one is awaited, hydrated and
  *   released, so the derived atom doesn't request it again.
- * - Without claims, the settled result is returned, typed failures
- *   included. With claims, `claims.claim` throws a claimed failure to its
- *   boundary and returns the rest, typed without the claimed errors.
+ * - The settled result is returned, typed failures included. A defect is
+ *   thrown to the error boundaries above.
  * - While a failed atom refreshes, such as after a boundary's `reset`, the
  *   read suspends instead of returning the old failure again.
  *
@@ -86,7 +85,7 @@ const sourceOf = (atom: Atom.Atom<unknown>): Atom.Atom<unknown> => {
  * import { useAtomResult } from "raf-effect-atom"
  *
  * function IssueTitle(props: { readonly id: number }) {
- *   const result = useAtomResult(issue(props.id), useAuthBoundary())
+ *   const result = useAtomResult(issue(props.id))
  *   return AsyncResult.isSuccess(result) ? <h1>{result.value.title}</h1> : null
  * }
  * ```
@@ -97,17 +96,9 @@ const sourceOf = (atom: Atom.Atom<unknown>): Atom.Atom<unknown> => {
  * @category hooks
  * @since 0.1.0
  */
-export function useAtomResult<A, E>(
+export const useAtomResult = <A, E>(
 	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-): SettledResult<A, E>;
-export function useAtomResult<A, E, Tags extends string>(
-	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-	claims: ErrorBoundaryClaims<Tags>,
-): ClaimedResult<A, E, Tags>;
-export function useAtomResult<A, E>(
-	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-	claims?: ErrorBoundaryClaims<string>,
-): ClaimedResult<A, E, string> | SettledResult<A, E> {
+): SettledResult<A, E> => {
 	const registry = React.useContext(RegistryContext);
 	if (
 		Registry.isServer() &&
@@ -147,5 +138,5 @@ export function useAtomResult<A, E>(
 	) {
 		throw Cause.squash(result.cause);
 	}
-	return claims === undefined ? result : claims.claim(atom, registry, result);
-}
+	return result;
+};

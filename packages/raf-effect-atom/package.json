@@ -49,14 +49,10 @@
 		"@effect/atom-react": "^4.0.6",
 		"@tanstack/react-router": "^1.170.46",
 		"effect": "^4.0.6",
-		"effect-atom-boundary": "*",
 		"react": "^19.2.0"
 	},
 	"peerDependenciesMeta": {
 		"@tanstack/react-router": {
-			"optional": true
-		},
-		"effect-atom-boundary": {
 			"optional": true
 		}
 	},

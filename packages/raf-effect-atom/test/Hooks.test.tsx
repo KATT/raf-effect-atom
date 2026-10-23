@@ -33,7 +33,7 @@ const [NotFoundBoundary, useNotFoundBoundary] = createErrorBoundary({
 });
 
 function Title(props: { readonly id: number }) {
-	const result = useAtomResult(issue(props.id), useNotFoundBoundary());
+	const result = useAtomResult(useNotFoundBoundary().wrap(issue(props.id)));
 	if (AsyncResult.isSuccess(result)) {
 		return <p>{result.value.title}</p>;
 	}
@@ -200,7 +200,7 @@ describe("useAtomResult", () => {
 		expect(screen.getByText(/^Outer: .*the server crashed/)).toBeDefined();
 	});
 
-	it("returns a failure it isn't given claims for", async () => {
+	it("returns a typed failure", async () => {
 		using _server = serve({ 1: ["missing"] });
 		using app = mount();
 		await app.render(
@@ -211,7 +211,7 @@ describe("useAtomResult", () => {
 		expect(screen.getByText("Result: IssueNotFound")).toBeDefined();
 	});
 
-	it("returns a failure its claims don't own", async () => {
+	it("returns a failure the boundary above doesn't claim", async () => {
 		using _server = serve({ 1: ["signed-out"] });
 		using app = mount();
 		await app.render(<Page ids={[1]} />);

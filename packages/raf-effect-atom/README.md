@@ -13,7 +13,7 @@ Render-as-you-fetch for [Effect Atom](https://github.com/Effect-TS/effect/tree/m
 npm install raf-effect-atom effect @effect/atom-react react
 ```
 
-`effect`, `@effect/atom-react` and `react` (19.2 or newer) are peer dependencies. [`effect-atom-boundary`](https://github.com/KATT/raf-effect-atom/tree/main/packages/effect-atom-boundary) is an optional one, for typed error boundaries.
+`effect`, `@effect/atom-react` and `react` (19.2 or newer) are peer dependencies.
 
 ## Usage
 
@@ -31,7 +31,7 @@ export async function loader(args: LoaderArgs) {
 }
 ```
 
-A component reads the atom with `useAtomResult`, which waits for a streamed result instead of starting the atom again, and returns typed failures. Read the atom an [`effect-atom-boundary`](https://github.com/KATT/raf-effect-atom/tree/main/packages/effect-atom-boundary) boundary's claims wrap to throw its errors to it:
+A component reads the atom with `useAtomResult`, which waits for a streamed result instead of starting the atom again, and returns typed failures. It also reads an atom derived from one, such as the atom an [`effect-atom-boundary`](https://github.com/KATT/raf-effect-atom/tree/main/packages/effect-atom-boundary) boundary's `wrap` returns, which throws the errors that boundary claims to it:
 
 ```tsx
 import { useAtomResult } from "raf-effect-atom";
