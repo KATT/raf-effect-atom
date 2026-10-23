@@ -14,7 +14,7 @@ import type * as Atom from "effect/reactivity/Atom";
 import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as Types from "effect/Types";
 
-import * as FailedReads from "./internal/failedReads.ts";
+import * as FailedReads from "./internal/failed-reads.ts";
 
 /**
  * Literal type used as the `ErrorBoundaryClaims` type identifier.

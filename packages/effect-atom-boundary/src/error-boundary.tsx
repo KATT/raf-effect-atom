@@ -23,8 +23,8 @@ import {
 	type TagsOf,
 	TypeId,
 	type Variance,
-} from "./Claim.ts";
-import * as FailedReads from "./internal/failedReads.ts";
+} from "./claim.ts";
+import * as FailedReads from "./internal/failed-reads.ts";
 import { variance } from "./internal/variance.ts";
 
 /**

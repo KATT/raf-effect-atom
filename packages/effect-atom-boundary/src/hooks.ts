@@ -16,7 +16,7 @@ import {
 	claim,
 	type ClaimedResult,
 	type ErrorBoundaryClaims,
-} from "./Claim.ts";
+} from "./claim.ts";
 
 /**
  * Reads an `AsyncResult` atom through React Suspense and throws its typed
