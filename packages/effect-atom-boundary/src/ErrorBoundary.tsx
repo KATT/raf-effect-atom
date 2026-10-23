@@ -18,7 +18,6 @@ import type * as AtomRpc from "effect/reactivity/AtomRpc";
 import * as React from "react";
 
 import {
-	claim,
 	type ErrorBoundaryClaims,
 	type TagsOf,
 	TypeId,
@@ -407,7 +406,6 @@ export const createErrorBoundary = <
 		handlerFor(handlers, error) !== undefined ||
 		(parent?.claims.owns(error) ?? false);
 	const claims: ErrorBoundaryClaims<string> = {
-		claim: (atom, registry, result) => claim(atom, registry, result, claims),
 		owns,
 		[TypeId]: variance,
 		wrap: Wrap.make(owns),

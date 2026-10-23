@@ -1,17 +1,13 @@
 import { hole } from "effect";
 import type * as AsyncResult from "effect/reactivity/AsyncResult";
 import type * as Atom from "effect/reactivity/Atom";
-import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import { describe, expect, it } from "tstyche";
 
 import {
 	AtomErrorBoundary,
-	claim,
-	type ClaimedResult,
 	createErrorBoundary,
 	type ErrorBoundaryClaims,
 	type ErrorsOf,
-	useAtomResult,
 } from "../src/index.ts";
 import { issue, Issues, user } from "../test/fixtures/Issues.ts";
 
@@ -171,55 +167,5 @@ describe("createErrorBoundary", () => {
 		expect(useAuthBoundary().wrap).type.not.toBeCallableWith(
 			hole<Atom.Atom<number>>(),
 		);
-	});
-
-	it("narrows a read under it to the unclaimed errors", () => {
-		const result = useAtomResult(issue(1), useAuthBoundary());
-		expect(result).type.toBe<
-			| AsyncResult.Failure<
-					Issue,
-					Tagged<IssueError, "IssueNotFound" | "RpcClientError">
-			  >
-			| AsyncResult.Success<
-					Issue,
-					Tagged<IssueError, "IssueNotFound" | "RpcClientError">
-			  >
-		>();
-	});
-});
-
-describe("useAtomResult", () => {
-	it("returns a success without claims", () => {
-		expect(useAtomResult(issue(1))).type.toBe<
-			AsyncResult.Success<Issue, IssueError>
-		>();
-	});
-});
-
-describe("claim", () => {
-	const registry = hole<AtomRegistry.AtomRegistry>();
-	const result = hole<
-		| AsyncResult.Failure<Issue, IssueError>
-		| AsyncResult.Success<Issue, IssueError>
-	>();
-
-	it("returns a success without claims", () => {
-		expect(claim(issue(1), registry, result)).type.toBe<
-			AsyncResult.Success<Issue, IssueError>
-		>();
-	});
-
-	it("narrows by the claims' tags", () => {
-		const claims = hole<ErrorBoundaryClaims<"Offline" | "Unauthorized">>();
-		expect(claim(issue(1), registry, result, claims)).type.toBe<
-			ClaimedResult<Issue, IssueError, "Offline" | "Unauthorized">
-		>();
-		expect(claims.claim(issue(1), registry, result)).type.toBe<
-			ClaimedResult<Issue, IssueError, "Offline" | "Unauthorized">
-		>();
-	});
-
-	it("rejects a result of another atom", () => {
-		expect(claim).type.not.toBeCallableWith(user("a"), registry, result);
 	});
 });

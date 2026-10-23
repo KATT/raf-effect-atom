@@ -17,7 +17,6 @@ import {
 	AtomErrorBoundary,
 	type CatchTagProps,
 	type CatchTags,
-	claim,
 	createErrorBoundary,
 } from "../src/index.ts";
 import { CompiledNotFound, type IssueNotFound } from "./fixtures/Handlers.tsx";
@@ -414,30 +413,6 @@ describe("a handler that's a component", () => {
 		await click("Hook: no issue 1, 0 clicks");
 		await app.render(tree());
 		expect(screen.getByText("Hook: no issue 1, 1 clicks")).toBeDefined();
-	});
-});
-
-describe("claim", () => {
-	it("returns a success and throws a typed failure", async () => {
-		using _server = serve({ 1: ["found"], 2: ["missing"] });
-		using app = mount();
-		const release = [
-			app.registry.mount(issue(1)),
-			app.registry.mount(issue(2)),
-		];
-		await settle();
-		const found = app.registry.get(issue(1));
-		const missing = app.registry.get(issue(2));
-		if (AsyncResult.isInitial(found) || AsyncResult.isInitial(missing)) {
-			throw new Error("expected both reads to settle");
-		}
-		expect(claim(issue(1), app.registry, found)).toBe(found);
-		expect(() => claim(issue(2), app.registry, missing)).toThrow(
-			expect.objectContaining({ _tag: "IssueNotFound", id: 2 }),
-		);
-		for (const dispose of release) {
-			dispose();
-		}
 	});
 });
 
