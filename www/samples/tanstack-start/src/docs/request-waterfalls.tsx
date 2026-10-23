@@ -1,14 +1,16 @@
 import type { IssueId } from "@examples/contract";
 import { Effect } from "effect";
 import { Loader, useAtomResult, useWaterfall } from "raf-effect-atom";
-import { Suspense, use, useState } from "react";
+import { startTransition, Suspense, use, useRef, useState } from "react";
 import { RegistryContext } from "@effect/atom-react";
 
-import { useIssueBoundary } from "~/boundaries.tsx";
-import { assignee, issue } from "~/issues.ts";
+import { useAuthBoundary, useIssueBoundary } from "~/boundaries.tsx";
+import { assignee, issue, searchIssues } from "~/issues.ts";
 
 declare const atoms: Loader.Loader;
 declare const id: IssueId;
+/** `value`, once it has stopped changing for `ms`. */
+declare function useDebouncedValue<A>(value: A, ms: number): A;
 
 // #region fetch-on-render
 // No loader started these atoms, so each read starts its own request.
@@ -64,37 +66,88 @@ const both = Effect.all(
 );
 // #endregion effect-all
 
-// #region use-waterfall
-// The ids come from the list's result, so no loader can know them.
-function AssigneeCell(props: { issueId: IssueId }) {
-	const result = useAtomResult(
-		useIssueBoundary().wrap(useWaterfall(assignee(props.issueId))),
-	);
-	return <td>{result.value.name}</td>;
-}
-// #endregion use-waterfall
-
 // #region event-handler
-function ShowAssignee(props: { issueId: IssueId }) {
+// Each keystroke doesn't belong in the URL, so the debounced handler starts
+// the search, then renders its results in a transition, which keeps the
+// previous results on screen until the new ones are in.
+function IssueSearch() {
 	const registry = use(RegistryContext);
-	const [shown, setShown] = useState(false);
-	if (!shown) {
-		return (
-			<button
-				onClick={() => {
-					// Starts it here, before the state change renders its reader.
-					Loader.make(registry).prefetch(assignee(props.issueId));
-					setShown(true);
-				}}
-			>
-				Show the assignee
-			</button>
-		);
-	}
+	const [query, setQuery] = useState("");
+	const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
 	return (
-		<Suspense fallback={<p>Loading the assignee…</p>}>
-			<Assignee issueId={props.issueId} />
-		</Suspense>
+		<search>
+			<input
+				aria-label="Search issues"
+				onChange={(event) => {
+					const next = event.target.value;
+					clearTimeout(timeout.current);
+					timeout.current = setTimeout(() => {
+						Loader.make(registry).prefetch(searchIssues(next));
+						startTransition(() => {
+							setQuery(next);
+						});
+					}, 300);
+				}}
+				type="search"
+			/>
+			{query === "" ? null : (
+				<Suspense fallback={<p>Searching…</p>}>
+					<SearchResults query={query} />
+				</Suspense>
+			)}
+		</search>
+	);
+}
+
+function SearchResults(props: { query: string }) {
+	// The app and auth boundaries claim RpcClientError and Unauthorized.
+	const result = useAtomResult(
+		useAuthBoundary().wrap(searchIssues(props.query)),
+	);
+	return (
+		<ul>
+			{result.value.map((found) => (
+				<li key={found.id}>{found.title}</li>
+			))}
+		</ul>
 	);
 }
 // #endregion event-handler
+
+// #region use-waterfall
+// The query exists only in render: it's the input's text, debounced.
+function DebouncedSearch() {
+	const [text, setText] = useState("");
+	const query = useDebouncedValue(text, 300);
+	return (
+		<search>
+			<input
+				aria-label="Search issues"
+				onChange={(event) => {
+					setText(event.target.value);
+				}}
+				type="search"
+				value={text}
+			/>
+			{query === "" ? null : (
+				<Suspense fallback={<p>Searching…</p>}>
+					<DebouncedResults query={query} />
+				</Suspense>
+			)}
+		</search>
+	);
+}
+
+function DebouncedResults(props: { query: string }) {
+	const result = useAtomResult(
+		useAuthBoundary().wrap(useWaterfall(searchIssues(props.query))),
+	);
+	return (
+		<ul>
+			{result.value.map((found) => (
+				<li key={found.id}>{found.title}</li>
+			))}
+		</ul>
+	);
+}
+// #endregion use-waterfall

@@ -21,3 +21,6 @@ export const assignee = (issueId: IssueId) =>
 		{ serializationKey: `${issueId}` },
 	);
 // #endregion atoms
+
+export const searchIssues = (query: string) =>
+	IssuesClient.query("SearchIssues", { query });

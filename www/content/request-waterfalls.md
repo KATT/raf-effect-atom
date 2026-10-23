@@ -87,19 +87,32 @@ An atom whose input comes from another atom's result is a waterfall by construct
 When the data really can't be reshaped, such as a third-party API, you have two options, and both pay the extra round trip:
 
 - **In the loader:** await the parent with `ensure` and start the child from its result. The navigation waits for both.
-- **In a component:** start the child with `useWaterfall`, below. The rest of the page renders first.
+- **In a component:** start the child with [`useWaterfall`](#render-time-inputs-usewaterfall), an escape hatch. The rest of the page renders first.
 
-## Event handlers
+## Put the state in the URL
 
-Data a user asks for, such as the next page of a list or a panel they open, starts in the event handler, before the state change that renders its reader. `Loader.make(registry)` gives a handler the same verbs a loader has:
+Loaders start what the URL names. The example apps' issue list keeps its status filter and sort order in search params, so its loader starts the matching page, and a filtered list survives a reload or a shared link.
+
+> [!TIP]
+> A page number, a filter, the selected item or a dialog that shows data goes in the URL: in search params ([TanStack Router](https://tanstack.com/router/latest/docs/framework/react/guide/search-params), [Next.js](https://nextjs.org/docs/app/api-reference/file-conventions/page#searchparams-optional), [React Router](https://reactrouter.com/api/hooks/useSearchParams)), or for a dialog, in a route of its own, shown over the page with [route masking](https://tanstack.com/router/latest/docs/framework/react/guide/route-masking) in TanStack Router or [parallel](https://nextjs.org/docs/app/api-reference/file-conventions/parallel-routes#modals) and [intercepting routes](https://nextjs.org/docs/app/api-reference/file-conventions/intercepting-routes) in Next.js. The loader then starts its atoms with the page's, and a link opens it, a reload keeps it and the back button closes it.
+
+## Escape hatches
+
+What's left is state that shouldn't be in the URL, such as each keystroke in a search box. Two escape hatches start its atoms, and both start the request later than a loader would.
+
+### Event handlers
+
+When an event handler changes the state that picks the data, it can start the atom before the state change that renders its reader. Search-as-you-type is the case: the URL can hold a submitted query, but not every keystroke, so the debounced handler starts each search. `Loader.make(registry)` gives a handler the same verbs a loader has:
 
 ```sample
 tanstack-start/src/docs/request-waterfalls.tsx#event-handler
 ```
 
-## Render-time inputs: useWaterfall
+The request starts with the state change, not after the render it causes, and the transition keeps the previous results on screen until the next ones are in.
 
-When an input exists only in render, such as an id from a list's result, no loader or handler can start the atom. `useWaterfall` starts it during render, like `prefetch`, and returns it, so the read looks like one fed by a loader:
+### Render-time inputs: useWaterfall
+
+When an input exists only in render, such as a value a hook debounces, no loader or handler can start the atom. `useWaterfall` starts it during render, like `prefetch`, and returns it, so the read looks like one fed by a loader:
 
 ```sample
 tanstack-start/src/docs/request-waterfalls.tsx#use-waterfall
@@ -126,7 +139,7 @@ tanstack-start/src/routes/__root.tsx#root
 The report names the atom and how to fix it:
 
 ```text
-raf-effect-atom: rendering read AtomRpc:GetIssueAssignee:1 before anything else had started it, so its request waits for this render: a request waterfall. Start it before render: in the route's loader or the server component (atoms.prefetch or atoms.ensure), or in the event handler that shows it (Loader.make(registry).prefetch). If its input is only known at render time, read it with useAtomResult(useWaterfall(atom)). https://raf-effect-atom.katt.dev/docs/request-waterfalls
+raf-effect-atom: rendering read AtomRpc:GetIssueAssignee:1 before anything else had started it, so its request waits for this render: a request waterfall. Start it before render, in the route's loader or the server component (atoms.prefetch or atoms.ensure). If the state that picks it, such as a page, a filter or an open dialog, isn't in the URL, put it there so the loader can. As escape hatches for state that can't be in the URL: start it in the event handler that changes the state (Loader.make(registry).prefetch), or, if its input only exists in render, read it with useAtomResult(useWaterfall(atom)). https://raf-effect-atom.katt.dev/docs/request-waterfalls
 ```
 
 Atoms a loader, a server component, an event handler or `useWaterfall` started aren't reported, and neither is a derived atom, such as a boundary's `wrap`, over one of those. The example apps use `"throw"`, so a component that forgets its loader breaks the page in development instead of shipping a waterfall.
@@ -139,8 +152,9 @@ Lazy route components are another waterfall: the code has to download before it 
 
 ## Summary
 
-- Start atoms in loaders, server components and event handlers, never in render.
+- Start atoms in loaders and server components, never in render.
+- Put the state that picks data in the URL: search params, and routes for dialogs.
 - Start every atom before awaiting any, and give `Effect.all` a `concurrency`.
 - Shape data so a route's inputs come from the URL, not from other atoms.
-- Use `useWaterfall` only when you can't, and treat each one as a known cost.
+- For state that can't be in the URL, start atoms in the event handler that changes it, or with `useWaterfall`, and treat each one as a known cost.
 - Keep `<WaterfallDetection mode="throw">` in the root layout, so development finds the rest.
