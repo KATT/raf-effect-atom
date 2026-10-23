@@ -379,6 +379,57 @@ describe("make", () => {
 			}).pipe(Effect.provide(browser())),
 	);
 
+	it.live("runs an Effect on its registry, rejecting with its failure", () =>
+		Effect.gen(function* () {
+			using server = serve();
+			const registry = yield* AtomRegistry.AtomRegistry;
+			const loader = Loader.make(registry);
+			const handles = yield* Effect.promise(() =>
+				loader.run(
+					Effect.gen(function* () {
+						const assignee = yield* Loader.prefetch(issue, 2);
+						const loaded = yield* Loader.ensure(issue, 1);
+						return { assignee, issue: loaded };
+					}),
+				),
+			);
+			assert.isTrue(AsyncResult.isSuccess(Loader.result(handles.issue)));
+			assert.strictEqual(server.requests(2), 1);
+			const rejection = yield* Effect.flip(
+				Effect.tryPromise(() => loader.run(Effect.fail("boom"))),
+			);
+			assert.strictEqual(rejection.cause, "boom");
+		}).pipe(Effect.provide(browser())),
+	);
+
+	it.live("interrupts run with its own signal or the loader's", () =>
+		Effect.gen(function* () {
+			const registry = yield* AtomRegistry.AtomRegistry;
+			const gate = gated("run-signal");
+			const made = new AbortController();
+			const given = new AbortController();
+			const loader = Loader.make(registry, { signal: made.signal });
+			const byGiven = loader.run(Loader.ensure(gate.atom), {
+				signal: given.signal,
+			});
+			const byMade = loader.run(Loader.ensure(gate.atom), {
+				signal: new AbortController().signal,
+			});
+			yield* Effect.sleep("5 millis");
+			const givenReason = new Error("the navigation left");
+			given.abort(givenReason);
+			const givenRejection = yield* Effect.flip(
+				Effect.tryPromise(() => byGiven),
+			);
+			assert.strictEqual(givenRejection.cause, givenReason);
+			const madeReason = new Error("the request left");
+			made.abort(madeReason);
+			const madeRejection = yield* Effect.flip(Effect.tryPromise(() => byMade));
+			assert.strictEqual(madeRejection.cause, madeReason);
+			gate.open("loaded");
+		}).pipe(Effect.provide(browser())),
+	);
+
 	it.live("takes a lease TTL", () =>
 		Effect.gen(function* () {
 			using _server = serve();

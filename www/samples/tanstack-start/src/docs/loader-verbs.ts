@@ -1,10 +1,10 @@
 import type { IssueId } from "@examples/contract";
-import { notFound } from "@tanstack/react-router";
-import { Effect, Match, Option } from "effect";
+import { createFileRoute, notFound } from "@tanstack/react-router";
+import { Effect, Match, Option, Schema } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import { Loader } from "raf-effect-atom";
 
-import { assignee, issue } from "~/issues.ts";
+import { assignee, issue, IssueParams } from "~/issues.ts";
 
 declare const atoms: Loader.Loader;
 declare const id: IssueId;
@@ -47,4 +47,23 @@ const program = Effect.gen(function* () {
 	const issueHandle = yield* Loader.ensure(issue, id);
 	return { assignee: assigneeHandle, issue: issueHandle };
 });
+
+// Runs it on the registry the Promise verbs use.
+const handles = await atoms.run(program);
+//    ^?
 // #endregion effect
+
+// #region signal
+export const Route = createFileRoute("/issues/$id")({
+	params: {
+		parse: (params) => Schema.decodeUnknownSync(IssueParams)(params),
+		stringify: Schema.encodeSync(IssueParams),
+	},
+	loader: async ({ abortController, context, params }) => ({
+		// Stops waiting when another navigation supersedes this one.
+		issue: await context.atoms.run(Loader.ensure(issue, params.id), {
+			signal: abortController.signal,
+		}),
+	}),
+});
+// #endregion signal

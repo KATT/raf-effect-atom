@@ -63,9 +63,15 @@ When a navigation is left while its loaders wait, because another one interrupte
 - On Next.js, the verbs take React's [`cacheSignal`](https://react.dev/reference/react/cacheSignal), which aborts with the server component render.
 - Another integration passes its own: `Loader.make(registry, { signal })`.
 
+On TanStack Router, the router context's `atoms` serves every navigation, so its verbs can't see one navigation's signal, and a loader waits until the atom settles. To stop waiting, run the Effect verbs with `run` and the loader's [abort signal](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#using-the-abort-signal):
+
+```sample
+tanstack-start/src/docs/loader-verbs.ts#signal
+```
+
 ## In Effect code
 
-The verbs are Effects that need an `AtomRegistry`. The framework integrations put them on the router context as Promises, through `Loader.make(registry)`, because loaders are async functions.
+The verbs are Effects that need an `AtomRegistry`. The framework integrations put them on the router context as Promises, through `Loader.make(registry)`, because loaders are async functions. Its `run` runs an Effect that needs the registry on the same registry, with the same lease and signal, and rejects with its failure: `raf-effect-atom/next` exports it as `run`.
 
 ```sample
 tanstack-start/src/docs/loader-verbs.ts#effect
