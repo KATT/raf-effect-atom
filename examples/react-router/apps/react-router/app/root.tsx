@@ -10,6 +10,7 @@ import { Toaster } from "@examples/ui/components/sonner";
 import { WaterfallDetection } from "raf-effect-atom";
 import {
 	atomsMiddleware,
+	clientAtomsMiddleware,
 	RegistryProvider,
 } from "raf-effect-atom/react-router";
 import { type ReactNode, useState } from "react";
@@ -50,9 +51,19 @@ export const middleware: Array<Route.MiddlewareFunction> = [
 	}),
 ];
 
+// Client loaders run over the browser's registry, which the root's
+// `RegistryProvider` holds.
+export const clientMiddleware: Array<Route.ClientMiddlewareFunction> = [
+	clientAtomsMiddleware(atomsContext),
+];
+
 export function loader(args: Route.LoaderArgs) {
 	return readSettings(args.request.headers.get("cookie"));
 }
+
+// The settings menu starts from these and keeps its own state, and a session
+// change reloads the page, so navigations needn't ask the server again.
+export const shouldRevalidate = () => false;
 
 export function Layout(props: { readonly children: ReactNode }) {
 	return (
@@ -98,7 +109,7 @@ export default function App(props: Route.ComponentProps) {
 					</AppLink>
 				}
 				framework="React Router"
-				loaders="server"
+				loaders="browser"
 				settings={
 					<Settings
 						initial={props.loaderData}

@@ -9,18 +9,23 @@ import * as Schema from "effect/Schema";
 import * as React from "react";
 import {
 	createContext,
+	createMemoryRouter,
 	createStaticHandler,
 	RouterContextProvider,
+	RouterProvider,
+	useLoaderData,
 } from "react-router";
 
 import {
 	type Handle,
 	HydrationBoundary,
 	Loader,
+	RequestRegistry,
 	useAtomResult,
 } from "../src/index.ts";
 import {
 	atomsMiddleware,
+	clientAtomsMiddleware,
 	RegistryProvider,
 	type RequestAtoms,
 } from "../src/ReactRouter.ts";
@@ -235,6 +240,77 @@ describe("atomsMiddleware's seed", () => {
 				AsyncResult.isSuccess(greeted) &&
 				greeted.value === "Hello, ada",
 		);
+	});
+});
+
+describe("clientAtomsMiddleware", () => {
+	/** A Data Mode router whose loaders run in the browser, as client loaders do. */
+	const browserRouter = () =>
+		createMemoryRouter([
+			{
+				children: [
+					{ element: <p>Home</p>, path: "/" },
+					{
+						Component: function IssueRoute() {
+							const data = useLoaderData<IssueData>();
+							return (
+								<HydrationBoundary state={data.atoms}>
+									<Title issue={data.issue} />
+								</HydrationBoundary>
+							);
+						},
+						loader: async (args): Promise<IssueData> => {
+							const atoms = args.context.get(atomsContext);
+							const loaded = await atoms.ensure(issue, Number(args.params.id));
+							return {
+								atoms: atoms.dehydrate(),
+								issue: loaded,
+								registry: atoms.registry,
+							};
+						},
+						path: "issues/:id",
+					},
+				],
+				middleware: [clientAtomsMiddleware(atomsContext)],
+			},
+		]);
+
+	it("runs loaders over the browser's registry, so ensure doesn't ask twice", async () => {
+		using server = serve({});
+		const router = browserRouter();
+		await act(async () => {
+			render(
+				<RegistryProvider>
+					<RouterProvider router={router} />
+				</RegistryProvider>,
+			);
+		});
+		using _rendered = { [Symbol.dispose]: cleanup };
+		await act(() => router.navigate("/issues/1"));
+		await settle();
+		assert.isDefined(screen.getByText("Issue 1"));
+		await act(() => router.navigate("/"));
+		await act(() => router.navigate("/issues/1"));
+		assert.isDefined(screen.getByText("Issue 1"));
+		assert.strictEqual(server.requests(1), 1);
+		const data = Object.values(router.state.loaderData).find(
+			(value): value is IssueData => value !== undefined,
+		);
+		assert.deepStrictEqual(data?.atoms, []);
+		assert.isFalse(
+			data === undefined || RequestRegistry.isRequestRegistry(data.registry),
+		);
+	});
+
+	it("fails the navigation without a mounted RegistryProvider", async () => {
+		using _server = serve({});
+		const router = browserRouter();
+		await act(() => router.navigate("/issues/1"));
+		assert.match(
+			String(Object.values(router.state.errors ?? {})[0]),
+			/no mounted RegistryProvider/,
+		);
+		router.dispose();
 	});
 });
 

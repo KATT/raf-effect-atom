@@ -4,8 +4,11 @@
  * A root `middleware` gives each server request its own registry, under a
  * router context the app creates. Loaders start atoms with its verbs and
  * return its `dehydrate()` with their data; the route component hydrates it
- * with `HydrationBoundary`, inside the root's `RegistryProvider`. Nothing is
- * imported from `react-router`.
+ * with `HydrationBoundary`, inside the root's `RegistryProvider`. A root
+ * `clientMiddleware` puts the browser's registry under the same context, so
+ * one function can be both the route's `loader` and its `clientLoader`: after the first
+ * page, loaders run in the browser, where `ensure` finds what the registry
+ * already holds. Nothing is imported from `react-router`.
  *
  * **Example**
  *
@@ -20,13 +23,17 @@
  * import { atomsMiddleware } from "raf-effect-atom/react-router"
  *
  * export const middleware = [atomsMiddleware(atomsContext)]
+ * export const clientMiddleware = [clientAtomsMiddleware(atomsContext)]
  *
  * // app/routes/issue.tsx
- * export async function loader(args: Route.LoaderArgs) {
+ * async function load(args: Route.LoaderArgs) {
  *   const atoms = args.context.get(atomsContext)
  *   const handle = await atoms.ensure(issue, Number(args.params.id))
  *   return { atoms: atoms.dehydrate(), issue: handle }
  * }
+ *
+ * export const loader = load
+ * export const clientLoader = load
  *
  * export default function IssueRoute(props: Route.ComponentProps) {
  *   return (
@@ -45,6 +52,7 @@ import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as EffectHydration from "effect/reactivity/Hydration";
 
 import * as Hydration from "./Hydration.ts";
+import * as Registry from "./internal/registry.ts";
 import * as Loader from "./Loader.ts";
 import * as RequestRegistry from "./RequestRegistry.ts";
 
@@ -56,7 +64,9 @@ export {
 } from "./RegistryProvider.tsx";
 
 /**
- * One request's registry, with the loader verbs over it.
+ * One request's registry, with the loader verbs over it. In a client loader,
+ * the browser's registry, whose `dehydrate` returns nothing: its atoms are
+ * already where the components read them.
  *
  * @stability unstable
  * @category models
@@ -133,8 +143,7 @@ export interface AtomsMiddlewareOptions {
  * **Gotchas**
  *
  * It's server middleware: export it as the root route's `middleware`, not
- * `clientMiddleware`. In the browser, the root's `RegistryProvider` holds
- * the registry.
+ * `clientMiddleware`, which takes `clientAtomsMiddleware`.
  *
  * **Example**
  *
@@ -231,3 +240,71 @@ const disposeAfter = (
 		},
 	});
 };
+
+const browserAtoms = new WeakMap<AtomRegistry.AtomRegistry, RequestAtoms>();
+
+const browserAtomsOf = (registry: AtomRegistry.AtomRegistry): RequestAtoms => {
+	let atoms = browserAtoms.get(registry);
+	if (atoms === undefined) {
+		atoms = { ...Loader.make(registry), dehydrate: () => [], registry };
+		browserAtoms.set(registry, atoms);
+	}
+	return atoms;
+};
+
+/**
+ * Creates a root client middleware that gives client loaders the browser's
+ * registry, under the context `atomsMiddleware` uses on the server.
+ *
+ * **When to use**
+ *
+ * Export it as the root route's `clientMiddleware`, and each route's loader
+ * function as both its `loader` and its `clientLoader`. The first page's loaders run on
+ * the server and stream their atoms in; after that, navigations run the
+ * loaders in the browser. `ensure` then renders what the browser's registry
+ * holds without a request, and a link's prefetch doesn't fetch a route's
+ * `.data` that the click would fetch again.
+ *
+ * **Details**
+ *
+ * The registry is the one the mounted `RegistryProvider` provides. Its
+ * `dehydrate` returns nothing, so a loader's data has the same shape in
+ * the browser and on the server, and `HydrationBoundary` has nothing to do.
+ *
+ * **Gotchas**
+ *
+ * The atoms run in the browser, so their RPC protocol must reach the server
+ * from there, as it does for anything a component starts.
+ *
+ * **Example**
+ *
+ * ```ts
+ * // app/root.tsx
+ * export const middleware = [atomsMiddleware(atomsContext)]
+ * export const clientMiddleware = [clientAtomsMiddleware(atomsContext)]
+ *
+ * // app/routes/issue.tsx: one function for both, since React Router
+ * // removes `loader` from the browser's bundle.
+ * export const loader = load
+ * export const clientLoader = load
+ * ```
+ *
+ * @stability unstable
+ * @category integrations
+ * @since 0.2.0
+ */
+export const clientAtomsMiddleware =
+	(context: AtomsContext) =>
+	<Result>(
+		args: MiddlewareArgs,
+		next: () => Promise<Result>,
+	): Promise<Result> => {
+		const registry = Registry.current();
+		if (registry === undefined) {
+			throw new Error(
+				"clientAtomsMiddleware found no mounted RegistryProvider: render raf-effect-atom/react-router's RegistryProvider around the app in the root layout.",
+			);
+		}
+		args.context.set(context, browserAtomsOf(registry));
+		return next();
+	};

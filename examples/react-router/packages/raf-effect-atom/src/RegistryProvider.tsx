@@ -30,6 +30,9 @@ import * as Registry from "./internal/registry.ts";
  * It's read once, when the registry is made. The server's request registry
  * lives for one request, so it has none.
  *
+ * In the browser, React Router's `clientAtomsMiddleware` gives client
+ * loaders the registry of the mounted provider.
+ *
  * **Example**
  *
  * ```tsx
@@ -53,6 +56,7 @@ export const RegistryProvider = (props: {
 	const [registry] = React.useState(() =>
 		Registry.make({ defaultIdleTTL: props.defaultIdleTTL }),
 	);
+	React.useEffect(() => Registry.mount(registry), [registry]);
 	return (
 		<RegistryContext.Provider value={registry}>
 			{props.children}

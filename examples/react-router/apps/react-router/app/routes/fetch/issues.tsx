@@ -7,7 +7,7 @@ import { parseListInput } from "~/params.ts";
 
 import type { Route } from "./+types/issues";
 
-export async function loader(args: Route.LoaderArgs) {
+async function load(args: Route.LoaderArgs) {
 	const input = parseListInput(args.request);
 	const atoms = args.context.get(atomsContext);
 	// Always waits for fresh results.
@@ -17,6 +17,11 @@ export async function loader(args: Route.LoaderArgs) {
 	]);
 	return { atoms: atoms.dehydrate(), handles: { counts, page }, input };
 }
+
+export const loader = load;
+// After the first page, the same loader runs in the browser, over its
+// registry.
+export const clientLoader = load;
 
 export default function Page(props: Route.ComponentProps) {
 	return (

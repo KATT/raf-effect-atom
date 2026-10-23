@@ -7,7 +7,7 @@ import { parseIssueId } from "~/params.ts";
 
 import type { Route } from "./+types/issue";
 
-export function loader(args: Route.LoaderArgs) {
+function load(args: Route.LoaderArgs) {
 	const issueId = parseIssueId(args.params.issueId);
 	const atoms = args.context.get(atomsContext);
 	// Starts every atom the page reads and returns their handles at once.
@@ -18,6 +18,11 @@ export function loader(args: Route.LoaderArgs) {
 	};
 	return { atoms: atoms.dehydrate(), handles, issueId };
 }
+
+export const loader = load;
+// After the first page, the same loader runs in the browser, over its
+// registry.
+export const clientLoader = load;
 
 export default function Page(props: Route.ComponentProps) {
 	return (

@@ -3,7 +3,7 @@ import type { LoaderVerb } from "@examples/kit/lib/loader-verb";
 /**
  * Where an app's loaders run after the first page load. `server`: every
  * navigation loads on the server into a new, empty registry (React server
- * components, React Router loaders), so `ensure` waits like `fetch`.
+ * components), so `ensure` waits like `fetch`.
  */
 export type LoaderRuntime = "browser" | "server";
 

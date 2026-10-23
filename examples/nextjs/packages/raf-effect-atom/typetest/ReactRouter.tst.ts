@@ -5,6 +5,7 @@ import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as EffectHydration from "effect/reactivity/Hydration";
 import {
 	createContext,
+	type DataStrategyResult,
 	type LoaderFunctionArgs,
 	type MiddlewareFunction,
 	useLoaderData,
@@ -12,7 +13,11 @@ import {
 import { describe, expect, it } from "tstyche";
 
 import type { Handle, LoadedHandle } from "../src/index.ts";
-import { atomsMiddleware, type RequestAtoms } from "../src/ReactRouter.ts";
+import {
+	atomsMiddleware,
+	clientAtomsMiddleware,
+	type RequestAtoms,
+} from "../src/ReactRouter.ts";
 import { counter, issue } from "../test/fixtures/issues.ts";
 
 const atomsContext = createContext<RequestAtoms>();
@@ -28,6 +33,15 @@ describe("raf-effect-atom/react-router", () => {
 			MiddlewareFunction<Response>
 		>();
 		expect(atomsMiddleware).type.not.toBeCallableWith(createContext<number>());
+	});
+
+	it("makes a React Router client middleware from the same context", () => {
+		expect(clientAtomsMiddleware(atomsContext)).type.toBeAssignableTo<
+			MiddlewareFunction<Record<string, DataStrategyResult>>
+		>();
+		expect(clientAtomsMiddleware).type.not.toBeCallableWith(
+			createContext<number>(),
+		);
 	});
 
 	it("seeds each request's registry from the request", () => {
