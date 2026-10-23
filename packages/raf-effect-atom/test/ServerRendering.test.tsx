@@ -6,7 +6,8 @@ import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import * as React from "react";
 import { renderToString } from "react-dom/server";
 
-import { Loader, useAtomResult } from "../src/index.ts";
+import { Loader, RequestRegistry, useAtomResult } from "../src/index.ts";
+import { makeRegistry } from "../src/TanStackRouter.tsx";
 import { issue, serve } from "./fixtures/Issues.ts";
 import { load } from "./fixtures/server.ts";
 
@@ -43,6 +44,14 @@ describe("useAtomResult on the server", () => {
 			"without a request registry",
 		);
 		expect(server.requests(1)).toBe(0);
+		registry.dispose();
+	});
+});
+
+describe("makeRegistry on the server", () => {
+	it("makes a request registry where there's no window", () => {
+		const registry = makeRegistry();
+		expect(RequestRegistry.isRequestRegistry(registry)).toBe(true);
 		registry.dispose();
 	});
 });
