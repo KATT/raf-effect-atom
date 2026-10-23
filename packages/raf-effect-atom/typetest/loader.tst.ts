@@ -5,7 +5,7 @@ import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import { describe, expect, it } from "tstyche";
 
 import { Hydration, Loader } from "../src/index.ts";
-import { issue } from "../test/fixtures/Issues.ts";
+import { issue } from "../test/fixtures/issues.ts";
 
 type IssueError = Atom.Failure<ReturnType<typeof issue>>;
 type Issue = Atom.Success<ReturnType<typeof issue>>;

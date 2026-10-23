@@ -5,8 +5,8 @@ import { screen } from "@testing-library/react";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 
 import { RequestRegistry } from "../src/index.ts";
-import { makeRegistry, setupRouterAtoms } from "../src/TanStackRouter.tsx";
-import { counter, serve } from "./fixtures/Issues.ts";
+import { makeRegistry, setupRouterAtoms } from "../src/tanstack-router.tsx";
+import { counter, serve } from "./fixtures/issues.ts";
 import { renderInBrowser, renderOnServer } from "./fixtures/router.tsx";
 
 describe("setupRouterAtoms", () => {

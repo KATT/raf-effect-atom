@@ -34,7 +34,7 @@
 	"sideEffects": false,
 	"exports": {
 		".": "./src/index.ts",
-		"./tanstack-router": "./src/TanStackRouter.tsx"
+		"./tanstack-router": "./src/tanstack-router.tsx"
 	},
 	"scripts": {
 		"build": "vp pack",
@@ -80,7 +80,7 @@
 		"access": "public",
 		"exports": {
 			".": "./dist/index.mjs",
-			"./tanstack-router": "./dist/TanStackRouter.mjs"
+			"./tanstack-router": "./dist/tanstack-router.mjs"
 		},
 		"provenance": true
 	}

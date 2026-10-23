@@ -14,7 +14,7 @@ import {
 	IssueNotFound,
 	serve,
 	unkeyedIssue,
-} from "./fixtures/Issues.ts";
+} from "./fixtures/issues.ts";
 
 /** A browser registry with a short idle TTL, disposed with the test. */
 const browser = (defaultIdleTTL = 20) =>

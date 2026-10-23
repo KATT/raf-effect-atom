@@ -14,7 +14,7 @@ import {
 	settle,
 	silenceCaughtErrors,
 } from "./fixtures/browser.tsx";
-import { issue, IssueNotFound, Issues, serve } from "./fixtures/Issues.ts";
+import { issue, IssueNotFound, Issues, serve } from "./fixtures/issues.ts";
 import { load } from "./fixtures/server.ts";
 
 const isIssueNotFound = Schema.is(IssueNotFound);

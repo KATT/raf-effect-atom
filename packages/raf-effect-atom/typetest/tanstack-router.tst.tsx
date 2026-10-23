@@ -8,8 +8,8 @@ import {
 import { describe, expect, it } from "tstyche";
 
 import { Loader } from "../src/index.ts";
-import { setupRouterAtoms } from "../src/TanStackRouter.tsx";
-import { issue } from "../test/fixtures/Issues.ts";
+import { setupRouterAtoms } from "../src/tanstack-router.tsx";
+import { issue } from "../test/fixtures/issues.ts";
 
 type Issue = Loader.SettledResult<
 	{ readonly id: number; readonly title: string },

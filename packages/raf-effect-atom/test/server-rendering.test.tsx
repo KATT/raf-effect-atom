@@ -7,8 +7,8 @@ import * as React from "react";
 import { renderToString } from "react-dom/server";
 
 import { Loader, RequestRegistry, useAtomResult } from "../src/index.ts";
-import { makeRegistry } from "../src/TanStackRouter.tsx";
-import { issue, serve } from "./fixtures/Issues.ts";
+import { makeRegistry } from "../src/tanstack-router.tsx";
+import { issue, serve } from "./fixtures/issues.ts";
 import { load } from "./fixtures/server.ts";
 
 function Title(props: { readonly id: number }) {

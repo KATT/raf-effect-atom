@@ -15,7 +15,7 @@ import {
 	type Loader,
 	useAtomResult,
 } from "../src/index.ts";
-import { issue, Issues } from "../test/fixtures/Issues.ts";
+import { issue, Issues } from "../test/fixtures/issues.ts";
 
 type IssueError = Atom.Failure<ReturnType<typeof issue>>;
 type Issue = Atom.Success<ReturnType<typeof issue>>;

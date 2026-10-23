@@ -14,7 +14,7 @@ import {
 	IssueNotFound,
 	serve,
 	unkeyedIssue,
-} from "./fixtures/Issues.ts";
+} from "./fixtures/issues.ts";
 import { wire } from "./fixtures/wire.ts";
 
 const errorOf = (result: AsyncResult.AsyncResult<unknown, unknown>) =>

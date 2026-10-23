@@ -21,9 +21,9 @@ import * as Schema from "effect/Schema";
 import * as React from "react";
 
 import { Loader, RequestRegistry, useAtomResult } from "../../src/index.ts";
-import { setupRouterAtoms } from "../../src/TanStackRouter.tsx";
+import { setupRouterAtoms } from "../../src/tanstack-router.tsx";
 import { mount, settle } from "./browser.tsx";
-import { issue, IssueNotFound } from "./Issues.ts";
+import { issue, IssueNotFound } from "./issues.ts";
 
 const isIssueNotFound = Schema.is(IssueNotFound);
 

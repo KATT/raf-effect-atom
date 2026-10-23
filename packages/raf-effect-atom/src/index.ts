@@ -6,24 +6,24 @@
 /**
  * @since 0.1.0
  */
-export * as Hydration from "./Hydration.ts";
+export * as Hydration from "./hydration.ts";
 
 /**
  * @since 0.1.0
  */
-export * as Loader from "./Loader.ts";
+export * as Loader from "./loader.ts";
 
 /**
  * @since 0.1.0
  */
-export * as RequestRegistry from "./RequestRegistry.ts";
+export * as RequestRegistry from "./request-registry.ts";
 
 /**
  * @since 0.1.0
  */
-export * from "./Hooks.ts";
+export * from "./hooks.ts";
 
 /**
  * @since 0.1.0
  */
-export * from "./ReactHydration.tsx";
+export * from "./react-hydration.tsx";
