@@ -1,6 +1,14 @@
-import { hole } from "effect";
+import { Effect, hole, Layer, Schema } from "effect";
+import { HttpClient } from "effect/http";
+import {
+	HttpApi,
+	HttpApiEndpoint,
+	HttpApiGroup,
+	HttpApiMiddleware,
+} from "effect/http-api";
 import type * as AsyncResult from "effect/reactivity/AsyncResult";
 import type * as Atom from "effect/reactivity/Atom";
+import * as AtomHttpApi from "effect/reactivity/AtomHttpApi";
 import { describe, expect, it } from "tstyche";
 
 import {
@@ -18,9 +26,73 @@ type UserError = Atom.Failure<ReturnType<typeof user>>;
 type Issue = Atom.Success<ReturnType<typeof issue>>;
 type Tagged<E, Tag extends string> = Extract<E, { readonly _tag: Tag }>;
 
+class IssueGone extends Schema.TaggedError<IssueGone>()("IssueGone", {
+	id: Schema.Int,
+}) {}
+
+class Forbidden extends Schema.TaggedError<Forbidden>()("Forbidden", {}) {}
+
+class MissingSession extends Schema.TaggedError<MissingSession>()(
+	"MissingSession",
+	{},
+) {}
+
+class Session extends HttpApiMiddleware.Service<
+	Session,
+	{ clientError: MissingSession }
+>()("Session", { error: Forbidden, requiredForClient: true }) {}
+
+class Dashboard extends AtomHttpApi.Service<Dashboard>()("Dashboard", {
+	api: HttpApi.make("Dashboard").add(
+		HttpApiGroup.make("issues").add(
+			HttpApiEndpoint.get("get", "/issue", {
+				error: IssueGone,
+				success: Schema.String,
+			}),
+		),
+		HttpApiGroup.make("status").add(
+			HttpApiEndpoint.get("get", "/status", {
+				success: Schema.String,
+			}).middleware(Session),
+		),
+	),
+	httpClient: Layer.succeed(
+		HttpClient.HttpClient,
+		HttpClient.make(() => Effect.die("not used")),
+	),
+}) {}
+
+const dashboardIssue = () => Dashboard.query("issues", "get", {});
+const dashboardStatus = () => Dashboard.query("status", "get", {});
+
 describe("ErrorsOf", () => {
 	it("is the union of every procedure's errors for an AtomRpc client", () => {
 		expect<ErrorsOf<typeof Issues>>().type.toBe<IssueError | UserError>();
+	});
+
+	it("is the union of every endpoint's and middleware's errors for an AtomHttpApi client", () => {
+		expect<ErrorsOf<typeof Dashboard>>().type.toBe<
+			IssueGone | MissingSession | Forbidden
+		>();
+		expect<ErrorsOf<typeof Dashboard>>().type.toBe<
+			| Atom.Failure<ReturnType<typeof dashboardIssue>>
+			| Atom.Failure<ReturnType<typeof dashboardStatus>>
+		>();
+	});
+
+	it("types a shared boundary's handlers by an AtomHttpApi client's errors", () => {
+		createErrorBoundary({
+			catchTags: {
+				Forbidden: (caught) => {
+					expect(caught.error).type.toBe<Forbidden>();
+					return null;
+				},
+				// @ts-expect-error Object literal may only specify known properties
+				HttpClientError: () => null,
+			},
+			errors: Dashboard,
+			name: "Dashboard",
+		});
 	});
 
 	it("is the atom's error for an atom or an atom family", () => {

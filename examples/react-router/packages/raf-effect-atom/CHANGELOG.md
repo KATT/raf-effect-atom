@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.5](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.4...raf-effect-atom%400.2.5) (2026-10-23)
+
+### Features
+
+- **raf-effect-atom:** start a derived atom's source from the loader verbs, following initialValueTarget ([00a9760](https://github.com/KATT/raf-effect-atom/commit/00a97602068cabf085fa9cfe41e88bf853b6af32))
+
 ## [0.2.4](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.3...raf-effect-atom%400.2.4) (2026-10-23)
 
 ### Features
