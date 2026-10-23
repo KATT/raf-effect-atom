@@ -7,11 +7,10 @@ import { exampleAppMeta, exampleApps } from "@examples/kit/lib/example-apps";
 import { loaderVerbOf } from "@examples/kit/lib/loader-verb";
 import { logoUrl } from "@examples/kit/lib/logo";
 import { Toaster } from "@examples/ui/components/sonner";
-import { WaterfallDetection } from "raf-effect-atom";
+import { RegistryProvider, WaterfallDetection } from "raf-effect-atom";
 import {
 	atomsMiddleware,
 	clientAtomsMiddleware,
-	RegistryProvider,
 } from "raf-effect-atom/react-router";
 import { type ReactNode, useState } from "react";
 import {

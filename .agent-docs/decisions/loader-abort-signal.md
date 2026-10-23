@@ -14,4 +14,4 @@
   - Wrapping every route's `loader`: lazy routes, and code splitting moves loaders.
   - The client aborts a preload's controller once the preload ends, and the previous navigation's when the next one starts. A verb bound to it would reject an unawaited `ensure` that a preloaded loader returned.
   - TanStack Router loaders pass the signal explicitly, by running the Effect verbs with `context.atoms.run(effect, { signal: abortController.signal })` (`Loader.Loader.run`, also from the spike), or with the spike's `RouteLoader.run`, which isn't on main ([PR #1](https://github.com/KATT/raf-effect-atom/pull/1)).
-- Files: `packages/raf-effect-atom/src/{Loader.ts,ReactRouter.ts,internal/next.ts}`, the abort tests in `test/{Loader,ReactRouter,Next.rsc}.test.ts(x)`, and `www/content/loader-verbs.md#aborted-requests`.
+- Files: `packages/raf-effect-atom/src/{Loader.ts,ReactRouter.ts,internal/rsc.ts}`, the abort tests in `test/{Loader,ReactRouter,Rsc.rsc}.test.ts(x)`, and `www/content/loader-verbs.md#aborted-requests`.

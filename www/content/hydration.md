@@ -36,6 +36,11 @@ A serializable query encodes its whole `AsyncResult` with the procedure's Schema
 
 [Effect Atom's hydration](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/reactivity/Hydration.ts) seeds an atom's value, but an effect atom still runs its effect when it mounts, so every result the server rendered would be requested again. `Hydration.hydrated(atom)` returns a copy of a serializable atom that keeps its hydrated value on the first read. The loader verbs and `useAtomResult` read through it; use it yourself to read a hydrated atom with `@effect/atom-react`'s own hooks, such as `useAtomValue(Hydration.hydrated(issue(1)))`.
 
-## Without a router integration
+## HydrationBoundary
 
-Where the server's state reaches React as a prop, such as a server component's props, `HydrationBoundary` from `raf-effect-atom` hydrates it while rendering: `<HydrationBoundary state={state}>`.
+Where the server's state reaches React through rendering rather than a router, `HydrationBoundary` from `raf-effect-atom` hydrates it. Apps import the same component everywhere; it does what the code around it can:
+
+- In a [server component](https://react.dev/reference/rsc/server-components), pass the request's registry: `<HydrationBoundary registry={getRegistry()}>`, with `getRegistry` from `raf-effect-atom/rsc`. Server components get their own build of `HydrationBoundary` through the package's `react-server` [export condition](https://nodejs.org/api/packages.html#conditional-exports), which every React Server Components bundler resolves. It waits for the registry's seed, dehydrates the atoms started so far, and sends them with the server component's payload, so results still loading stream in as they settle.
+- Anywhere else, such as a React Router route component, pass the state a loader dehydrated: `<HydrationBoundary state={loaderData.atoms}>`. A registry can't cross to the browser, so `registry` throws outside server components.
+
+Both write into the browser's registry, which `RegistryProvider` from `raf-effect-atom` holds at the root.

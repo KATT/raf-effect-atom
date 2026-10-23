@@ -1,8 +1,7 @@
-import { WaterfallDetection } from "raf-effect-atom";
+import { RegistryProvider, WaterfallDetection } from "raf-effect-atom";
 import {
 	atomsMiddleware,
 	clientAtomsMiddleware,
-	RegistryProvider,
 } from "raf-effect-atom/react-router";
 import type { ReactNode } from "react";
 import { Links, Meta, Outlet, Scripts } from "react-router";

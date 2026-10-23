@@ -346,9 +346,10 @@ const stepsByMode = {
 						<code>prefetch</code> starts an atom without waiting, and{" "}
 						<code>ensure</code> waits for one the page can’t lay out without.
 						Each returns a handle, which the page passes to the client component
-						that reads the atom. <code>HydrateAtoms</code> sends{" "}
-						<code>await dehydrate()</code> to the browser’s registry, with the
-						results still loading as promises, so nothing is fetched twice.
+						that reads the atom. In a server component,{" "}
+						<code>HydrationBoundary</code> takes the request’s registry and
+						sends it to the browser’s, with the results still loading as
+						promises, so nothing is fetched twice.
 					</p>
 				</>
 			),

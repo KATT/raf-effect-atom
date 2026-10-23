@@ -1,4 +1,4 @@
-import { HydrateAtoms } from "raf-effect-atom/next";
+import { HydrationBoundary } from "raf-effect-atom";
 
 import { atoms } from "~/atoms.server.ts";
 import { IssuesPage } from "~/components/pages.tsx";
@@ -16,8 +16,8 @@ export default async function Page(props: {
 		page: atoms.prefetch(issuePage, input, 0),
 	};
 	return (
-		<HydrateAtoms state={await atoms.dehydrate()}>
+		<HydrationBoundary registry={atoms.getRegistry()}>
 			<IssuesPage handles={handles} input={input} verb="prefetch" />
-		</HydrateAtoms>
+		</HydrationBoundary>
 	);
 }

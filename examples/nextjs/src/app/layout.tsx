@@ -11,8 +11,7 @@ import { logoUrl } from "@examples/kit/lib/logo";
 import { Toaster } from "@examples/ui/components/sonner";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { WaterfallDetection } from "raf-effect-atom";
-import { RegistryProvider } from "raf-effect-atom/next";
+import { RegistryProvider, WaterfallDetection } from "raf-effect-atom";
 import type { ReactNode } from "react";
 
 import { AppBoundary, AuthBoundary } from "~/boundaries.tsx";
@@ -61,7 +60,7 @@ export default async function RootLayout(props: {
 		<html lang="en" suppressHydrationWarning>
 			<body className="flex min-h-screen flex-col antialiased">
 				<ThemeProvider>
-					{/* The browser's registry, which every page's `HydrateAtoms` fills. */}
+					{/* The browser's registry, which every page's `HydrationBoundary` fills. */}
 					<RegistryProvider>
 						{/* In development, a component reading an atom no server component started throws. */}
 						<WaterfallDetection mode="throw">

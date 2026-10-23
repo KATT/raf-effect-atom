@@ -80,7 +80,7 @@ tanstack-start/src/docs/loader-verbs.ts#signal
 
 ## In Effect code
 
-The verbs are Effects that need an `AtomRegistry`. The framework integrations put them on the router context as Promises, through `Loader.make(registry)`, because loaders are async functions. Its `run` runs an Effect that needs the registry on the same registry, with the same lease and signal, and rejects with its failure: `raf-effect-atom/next` exports it as `run`.
+The verbs are Effects that need an `AtomRegistry`. The framework integrations put them on the router context as Promises, through `Loader.make(registry)`, because loaders are async functions. Its `run` runs an Effect that needs the registry on the same registry, with the same lease and signal, and rejects with its failure: `raf-effect-atom/rsc` exports it as `run`.
 
 ```sample
 tanstack-start/src/docs/loader-verbs.ts#effect

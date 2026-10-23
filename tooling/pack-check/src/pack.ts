@@ -9,7 +9,13 @@ import {
 } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
-import { isClientModule, Manifest, specifiers, type Tarball } from "./check.ts";
+import {
+	isClientModule,
+	Manifest,
+	reactServerTargets,
+	specifiers,
+	type Tarball,
+} from "./check.ts";
 
 class CommandFailed extends Data.TaggedError("CommandFailed")<{
 	readonly command: string;
@@ -249,6 +255,40 @@ export const consume = Effect.fn("consume")(function* (
 		].join("\n"),
 	);
 	yield* Console.log(yield* run(dir, "node", ["imports.mjs"]));
+
+	// Resolved, not imported: a bundler swaps the `"use client"` modules the
+	// server build re-exports for references, and Node would run them.
+	const serverTargets = packed.flatMap((entry) =>
+		reactServerTargets(entry.tarball.manifest).map((server) => ({
+			...server,
+			target: path.join(
+				dir,
+				"node_modules",
+				entry.tarball.manifest.name,
+				server.target,
+			),
+		})),
+	);
+	if (serverTargets.length > 0) {
+		yield* fs.writeFileString(
+			path.join(dir, "react-server.mjs"),
+			[
+				'import { fileURLToPath } from "node:url";',
+				`for (const { specifier, target } of ${JSON.stringify(serverTargets)}) {`,
+				"\tconst resolved = fileURLToPath(import.meta.resolve(specifier));",
+				"\tif (resolved !== target) throw new Error(`${specifier} resolved to ${resolved} under react-server, not ${target}`);",
+				"\tconsole.log(`resolve ${specifier} under react-server: ${resolved}`);",
+				"}",
+				"",
+			].join("\n"),
+		);
+		yield* Console.log(
+			yield* run(dir, "node", [
+				"--conditions=react-server",
+				"react-server.mjs",
+			]),
+		);
+	}
 
 	yield* fs.writeFileString(
 		path.join(dir, "index.ts"),

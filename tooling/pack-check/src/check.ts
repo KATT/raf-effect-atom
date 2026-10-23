@@ -69,7 +69,7 @@ const exportTargets = (value: Exports | undefined): ReadonlyArray<string> => {
 	return Object.values(value).flatMap(exportTargets);
 };
 
-/** The subpaths a consumer imports: `raf-effect-atom`, `raf-effect-atom/next`. */
+/** The subpaths a consumer imports: `raf-effect-atom`, `raf-effect-atom/rsc`. */
 export const specifiers = (manifest: Manifest): ReadonlyArray<string> =>
 	Predicate.isObject(manifest.exports) &&
 	Object.keys(manifest.exports).every((key) => key.startsWith("."))
@@ -77,6 +77,29 @@ export const specifiers = (manifest: Manifest): ReadonlyArray<string> =>
 				key === "." ? manifest.name : `${manifest.name}/${key.slice(2)}`,
 			)
 		: [manifest.name];
+
+/**
+ * Each subpath whose export has a `react-server` condition, with the file a
+ * server components bundler resolves it to.
+ */
+export const reactServerTargets = (
+	manifest: Manifest,
+): ReadonlyArray<{ readonly specifier: string; readonly target: string }> =>
+	Predicate.isObject(manifest.exports)
+		? Object.entries(manifest.exports).flatMap(([key, value]) =>
+				Predicate.isObject(value) && Predicate.isString(value["react-server"])
+					? [
+							{
+								specifier:
+									key === "."
+										? manifest.name
+										: `${manifest.name}/${key.slice(2)}`,
+								target: value["react-server"],
+							},
+						]
+					: [],
+			)
+		: [];
 
 /** `src/Hooks.ts` is built to `dist/Hooks.mjs` (`vp pack` with `unbundle`). */
 export const builtFile = (source: string) =>

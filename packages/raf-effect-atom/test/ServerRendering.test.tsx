@@ -12,10 +12,10 @@ import {
 	Hydration,
 	HydrationBoundary,
 	Loader,
+	RegistryProvider,
 	RequestRegistry,
 	useAtomResult,
 } from "../src/index.ts";
-import { RegistryProvider } from "../src/Next.ts";
 import { makeRegistry } from "../src/TanStackRouter.tsx";
 import { issue, serve, unloaded } from "./fixtures/issues.ts";
 import { load } from "./fixtures/server.ts";
@@ -228,7 +228,7 @@ describe("makeRegistry on the server", () => {
 	});
 });
 
-describe("raf-effect-atom/next's RegistryProvider on the server", () => {
+describe("RegistryProvider on the server", () => {
 	it("renders client components with a request registry", () => {
 		using server = serve();
 		const tree = (

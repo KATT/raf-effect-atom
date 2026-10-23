@@ -4,6 +4,7 @@ import {
 	builtFile,
 	isClientModule,
 	type Manifest,
+	reactServerTargets,
 	specifiers,
 	type Tarball,
 	tarballProblems,
@@ -111,6 +112,28 @@ describe("tarballProblems", () => {
 				'src/Gone.tsx starts with "use client" but dist/Gone.mjs isn\'t in the tarball.',
 			],
 		);
+	});
+});
+
+describe("reactServerTargets", () => {
+	it("names each subpath with a react-server condition, and its target", () => {
+		assert.deepStrictEqual(
+			reactServerTargets({
+				...manifest,
+				exports: {
+					".": {
+						default: "./dist/index.mjs",
+						"react-server": "./dist/index.react-server.mjs",
+					},
+					"./next": "./dist/Next.mjs",
+				},
+			}),
+			[{ specifier: "lib", target: "./dist/index.react-server.mjs" }],
+		);
+	});
+
+	it("names none without the condition", () => {
+		assert.deepStrictEqual(reactServerTargets(manifest), []);
 	});
 });
 

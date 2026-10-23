@@ -123,7 +123,7 @@ tanstack-start/src/docs/request-waterfalls.tsx#browser-only
 - The atom reads what only the browser has inside its effect, so it needs no serialization key: the server never starts it, and the arguments the loader passes are what the URL holds.
 - On client navigations the loader runs in the browser, so the request starts with the page's other atoms. After a server render it starts once the boundary hydrates, the earliest the browser can, and the waterfall check doesn't report it.
 - Read it under a Suspense boundary. The server's read throws, so React renders the boundary's fallback and the browser renders the boundary; with no boundary around it, the server can't render the page. React reports the throw to the server's [`onError`](https://react.dev/reference/react-dom/server/renderToReadableStream#parameters) and the browser's [`onRecoverableError`](https://react.dev/reference/react-dom/client/hydrateRoot#parameters), as for any boundary the server leaves to the browser.
-- On Next.js, a server component calls `prefetchInBrowser` from `raf-effect-atom/next` and passes the handle to a client component. On React Router, loaders call it on `atoms`, like the other verbs.
+- On Next.js, a server component calls `prefetchInBrowser` from `raf-effect-atom/rsc` and passes the handle to a client component. On React Router, loaders call it on `atoms`, like the other verbs.
 
 ## Escape hatches
 

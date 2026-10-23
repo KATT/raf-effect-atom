@@ -55,7 +55,7 @@ What `AtomRpc` lacks, and how this repo covers it:
 | query-meta                     | n/a         | `Atom.withLabel` is the only metadata; no filtering by meta.                                                                                                                     |
 | quick-start                    | Docs        | Contract, `AtomRpc` client, loader verb, read hook, boundary.                                                                                                                    |
 | react-router                   | Adds        | `raf-effect-atom/react-router`.                                                                                                                                                  |
-| react-server-components        | Adds        | `raf-effect-atom/next`.                                                                                                                                                          |
+| react-server-components        | Adds        | `raf-effect-atom/rsc`.                                                                                                                                                           |
 | reading-queries                | Atom + Adds | `useAtomValue`, `useAtomSuspense`, `useAtomRefresh`. Adds: the read hook that waits for a streamed result instead of fetching again, and claims errors for boundaries.           |
 | render-optimizations           | Atom        | Fine-grained atoms, `Atom.map`, `withEquality`. Structural sharing is n/a.                                                                                                       |
 | request-waterfalls             | Adds        | The loader verbs. raf-query's `useWaterfall` is n/a.                                                                                                                             |
@@ -252,7 +252,7 @@ export const Route = createFileRoute("/issues/$id")({
 ### Integrations (subpath exports, no extra packages)
 
 - **`raf-effect-atom/tanstack-router`** (TanStack Start and Router): `setupRouterAtoms(router)` puts the request's registry and verbs on the router context, wraps the app in the registry and hydration providers (`Wrap`), and dehydrates through the router's `dehydrate` / `hydrate` options. Static prerendering of `www` uses it too.
-- **`raf-effect-atom/next`** (App Router): `getRegistry()` per request through React's `cache`, `prefetch` / `ensure` in server components, and a client `HydrateAtoms` that receives `dehydrate(registry)` as props (React serializes the pending promises).
+- **`raf-effect-atom/rsc`** (React Server Components, such as the App Router): `getRegistry()` per request through React's `cache`, `prefetch` / `ensure` in server components, and `HydrationBoundary`'s `react-server` build, which dehydrates the registry and passes it to the client build as props (React serializes the pending promises). See [rsc-entrypoints.md](./rsc-entrypoints.md).
 - **`raf-effect-atom/react-router`** (Framework Mode, after the other two): a root `middleware` creates the request's registry in the router context; loaders call the verbs and return `dehydrate(registry)`; the route component wraps its tree in `HydrationBoundary`. raf-query's integration has the same shape and imports nothing from `react-router`, so it adds no peer.
 
 ### The read hook

@@ -1,10 +1,6 @@
 import { Schema } from "effect";
-import {
-	dehydrate,
-	ensure,
-	HydrateAtoms,
-	prefetch,
-} from "raf-effect-atom/next";
+import { HydrationBoundary } from "raf-effect-atom";
+import { ensure, getRegistry, prefetch } from "raf-effect-atom/rsc";
 
 import { IssueBoundary } from "~/boundaries.tsx";
 import { IssuePage } from "~/components/issue-page.tsx";
@@ -20,11 +16,11 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
 	return (
 		// The request registry's results go to the browser, still-loading ones
 		// as promises.
-		<HydrateAtoms state={await dehydrate()}>
+		<HydrationBoundary registry={getRegistry()}>
 			<IssueBoundary>
 				<IssuePage assignee={assigneeHandle} issue={issueHandle} />
 			</IssueBoundary>
-		</HydrateAtoms>
+		</HydrationBoundary>
 	);
 }
 // #endregion page

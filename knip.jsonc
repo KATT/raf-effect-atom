@@ -130,6 +130,11 @@
 				"react-router.config.ts": ["unlisted"],
 			},
 		},
+		"tooling/rsc-frameworks": {
+			// Each app is built by path from its test, with its own vite config.
+			"entry": ["vite-rsc/vite.config.ts", "vite-rsc/entry.*.tsx"],
+			"includeEntryExports": false,
+		},
 		"tooling/og-image": {
 			// The renderer reads the font files through `import.meta.resolve`,
 			// which Knip doesn't follow.

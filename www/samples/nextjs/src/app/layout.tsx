@@ -1,5 +1,4 @@
-import { WaterfallDetection } from "raf-effect-atom";
-import { RegistryProvider } from "raf-effect-atom/next";
+import { RegistryProvider, WaterfallDetection } from "raf-effect-atom";
 import type { ReactNode } from "react";
 
 import { AppBoundary, AuthBoundary } from "~/boundaries.tsx";
@@ -10,7 +9,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 	return (
 		<html lang="en">
 			<body>
-				{/* The browser's registry, which each page's HydrateAtoms fills. */}
+				{/* The browser's registry, which each page's HydrationBoundary fills. */}
 				<RegistryProvider>
 					{/* In development, a component that starts an atom no server component started throws. */}
 					<WaterfallDetection mode="throw">
