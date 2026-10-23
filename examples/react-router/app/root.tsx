@@ -3,6 +3,7 @@ import { Logo } from "@examples/kit/components/logo";
 import { NavigationProgress } from "@examples/kit/components/navigation-progress";
 import { SiteFooter } from "@examples/kit/components/site-footer";
 import { ThemeProvider } from "@examples/kit/components/theme-provider";
+import { exampleAppMeta, exampleApps } from "@examples/kit/lib/example-apps";
 import { loaderVerbOf } from "@examples/kit/lib/loader-verb";
 import { logoUrl } from "@examples/kit/lib/logo";
 import { Toaster } from "@examples/ui/components/sonner";
@@ -35,6 +36,10 @@ export const links: Route.LinksFunction = () => [
 	{ href: logoUrl, rel: "icon", type: "image/svg+xml" },
 ];
 
+// No route below exports `meta`, so every page has the root's.
+export const meta: Route.MetaFunction = () =>
+	exampleAppMeta(exampleApps["react-router"]);
+
 export const middleware: Array<Route.MiddlewareFunction> = [
 	atomsMiddleware(atomsContext),
 	// The backend reads the session and latency from cookies: atoms that run
@@ -59,7 +64,6 @@ export function Layout(props: { readonly children: ReactNode }) {
 			<head>
 				<meta charSet="utf-8" />
 				<meta content="width=device-width, initial-scale=1" name="viewport" />
-				<title>Issues · raf-effect-atom on React Router</title>
 				<Meta />
 				<Links />
 			</head>

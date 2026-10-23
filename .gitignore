@@ -22,3 +22,6 @@
 **/next-env.d.ts
 **/*.tsbuildinfo
 /examples/*/build
+
+# Rendered by `example-og-image` before each example app's build.
+/examples/*/public/og.png

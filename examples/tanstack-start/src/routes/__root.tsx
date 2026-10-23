@@ -4,6 +4,7 @@ import { Logo } from "@examples/kit/components/logo";
 import { NavigationProgress } from "@examples/kit/components/navigation-progress";
 import { SiteFooter } from "@examples/kit/components/site-footer";
 import { ThemeProvider } from "@examples/kit/components/theme-provider";
+import { exampleAppMeta, exampleApps } from "@examples/kit/lib/example-apps";
 import { loaderVerbOf } from "@examples/kit/lib/loader-verb";
 import { logoUrl } from "@examples/kit/lib/logo";
 import { Toaster } from "@examples/ui/components/sonner";
@@ -36,7 +37,7 @@ export const Route = createRootRouteWithContext<{
 		meta: [
 			{ charSet: "utf8" },
 			{ content: "width=device-width, initial-scale=1", name: "viewport" },
-			{ title: "Issues · raf-effect-atom on TanStack Start" },
+			...exampleAppMeta(exampleApps["tanstack-start"]),
 		],
 	}),
 	component: Outlet,

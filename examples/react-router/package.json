@@ -11,7 +11,7 @@
 		}
 	},
 	"scripts": {
-		"build": "react-router build",
+		"build": "example-og-image react-router public/og.png && react-router build",
 		"check:bundle": "bundle-check build/client --forbid @examples/db --forbid @examples/backend",
 		"dev": "react-router dev --port 3006",
 		"start": "PORT=3006 react-router-serve ./build/server/index.js",

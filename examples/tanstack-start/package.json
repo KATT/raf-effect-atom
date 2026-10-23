@@ -11,7 +11,7 @@
 		}
 	},
 	"scripts": {
-		"build": "vp build",
+		"build": "example-og-image tanstack-start public/og.png && vp build",
 		"check:bundle": "bundle-check .output/public --forbid @examples/db --forbid @examples/backend",
 		"dev": "vp dev --port 3005",
 		"start": "vp preview --port 3005",

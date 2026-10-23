@@ -11,7 +11,7 @@
 		}
 	},
 	"scripts": {
-		"build": "next build",
+		"build": "example-og-image nextjs public/og.png && next build",
 		"check:bundle": "bundle-check .next/static --forbid @examples/db --forbid @examples/backend",
 		"dev": "next dev --port 3007",
 		"start": "next start --port 3007",

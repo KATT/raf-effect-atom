@@ -137,6 +137,20 @@ export const loadOgRenderer = Effect.fn("loadOgRenderer")(function* (
 	});
 });
 
+/** Renders one card to `file`, for an app that serves a single card. */
+export const writeOgImage = Effect.fn("writeOgImage")(function* (
+	card: OgCard,
+	file: string,
+	options: RendererOptions,
+) {
+	const fs = yield* FileSystem.FileSystem;
+	const path = yield* Path.Path;
+	const render = yield* loadOgRenderer(options);
+	const png = yield* render(card);
+	yield* fs.makeDirectory(path.dirname(file), { recursive: true });
+	yield* fs.writeFile(file, png);
+});
+
 /** Deletes cached cards no build has read for two weeks. */
 export const pruneCache = Effect.fn("pruneCache")(function* (cacheDir: string) {
 	const fs = yield* FileSystem.FileSystem;

@@ -2,6 +2,11 @@ import "./globals.css";
 
 import { SiteFooter } from "@examples/kit/components/site-footer";
 import { ThemeProvider } from "@examples/kit/components/theme-provider";
+import {
+	exampleAppDescription,
+	exampleApps,
+	exampleAppTitle,
+} from "@examples/kit/lib/example-apps";
 import { logoUrl } from "@examples/kit/lib/logo";
 import { Toaster } from "@examples/ui/components/sonner";
 import type { Metadata } from "next";
@@ -14,9 +19,35 @@ import { Header } from "~/components/header.tsx";
 import { SettingsProvider } from "~/components/settings.tsx";
 import { parseSettings } from "~/settings.ts";
 
+const app = exampleApps.nextjs;
+const title = exampleAppTitle(app);
+const description = exampleAppDescription(app);
+const image = {
+	alt: title,
+	height: 630,
+	type: "image/png",
+	url: `${app.url}/og.png`,
+	width: 1200,
+};
+
 export const metadata = {
+	description,
 	icons: { icon: logoUrl },
-	title: "Issues · raf-effect-atom on Next.js",
+	openGraph: {
+		description,
+		images: [image],
+		siteName: "raf-effect-atom",
+		title,
+		type: "website",
+		url: app.url,
+	},
+	title,
+	twitter: {
+		card: "summary_large_image",
+		description,
+		images: [image],
+		title,
+	},
 } satisfies Metadata;
 
 export default async function RootLayout(props: {
