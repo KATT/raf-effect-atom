@@ -21,6 +21,8 @@ To derive one, assign `initialValueTarget` to the atom it reads. [`Atom.map`](ht
 tanstack-start/src/docs/loader-verbs.ts#derived
 ```
 
+[`Atom.swr`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/reactivity/Atom.ts) points at the atom it wraps the same way, so over a query with `reactivityKeys`, assign `initialValueTarget: query` to what it returns. `Atom.setIdleTTL`, `Atom.keepAlive` and `Atom.withLabel` copy the atom, serialization key included. An atom that picks between a value the page already has and a live query takes `Atom.serializable` itself, and the server sends whichever it picked.
+
 | Verb       | Starts the atom                          | Waits                             | When the atom has a result | Returns         |
 | ---------- | ---------------------------------------- | --------------------------------- | -------------------------- | --------------- |
 | `prefetch` | if it isn't in the registry              | never                             | leaves it alone            | a handle        |
