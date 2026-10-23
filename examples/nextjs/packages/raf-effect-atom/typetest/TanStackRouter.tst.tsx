@@ -1,4 +1,5 @@
 import { hole } from "effect";
+import * as Atom from "effect/reactivity/Atom";
 import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import {
 	createRootRouteWithContext,
@@ -8,7 +9,7 @@ import {
 import { describe, expect, it } from "tstyche";
 
 import { type LoadedHandle, Loader } from "../src/index.ts";
-import { setupRouterAtoms } from "../src/TanStackRouter.tsx";
+import { makeRegistry, setupRouterAtoms } from "../src/TanStackRouter.tsx";
 import { issue } from "../test/fixtures/issues.ts";
 
 type Issue = Loader.SettledResult<
@@ -29,6 +30,16 @@ describe("setupRouterAtoms", () => {
 		});
 		expect(setupRouterAtoms({ registry, router })).type.toBe<void>();
 		expect(setupRouterAtoms).type.not.toBeCallableWith({ router });
+	});
+
+	it("makes registries that start with initial values for any atom", () => {
+		const fetchAtom = Atom.readable((): typeof fetch => fetch);
+		expect(
+			makeRegistry({ initialValues: [Atom.initialValue(fetchAtom, fetch)] }),
+		).type.toBe<AtomRegistry.AtomRegistry>();
+		expect(makeRegistry).type.not.toBeCallableWith({
+			initialValues: [fetchAtom],
+		});
 	});
 
 	it("gives loaders the verbs, returning handles", () => {

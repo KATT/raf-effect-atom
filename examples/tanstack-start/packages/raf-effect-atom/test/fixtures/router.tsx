@@ -28,7 +28,7 @@ import {
 } from "../../src/index.ts";
 import { setupRouterAtoms } from "../../src/TanStackRouter.tsx";
 import { mount, settle } from "./browser.tsx";
-import { greeting, issue, IssueNotFound } from "./issues.ts";
+import { greeting, issue, IssueNotFound, welcome } from "./issues.ts";
 
 const isIssueNotFound = Schema.is(IssueNotFound);
 
@@ -96,10 +96,23 @@ const greetingRoute = createRoute({
 	path: "/greeting",
 });
 
+/** `/welcome` starts the welcome, which reads an initial value. */
+const welcomeRoute = createRoute({
+	component: function WelcomePage() {
+		const data = welcomeRoute.useLoaderData();
+		const result = useAtomResult(welcome, data.welcome);
+		return <p>{AsyncResult.isSuccess(result) ? result.value : "Failed"}</p>;
+	},
+	getParentRoute: () => rootRoute,
+	loader: (match) => ({ welcome: match.context.atoms.prefetch(welcome) }),
+	path: "/welcome",
+});
+
 const routeTree = rootRoute.addChildren([
 	ensureRoute,
 	prefetchRoute,
 	greetingRoute,
+	welcomeRoute,
 ]);
 
 /**

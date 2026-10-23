@@ -127,6 +127,22 @@ export const greeting = Atom.make((get) =>
 );
 
 /**
+ * What the request provides, as an atom holding its `fetch`: readable only,
+ * so only a registry's initial values set it.
+ */
+export const requestName = Atom.readable((): string => "stranger");
+
+/** A serializable query that reads `requestName`. */
+export const welcome = Atom.make((get) =>
+	Effect.succeed(`Welcome, ${get(requestName)}`).pipe(Effect.delay("5 millis")),
+).pipe(
+	Atom.serializable({
+		key: "welcome",
+		schema: AsyncResult.Schema({ success: Schema.String }),
+	}),
+);
+
+/**
  * A serializable atom that loads until `open` is called, for a loader whose
  * request or navigation goes while it waits.
  */

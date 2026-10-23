@@ -5,6 +5,7 @@ import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Option from "effect/Option";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
+import * as Atom from "effect/reactivity/Atom";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 
 import { Loader, RequestRegistry } from "../src/index.ts";
@@ -16,14 +17,22 @@ import {
 	IssueNotFound,
 	remadeIssue,
 	later,
+	requestName,
 	serve,
 	unkeyedIssue,
 	viewer,
+	welcome,
 } from "./fixtures/issues.ts";
 
 /** A browser registry with a short idle TTL, disposed with the test. */
 const browser = (defaultIdleTTL = 20) =>
 	AtomRegistry.layerOptions({ defaultIdleTTL });
+
+/** A registry disposed with the test. */
+const disposable = (registry: AtomRegistry.AtomRegistry) =>
+	Object.assign(registry, {
+		[Symbol.dispose]: () => registry.dispose(),
+	});
 
 const errorOf = (result: Loader.SettledResult<unknown, unknown>) =>
 	AsyncResult.isFailure(result)
@@ -318,6 +327,45 @@ describe("seeded request registries", () => {
 		assert.include(await rejection(loader.fetch(greeting)), "no cookie");
 		assert.isFalse(started(registry));
 		registry.dispose();
+	});
+});
+
+describe("request registries' initial values", () => {
+	it("reach a readable atom before any verb", async () => {
+		using registry = disposable(
+			RequestRegistry.make({
+				initialValues: [Atom.initialValue(requestName, "ada")],
+			}),
+		);
+		const result = Loader.result(await Loader.make(registry).ensure(welcome));
+		assert.isTrue(
+			AsyncResult.isSuccess(result) && result.value === "Welcome, ada",
+		);
+	});
+
+	it("outlive the atoms that read them", async () => {
+		using registry = disposable(
+			RequestRegistry.make({
+				initialValues: [Atom.initialValue(requestName, "ada")],
+			}),
+		);
+		const echo = Atom.readable((get) => get(requestName));
+		registry.mount(echo)();
+		await later(0);
+		assert.strictEqual(registry.get(requestName), "ada");
+	});
+
+	it("are set before the seed runs", () => {
+		const seen: Array<string> = [];
+		using _registry = disposable(
+			RequestRegistry.make({
+				initialValues: [Atom.initialValue(requestName, "ada")],
+				seed: (registry) => {
+					seen.push(registry.get(requestName));
+				},
+			}),
+		);
+		assert.deepStrictEqual(seen, ["ada"]);
 	});
 });
 

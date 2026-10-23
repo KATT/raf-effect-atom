@@ -36,12 +36,17 @@ const defaultIdleTTL = 400;
  */
 export const make = (options?: {
 	readonly defaultIdleTTL?: number | undefined;
+	readonly initialValues?: RequestRegistry.InitialValues | undefined;
 	readonly seed?: RequestRegistry.Seed | undefined;
 }): AtomRegistry.AtomRegistry =>
 	isServer()
-		? RequestRegistry.make({ seed: options?.seed })
+		? RequestRegistry.make({
+				initialValues: options?.initialValues,
+				seed: options?.seed,
+			})
 		: AtomRegistry.make({
 				defaultIdleTTL: options?.defaultIdleTTL ?? defaultIdleTTL,
+				initialValues: options?.initialValues,
 				scheduleTask,
 			});
 
