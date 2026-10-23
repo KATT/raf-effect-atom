@@ -25,7 +25,7 @@ import {
 	Random,
 } from "effect";
 
-import { seed, type Store } from "./seed.ts";
+import { seed, type Store } from "./Seed.ts";
 
 const ISSUES_PER_PAGE = 10;
 const COMMENTS_PER_PAGE = 4;

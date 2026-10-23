@@ -5,7 +5,7 @@ import { Config, Effect, Layer } from "effect";
 import { HttpRouter } from "effect/http";
 import { createServer } from "node:http";
 
-import { RpcRoutes } from "../rpc-routes.ts";
+import { RpcRoutes } from "../RpcRoutes.ts";
 
 const HttpServerLayer = Layer.unwrap(
 	Effect.gen(function* () {

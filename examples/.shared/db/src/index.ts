@@ -1,2 +1,2 @@
-export * from "./issues.ts";
-export { exampleUser } from "./seed.ts";
+export * from "./Issues.ts";
+export { exampleUser } from "./Seed.ts";

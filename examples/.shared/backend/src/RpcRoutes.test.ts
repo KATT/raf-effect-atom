@@ -17,7 +17,7 @@ import { Clock, Effect, Layer } from "effect";
 import { HttpClient, HttpClientRequest, HttpRouter } from "effect/http";
 import { RpcClient, RpcSerialization } from "effect/rpc";
 
-import { RPC_PATH, RpcRoutesNoDeps } from "./rpc-routes.ts";
+import { RPC_PATH, RpcRoutesNoDeps } from "./RpcRoutes.ts";
 
 const Server = HttpRouter.serve(RpcRoutesNoDeps, {
 	disableListenLog: true,

@@ -7,11 +7,11 @@ The layout copies Effect's own `ai-docs/src/51_http-server/fixtures` (`api/` for
 ## Packages
 
 - **`examples/.shared/contract`** (`@examples/contract`): depends on `effect` only. Browsers, server rendering, docs samples and the worker demos all import it.
-  - `issue.ts`: the `Schema.Class` models (`Issue`, `User`, `Comment`, `IssuePage`, `CommentPage`, `IssueCounts`), branded ids (`IssueId`, `UserId`, `CommentId`), `IssueStatus`, `Cursor`, and `IssueListInput` (the URL search params).
-  - `issue-errors.ts`: one `Schema.TaggedError` per failure (`IssueNotFound`, `EmptyTitle`, `EmptyBody`, `EmptyComment`).
-  - `authorization.ts`: the `Authorization` middleware declaration (error `Unauthorized`, provides `CurrentUser`) and the session cookie names.
-  - `latency.ts`: the server-only `Latency` middleware declaration (no client part, like Effect's `TimingMiddleware` fixture), the `db-latency` cookie name and its Schema decoder.
-  - `issue-rpcs.ts`: the `RpcGroup`, with both middlewares on every procedure.
+  - `Issue.ts`: the `Schema.Class` models (`Issue`, `User`, `Comment`, `IssuePage`, `CommentPage`, `IssueCounts`), branded ids (`IssueId`, `UserId`, `CommentId`), `IssueStatus`, `Cursor`, and `IssueListInput` (the URL search params).
+  - `IssueErrors.ts`: one `Schema.TaggedError` per failure (`IssueNotFound`, `EmptyTitle`, `EmptyBody`, `EmptyComment`).
+  - `Authorization.ts`: the `Authorization` middleware declaration (error `Unauthorized`, provides `CurrentUser`) and the session cookie names.
+  - `Latency.ts`: the server-only `Latency` middleware declaration (no client part, like Effect's `TimingMiddleware` fixture), the `db-latency` cookie name and its Schema decoder.
+  - `IssueRpcs.ts`: the `RpcGroup`, with both middlewares on every procedure.
 - **`examples/.shared/db`** (`@examples/db`): the `Issues` service (`Issues.layer` keeps the process-wide tables across dev-server reloads; `Issues.layerTest` seeds fresh ones), the `DbLatency` reference, and the seed. Server-only.
 - **`examples/.shared/backend`** (`@examples/backend`): `AuthorizationLayer` and `LatencyLayer` (the middleware implementations), `IssueHandlersNoDeps` (`IssueRpcs.toLayer`, thin arrows over `Issues`), `RpcRoutes` (`RpcServer.layerHttp` at `/rpc`), `webHandler` (`HttpRouter.toWebHandler(RpcRoutes)`), and `pnpm --filter @examples/backend start`, which serves `RpcRoutes` on its own with `@effect/platform-node` (`PORT`, default 3001). Its tests run a real `RpcClient` over HTTP and JSON against `NodeHttpServer.layerTest`.
 - **The `AtomRpc` client is per app**, not in the contract: its protocol differs per app (`#rpc-transport`: fetch in the browser, the in-process `webHandler.handler` on the server). Name it `IssuesClient`, after Effect's `UsersClient`.

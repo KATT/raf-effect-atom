@@ -1,7 +1,7 @@
 import { Context, Schema } from "effect";
 import { RpcMiddleware } from "effect/rpc";
 
-import type { User } from "./issue.ts";
+import type { User } from "./Issue.ts";
 
 /**
  * The cookie that signs the example user out. The apps' settings menu sets it

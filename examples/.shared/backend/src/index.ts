@@ -1,2 +1,2 @@
-export { RPC_PATH } from "./rpc-routes.ts";
-export { webHandler } from "./web-handler.ts";
+export { RPC_PATH } from "./RpcRoutes.ts";
+export { webHandler } from "./WebHandler.ts";
