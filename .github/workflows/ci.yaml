@@ -46,6 +46,17 @@ jobs:
       - uses: ./.github/actions/prepare
       - run: pnpm test
 
+  # Each example app's `check:bundle` names its client build output and the
+  # server-only packages that must stay out of it (`tooling/bundle-check`).
+  bundle_check:
+    name: Bundle Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/prepare
+      - run: pnpm -r --filter "./examples/*" build
+      - run: pnpm -r --filter "./examples/*" check:bundle
+
   type_check:
     name: Type Check
     runs-on: ubuntu-latest

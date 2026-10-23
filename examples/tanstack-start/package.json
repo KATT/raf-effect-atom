@@ -12,6 +12,7 @@
 	},
 	"scripts": {
 		"build": "vp build",
+		"check:bundle": "bundle-check .output/public --forbid @examples/db --forbid @examples/backend",
 		"dev": "vp dev --port 3005",
 		"start": "vp preview --port 3005",
 		"test": "vp test",
@@ -38,6 +39,7 @@
 		"@effect/vitest": "catalog:",
 		"@rolldown/plugin-babel": "0.2.4",
 		"@tailwindcss/vite": "4.3.3",
+		"@tooling/bundle-check": "workspace:*",
 		"@types/node": "24.19.2",
 		"@types/react": "19.3.0",
 		"@types/react-dom": "19.3.0",

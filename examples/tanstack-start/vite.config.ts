@@ -6,6 +6,11 @@ import { nitro } from "nitro/vite";
 import { defineConfig } from "vite-plus";
 
 export default defineConfig((env) => ({
+	environments: {
+		// `bundle-check` reads which modules the browser gets from the client
+		// build's source maps. Hidden: the chunks don't point to them.
+		client: { build: { sourcemap: "hidden" } },
+	},
 	// Tests import the app's modules directly, without the Start build.
 	plugins:
 		env.mode === "test"

@@ -41,7 +41,9 @@ Two checks, so a leak fails before it ships.
 
 **CI bundle check (`tooling/bundle-check`, Effect, run by a `bundle_check` job in `ci.yaml`)**, added with the first example app:
 
-- Builds each app (`pnpm --filter <app> build`) and scans only its client output: `.output/public/**` for the TanStack Start apps and `www`, `.next/static/**` for Next.js, `build/client/**` for React Router.
-- Fails when a client chunk contains a server-only marker: the db service's key `@examples/db/Issues` (its class is what every backend import pulls in, so the marker can't be tree-shaken while the code stays), and the seed's text (`Ada Lovelace`).
-- Has its own test: a fixture client bundle that imports the backend must fail the check, and one that imports only the contract must pass.
+- Generic: `bundle-check <client-dir> --forbid <package>...`. Each app runs it from a `check:bundle` script on its own client output (`.output/public` for TanStack Start, `.next/static` for Next.js, `build/client` for React Router) with `--forbid @examples/db --forbid @examples/backend`. The job builds every example (`pnpm -r --filter "./examples/*" build`), then runs every `check:bundle`.
+- Reads the client build's source maps, not its text: a bundler lists a module in a chunk's `sources` when it contributed code, so tree-shaken imports pass and any shipped code fails, with no marker to keep in sync. A source fails when it's under a forbidden workspace package's directory (found with `pnpm ls`) or under `node_modules/<name>/`. Turbopack's `turbopack:///[project]/…` sources match by the package's path from the workspace root.
+- Each app builds its client with source maps: `build.sourcemap: "hidden"` in Vite (the chunks don't link to them), `productionBrowserSourceMaps: true` in Next.js. With no maps the check fails rather than passing a build it couldn't read. Chunks with no map (Rolldown's runtime) are listed as unchecked.
+- Rejected: grepping chunks for markers such as the db service's key `@examples/db/Issues` and the seed's text. It needs a marker per package, and minifiers can rename or split strings.
+- Has its own test: real Vite builds of a fixture, where a client entry that calls the backend fails, one that imports only the contract passes, and one whose backend import is tree-shaken passes.
 - Framework guards on top, where they exist: Next.js's `server-only` in `app/rpc/route.ts`, and React Router's and TanStack Start's refusal of `.server.ts` modules in client code.
