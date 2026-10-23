@@ -101,6 +101,11 @@
 			"entry": ["src/**/*.{ts,tsx}"],
 			"includeEntryExports": false,
 		},
+		"tooling/og-image": {
+			// The renderer reads the font files through `import.meta.resolve`,
+			// which Knip doesn't follow.
+			"ignoreDependencies": ["@fontsource/inter", "@fontsource/jetbrains-mono"],
+		},
 		"tooling/oxlint-plugins": {
 			// Loaded by path from the root `.oxlintrc.json`.
 			"entry": [

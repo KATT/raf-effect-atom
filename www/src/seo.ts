@@ -30,13 +30,18 @@ export function absoluteUrl(path: string) {
 	return new URL(path, site.url).href;
 }
 
+/** Where the build writes a page's social card: `/docs/a` at `/og/docs/a.png`. */
+export function ogImagePath(path: string) {
+	return `/og${path === "/" ? "/index" : path}.png`;
+}
+
 /** `head()` for a route: title, description, canonical URL, social cards and JSON-LD. */
 export function pageHead(page: PageSeo) {
 	const title = page.title
 		? `${page.title} | ${site.name}`
 		: `${site.name}: ${site.tagline}`;
 	const url = absoluteUrl(page.path);
-	const image = absoluteUrl("/og.png");
+	const image = absoluteUrl(ogImagePath(page.path));
 	return {
 		links: [
 			{ href: url, rel: "canonical" },
@@ -56,13 +61,15 @@ export function pageHead(page: PageSeo) {
 			{ content: page.type ?? "website", property: "og:type" },
 			{ content: site.name, property: "og:site_name" },
 			{ content: image, property: "og:image" },
+			{ content: "image/png", property: "og:image:type" },
 			{ content: "1200", property: "og:image:width" },
 			{ content: "630", property: "og:image:height" },
-			{ content: `${site.name}: ${site.tagline}`, property: "og:image:alt" },
+			{ content: title, property: "og:image:alt" },
 			{ content: "summary_large_image", name: "twitter:card" },
 			{ content: title, name: "twitter:title" },
 			{ content: page.description, name: "twitter:description" },
 			{ content: image, name: "twitter:image" },
+			{ content: title, name: "twitter:image:alt" },
 		],
 		scripts: (page.structuredData ?? []).map((data) => ({
 			children: JSON.stringify({ "@context": "https://schema.org", ...data }),

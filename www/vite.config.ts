@@ -6,7 +6,12 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { Effect } from "effect";
 import { defineConfig } from "vite";
 
+import { logoSvg } from "@examples/kit/lib/logo";
+import { OgCard } from "@tooling/og-image/render";
+import { ogImages } from "@tooling/og-image/vite";
+
 import { docPages, docsContent } from "./build/content.ts";
+import { absoluteUrl, ogImagePath } from "./src/seo.ts";
 import { sections, site } from "./src/site.ts";
 
 const contentDir = new URL("content", import.meta.url).pathname;
@@ -32,6 +37,29 @@ export default defineConfig({
 			sections,
 			siteUrl: site.url,
 			twoslashCache: { dir: twoslashCacheDir, inputs: [lockfile] },
+		}),
+		ogImages({
+			cacheDir: new URL("node_modules/.cache/og", import.meta.url).pathname,
+			cards: [
+				OgCard.Home({
+					headline: site.tagline,
+					lede: "Start atoms from route loaders. Catch their failures by tag.",
+					packages: ["raf-effect-atom", "effect-atom-boundary"],
+					path: ogImagePath("/"),
+					url: site.url,
+				}),
+				...pages.map((page) =>
+					OgCard.Page({
+						description: page.description,
+						eyebrow: page.section,
+						path: ogImagePath(page.path),
+						pill: "Docs",
+						title: page.title,
+						url: absoluteUrl(page.path),
+					}),
+				),
+			],
+			logoSvg,
 		}),
 		tailwindcss(),
 		tanstackStart({

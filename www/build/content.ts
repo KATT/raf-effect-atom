@@ -150,14 +150,17 @@ const readSources = Effect.fn("readSources")(function* (dirs: ContentDirs) {
 	);
 });
 
-/** Page paths for prerendering and the sitemap. */
+/** Pages for prerendering, the sitemap and the social cards. */
 export const docPages = Effect.fn("docPages")(function* (dirs: ContentDirs) {
 	return yield* Effect.forEach(
 		yield* readSources(dirs),
 		(source) =>
 			Effect.map(lastModified(source.file), (date) => ({
+				description: source.frontmatter.description,
 				lastModified: date,
 				path: `/docs/${source.slug}`,
+				section: source.frontmatter.section,
+				title: source.frontmatter.title,
 			})),
 		{ concurrency: "unbounded" },
 	);

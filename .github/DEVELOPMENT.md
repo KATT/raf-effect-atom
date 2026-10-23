@@ -16,6 +16,7 @@ Tools live in `tooling/` and are written in TypeScript with Effect, run with pla
 | `tooling/oxlint-plugins`       | The custom lint rules `.oxlintrc.json` loads                   |
 | `tooling/conventional-commits` | Checks commit subjects (`commit-msg` hook, `Commits` workflow) |
 | `tooling/vercel-ignore`        | Vercel's Ignored Build Step                                    |
+| `tooling/og-image`             | The sites' social cards (`og:image`), rendered at build time   |
 
 ```shell
 git clone https://github.com/KATT/raf-effect-atom
