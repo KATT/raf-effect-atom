@@ -1,0 +1,40 @@
+name: CodeSandbox
+
+# The copies carry the libraries as workspace packages, so they can sync as
+# soon as anything they copy changes on main.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/codesandbox.yaml
+      - examples/**
+      - package.json
+      - packages/**
+      - pnpm-workspace.yaml
+      - tooling/bundle-check/**
+      - tooling/codesandbox/**
+      - tooling/og-image/**
+      - tooling/vercel-ignore/src/workspace.ts
+  workflow_dispatch:
+
+# One sync at a time; a queued run regenerates from the newest main.
+concurrency:
+  group: ${{ github.workflow }}
+
+jobs:
+  sync:
+    name: Sync the codesandbox branch
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: ./.github/actions/prepare
+      # Regenerates the copies, installs and builds each one, and pushes if
+      # anything changed.
+      - run: pnpm --filter @tooling/codesandbox sync

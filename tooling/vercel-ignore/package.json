@@ -5,6 +5,9 @@
 	"description": "Vercel's Ignored Build Step: skips a project's deployment when nothing it builds from changed",
 	"type": "module",
 	"sideEffects": false,
+	"exports": {
+		"./workspace": "./src/workspace.ts"
+	},
 	"scripts": {
 		"ignore": "node src/bin/ignore.ts",
 		"test": "vp test",

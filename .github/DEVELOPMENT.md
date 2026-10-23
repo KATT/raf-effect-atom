@@ -70,6 +70,19 @@ pnpm knip
 
 `.repos/effect` and `.repos/router` are `git subtree` checkouts of Effect and TanStack Router at the installed versions, managed by [vendor-src](https://www.npmjs.com/package/vendor-src) from `vendor-src.json`. To bump one, change its version in the root `package.json` (and the catalog in `pnpm-workspace.yaml` for Effect), run `pnpm install`, then `pnpm exec vendor-src sync`, which commits the subtree update.
 
+## CodeSandbox examples
+
+The [Examples](https://raf-effect-atom.katt.dev/docs/examples) page opens each example app on [CodeSandbox](https://codesandbox.io) from the `codesandbox` branch. That branch holds a standalone pnpm workspace per app in `examples/<app>`: the app in `apps/<app>`, and every workspace package it depends on (the libraries, `examples/.shared/*`, `tooling/og-image`, `tooling/bundle-check`) in `packages/`, with `.codesandbox/tasks.json` to install and start the dev server. [`tooling/codesandbox`](../tooling/codesandbox) writes it, and [`.github/workflows/codesandbox.yaml`](workflows/codesandbox.yaml) regenerates, installs, builds and pushes it after each push to `main` that changes what it copies. Don't edit the branch by hand.
+
+To try a copy locally:
+
+```shell
+pnpm --filter @tooling/codesandbox generate /tmp/codesandbox
+cd /tmp/codesandbox/examples/nextjs && pnpm install && pnpm dev
+```
+
+The apps' dev servers allow CodeSandbox's preview host, `*.csb.app` (Vite's `server.allowedHosts`, Next.js's `allowedDevOrigins`).
+
 ## Releasing / npm publish
 
 Each package has its own version, changelog (`packages/<package>/CHANGELOG.md`) and tag (`effect-atom-boundary@x.y.z`). Its latest tag is the version source, and only commits that touch its directory count. Each has a release-it config in [`release-it/`](../release-it).
