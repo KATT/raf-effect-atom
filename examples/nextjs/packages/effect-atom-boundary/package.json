@@ -1,6 +1,6 @@
 {
 	"name": "effect-atom-boundary",
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"description": "Typed error boundaries for Effect Atom: catch an atom's failures by tag, typed by the atom",
 	"keywords": [
 		"effect",
