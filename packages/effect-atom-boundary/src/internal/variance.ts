@@ -1,4 +1,4 @@
-import type { TypeId, Variance } from "../claim.ts";
+import type { TypeId, Variance } from "../Claim.ts";
 
 /** @internal */
 export const variance: Variance<never>[TypeId] = {

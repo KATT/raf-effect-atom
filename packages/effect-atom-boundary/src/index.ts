@@ -6,14 +6,14 @@
 /**
  * @since 0.1.0
  */
-export * from "./claim.ts";
+export * from "./Claim.ts";
 
 /**
  * @since 0.1.0
  */
-export * from "./error-boundary.tsx";
+export * from "./ErrorBoundary.tsx";
 
 /**
  * @since 0.1.0
  */
-export * from "./hooks.ts";
+export * from "./Hooks.ts";

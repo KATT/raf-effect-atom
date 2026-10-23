@@ -15,7 +15,7 @@ import {
 	createErrorBoundary,
 	useAtomResult,
 } from "../src/index.ts";
-import { issue, Issues, serve } from "./fixtures/issues.ts";
+import { issue, Issues, serve } from "./fixtures/Issues.ts";
 
 const [OfflineBoundary, useOfflineBoundary] = createErrorBoundary({
 	catchTags: { Offline: () => <p>Offline</p> },

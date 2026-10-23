@@ -13,7 +13,7 @@ import {
 	type ErrorsOf,
 	useAtomResult,
 } from "../src/index.ts";
-import { issue, Issues, user } from "../test/fixtures/issues.ts";
+import { issue, Issues, user } from "../test/fixtures/Issues.ts";
 
 // The UI side imports the client and its atoms, never an error class: every
 // error type below comes from the atoms.
