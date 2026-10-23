@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.3](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.2...raf-effect-atom%400.2.3) (2026-10-23)
+
+### Features
+
+- **raf-effect-atom:** run Effect code on a loader's registry with Loader.Loader.run ([d26307d](https://github.com/KATT/raf-effect-atom/commit/d26307dc6279106ebd9d26078c88e4ad10a8cbc9))
+
 ## [0.2.2](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.1...raf-effect-atom%400.2.2) (2026-10-23)
 
 ### Features
