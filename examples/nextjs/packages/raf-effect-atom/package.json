@@ -43,7 +43,8 @@
 		"test": "vp test && pnpm test-types",
 		"test-types": "tstyche",
 		"typecheck": "tsc",
-		"publish:npm": "pnpm pack --out package.tgz && npm publish package.tgz --access public"
+		"publish:npm": "pnpm pack --out package.tgz && npm publish package.tgz --access public",
+		"prepack": "cp ../../LICENSE LICENSE"
 	},
 	"peerDependencies": {
 		"@effect/atom-react": "^4.0.6",
