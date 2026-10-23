@@ -1,9 +1,31 @@
 import { scheduleTask } from "@effect/atom-react";
+import * as Effect from "effect/Effect";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 
 import * as RequestRegistry from "../RequestRegistry.ts";
+import { isDevelopment } from "./development.ts";
 
 export const isServer = (): boolean => !("window" in globalThis);
+
+/**
+ * In development, throws when `rendered` renders on the server without a
+ * request registry: in one every request shares, such as
+ * `@effect/atom-react`'s default `RegistryContext`.
+ */
+export const requireRequestRegistry = (
+	registry: AtomRegistry.AtomRegistry,
+	rendered: string,
+): void => {
+	if (
+		isServer() &&
+		!RequestRegistry.isRequestRegistry(registry) &&
+		Effect.runSync(isDevelopment)
+	) {
+		throw new Error(
+			`raf-effect-atom: ${rendered} rendered on the server without a request registry, so results would be shared between requests. Provide RequestRegistry.make() through RegistryContext, as the framework integrations do.`,
+		);
+	}
+};
 
 /** `@effect/atom-react`'s default registry keeps an unused atom this long. */
 const defaultIdleTTL = 400;

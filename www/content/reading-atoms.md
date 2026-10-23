@@ -36,4 +36,4 @@ While a failed atom refreshes, such as after a boundary's `reset`, the read susp
 
 ## On the server
 
-Server rendering needs a registry per request, or one user's results would reach another. In development, `useAtomResult` throws during server rendering when the registry isn't a request registry. The framework integrations provide one; outside them, provide `RequestRegistry.make()` through `RegistryContext`.
+Server rendering needs a registry per request, or one user's results would reach another. In development, `useAtomResult` and `HydrationBoundary` throw during server rendering when the registry isn't a request registry, such as [`@effect/atom-react`](https://github.com/Effect-TS/effect/tree/effect%404.0.6/packages/atom/react)'s default one, which every request shares. The framework integrations provide one; outside them, provide `RequestRegistry.make()` through `RegistryContext`.
