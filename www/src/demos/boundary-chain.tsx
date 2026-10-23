@@ -1,20 +1,21 @@
 import { Button } from "@examples/ui/components/button";
 import { Skeleton } from "@examples/ui/components/skeleton";
-import { IssueId, IssueNotFound, Unauthorized } from "@examples/contract";
+import {
+	IssueId,
+	type IssueNotFound,
+	type Unauthorized,
+} from "@examples/contract";
 import { type CatchTagProps, createErrorBoundary } from "effect-atom-boundary";
+import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { useAtomResult } from "raf-effect-atom";
-import { Suspense, useState } from "react";
+import { Atom } from "effect/reactivity";
+import { Suspense } from "react";
 
 import { AppBoundary, AppErrorBoundary } from "~/demo-kit/app-boundary.tsx";
 import { BoundaryChain } from "~/demo-kit/boundary-chain.tsx";
 import { IssuesClient } from "~/demo-kit/client.ts";
-import {
-	DropNextButton,
-	ErrorNotice,
-	FailNextButton,
-} from "~/demo-kit/controls.tsx";
+import { ErrorNotice, IssueFailureButtons } from "~/demo-kit/controls.tsx";
 import { defineDemo } from "~/demo-kit/define.ts";
-import { Crash } from "~/demo-kit/rpcs.ts";
 
 import { issue } from "./issue-atoms.ts";
 
@@ -81,8 +82,20 @@ function IssueTitle(props: { readonly id: IssueId }) {
 
 const ids = [1, 2, 404].map((id) => IssueId.make(id));
 
+/** The issue the demo shows, kept across the inline and expanded views. */
+const selectedAtom = Atom.make(ids[0] ?? IssueId.make(1)).pipe(
+	Atom.keepAlive,
+	Atom.withLabel("demo-kit:boundary-chain-issue"),
+);
+
+/** Queues a failure for the next request; `IssueNotFound` names the open issue. */
+function Controls() {
+	return <IssueFailureButtons issueId={useAtomValue(selectedAtom)} />;
+}
+
 function BoundaryChainDemo() {
-	const [id, setId] = useState(ids[0] ?? IssueId.make(1));
+	const id = useAtomValue(selectedAtom);
+	const setId = useAtomSet(selectedAtom);
 	return (
 		<div className="grid gap-4">
 			<div className="flex flex-wrap gap-1.5">
@@ -120,24 +133,13 @@ function BoundaryChainDemo() {
 				]}
 				reader="<IssueTitle>"
 			/>
-			<div className="flex flex-wrap gap-2 border-t pt-3">
-				<FailNextButton make={() => new Unauthorized()} tag="Unauthorized" />
-				<FailNextButton
-					make={() => new IssueNotFound({ id })}
-					tag="IssueNotFound"
-				/>
-				<DropNextButton />
-				<FailNextButton
-					make={() => new Crash({ message: "The server threw" })}
-					tag="Crash"
-				/>
-			</div>
 		</div>
 	);
 }
 
 export default defineDemo({
 	Component: BoundaryChainDemo,
+	Controls,
 	hint: "Queue a failure, then open another issue or press Try again. Watch the error climb: IssueNotFound stops at <IssueBoundary>, Unauthorized at <AuthBoundary>, and RpcClientError, a request that never reached the server, at <AppBoundary>. A Crash, typed unknown, climbs to the app’s error boundary.",
 	title: "Chained boundaries",
 });

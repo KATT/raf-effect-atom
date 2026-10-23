@@ -1,6 +1,7 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { Button } from "@examples/ui/components/button";
 import { cn } from "@examples/ui/lib/utils";
+import { type IssueId, IssueNotFound, Unauthorized } from "@examples/contract";
 import { Option } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import { Zap } from "lucide-react";
@@ -13,7 +14,7 @@ import {
 	failNext,
 	setLatency,
 } from "./client.ts";
-import { type InjectedError, latencies } from "./rpcs.ts";
+import { Crash, type InjectedError, latencies } from "./rpcs.ts";
 
 /** The demo server's controls, once its worker answered. */
 function useControls() {
@@ -58,7 +59,7 @@ export function LatencyControl() {
  * returns: one of the contract's errors, or a `Crash` no procedure declares.
  * The badge counts the failures still queued with that tag.
  */
-export function FailNextButton(props: {
+function FailNextButton(props: {
 	readonly count?: number;
 	readonly make: () => InjectedError;
 	/** The tag of what `make` returns, for the label. */
@@ -85,7 +86,7 @@ export function FailNextButton(props: {
  * server, so it fails with `RpcClientError`, as with the network down. The
  * badge counts the drops still queued.
  */
-export function DropNextButton() {
+function DropNextButton() {
 	const registry = useContext(RegistryContext);
 	const queued = useAtomValue(droppedAtom);
 	return (
@@ -97,6 +98,27 @@ export function DropNextButton() {
 			queued={queued}
 			tag="RpcClientError"
 		/>
+	);
+}
+
+/**
+ * The failures the boundary demos queue: the contract's two errors, a dropped
+ * request, and a `Crash` no procedure declares. `IssueNotFound` names `issueId`.
+ */
+export function IssueFailureButtons(props: { readonly issueId: IssueId }) {
+	return (
+		<>
+			<FailNextButton make={() => new Unauthorized()} tag="Unauthorized" />
+			<FailNextButton
+				make={() => new IssueNotFound({ id: props.issueId })}
+				tag="IssueNotFound"
+			/>
+			<DropNextButton />
+			<FailNextButton
+				make={() => new Crash({ message: "The server threw" })}
+				tag="Crash"
+			/>
+		</>
 	);
 }
 

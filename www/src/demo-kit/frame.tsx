@@ -110,6 +110,8 @@ function DemoCard(props: {
 	readonly action: ReactNode;
 	readonly body: ReactNode;
 	readonly className: string;
+	/** The demo's own settings, beside the latency. */
+	readonly controls: ReactNode;
 	readonly description: ReactNode;
 	readonly devtools: boolean;
 	readonly onStartOver: () => void;
@@ -132,6 +134,7 @@ function DemoCard(props: {
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
 					<LatencyControl />
+					{props.controls}
 					<Button onClick={props.onStartOver} size="xs" variant="ghost">
 						<RotateCcw /> Start over
 					</Button>
@@ -177,6 +180,8 @@ export function DemoFrame(props: { readonly demo: DemoDefinition }) {
 	};
 
 	const Demo = demo.Component;
+	const Controls = demo.Controls;
+	const demoControls = Controls === undefined ? null : <Controls />;
 	const body = (
 		<AppErrorBoundary key={session.id}>
 			<Suspense fallback={<DemoSkeleton />}>
@@ -214,6 +219,7 @@ export function DemoFrame(props: { readonly demo: DemoDefinition }) {
 						)
 					}
 					className="not-prose my-8 overflow-hidden rounded-xl border shadow-sm"
+					controls={demoControls}
 					description={
 						<p className="text-xs text-muted-foreground">{demo.hint}</p>
 					}
@@ -245,6 +251,7 @@ export function DemoFrame(props: { readonly demo: DemoDefinition }) {
 							}
 							body={body}
 							className="h-full min-h-0"
+							controls={demoControls}
 							description={
 								<DialogDescription className="text-xs">
 									{demo.hint}

@@ -1,19 +1,19 @@
 import { Button } from "@examples/ui/components/button";
 import { Skeleton } from "@examples/ui/components/skeleton";
-import { IssueId, IssueNotFound, Unauthorized } from "@examples/contract";
-import { useAtomSuspense } from "@effect/atom-react";
+import {
+	IssueId,
+	type IssueNotFound,
+	type Unauthorized,
+} from "@examples/contract";
+import { useAtomSet, useAtomSuspense, useAtomValue } from "@effect/atom-react";
 import { AtomErrorBoundary, type CatchTagProps } from "effect-atom-boundary";
-import { Suspense, useState } from "react";
+import { Atom } from "effect/reactivity";
+import { Suspense } from "react";
 
 import { AppBoundary, AppErrorBoundary } from "~/demo-kit/app-boundary.tsx";
 import { BoundaryChain } from "~/demo-kit/boundary-chain.tsx";
-import {
-	DropNextButton,
-	ErrorNotice,
-	FailNextButton,
-} from "~/demo-kit/controls.tsx";
+import { ErrorNotice, IssueFailureButtons } from "~/demo-kit/controls.tsx";
 import { defineDemo } from "~/demo-kit/define.ts";
-import { Crash } from "~/demo-kit/rpcs.ts";
 
 import { issue } from "./issue-atoms.ts";
 
@@ -83,8 +83,20 @@ function IssuePanel(props: { readonly id: IssueId }) {
 	);
 }
 
+/** The issue the demo shows, kept across the inline and expanded views. */
+const selectedAtom = Atom.make(ids[0] ?? IssueId.make(1)).pipe(
+	Atom.keepAlive,
+	Atom.withLabel("demo-kit:atom-error-boundary-issue"),
+);
+
+/** Queues a failure for the next request; `IssueNotFound` names the open issue. */
+function Controls() {
+	return <IssueFailureButtons issueId={useAtomValue(selectedAtom)} />;
+}
+
 function AtomErrorBoundaryDemo() {
-	const [id, setId] = useState(ids[0] ?? IssueId.make(1));
+	const id = useAtomValue(selectedAtom);
+	const setId = useAtomSet(selectedAtom);
 	return (
 		<div className="grid gap-4">
 			<div className="flex flex-wrap gap-1.5">
@@ -118,24 +130,13 @@ function AtomErrorBoundaryDemo() {
 				]}
 				reader="<IssueTitle>"
 			/>
-			<div className="flex flex-wrap gap-2 border-t pt-3">
-				<FailNextButton make={() => new Unauthorized()} tag="Unauthorized" />
-				<FailNextButton
-					make={() => new IssueNotFound({ id })}
-					tag="IssueNotFound"
-				/>
-				<DropNextButton />
-				<FailNextButton
-					make={() => new Crash({ message: "The server threw" })}
-					tag="Crash"
-				/>
-			</div>
 		</div>
 	);
 }
 
 export default defineDemo({
 	Component: AtomErrorBoundaryDemo,
+	Controls,
 	hint: "Open issue #404, then queue a failure and press Try again. IssueNotFound and Unauthorized have a handler here, and RpcClientError, a request that never reached the server, goes on to <AppBoundary>. A Crash isn’t a typed error, so it reaches the app’s error boundary as unknown.",
 	title: "AtomErrorBoundary",
 });

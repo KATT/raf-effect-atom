@@ -6,6 +6,12 @@ export interface DemoDefinition {
 	 * worker through `IssuesClient`.
 	 */
 	readonly Component: ComponentType;
+	/**
+	 * The demo's own settings, such as the failures it can queue, shown in the
+	 * header next to the latency, above the demo. Rendered in the demo's
+	 * registry, so it shares state with `Component` through atoms.
+	 */
+	readonly Controls?: ComponentType;
 	/** One sentence on what to try. */
 	readonly hint: string;
 	readonly title: string;
