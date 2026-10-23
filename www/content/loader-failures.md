@@ -40,3 +40,13 @@ tanstack-start/src/docs/loader-failures.tsx#not-found
 ```
 
 The typed failure stays a value until the loader decides what it means. Only a defect or an interruption rejects, and goes to the router's error component.
+
+## Reads behind a check
+
+The server sends every atom the loaders started, so data the page should carry only once a check passes, such as an access check, starts after the check rather than with it. The loader `ensure`s the check and starts the reads it guards only when it succeeded:
+
+```sample
+tanstack-start/src/docs/loader-failures.tsx#guarded
+```
+
+A failed check sends none of the guarded atoms, even ones that would have succeeded. The reads wait for the check, one round trip, which on the server is usually an in-process call, and still run alongside each other. The server should still authorize each read on its own: the check decides what the page shows, not what a request may fetch.
