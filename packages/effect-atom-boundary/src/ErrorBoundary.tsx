@@ -94,10 +94,13 @@ const handlerFor = (
 };
 
 interface CatcherProps {
-	readonly catches: (error: unknown) => Handler | undefined;
 	readonly children?: React.ReactNode | undefined;
-	readonly refresh: (error: unknown) => void;
-	readonly resetKey?: unknown;
+	readonly handlers: Handlers;
+	/**
+	 * `AtomErrorBoundary`'s atom: a failure another atom's read threw goes to
+	 * the boundaries above, and a new atom clears a caught failure.
+	 */
+	readonly own?: FailedReads.FailedRead | undefined;
 }
 
 interface CatcherState {
@@ -108,7 +111,7 @@ interface CatcherState {
 class Catcher extends React.Component<CatcherProps, CatcherState> {
 	override state: CatcherState = {
 		caught: undefined,
-		resetKey: this.props.resetKey,
+		resetKey: this.props.own?.atom,
 	};
 
 	static getDerivedStateFromError(error: unknown): Partial<CatcherState> {
@@ -119,10 +122,11 @@ class Catcher extends React.Component<CatcherProps, CatcherState> {
 		props: CatcherProps,
 		state: CatcherState,
 	): Partial<CatcherState> | null {
-		if (Object.is(props.resetKey, state.resetKey)) {
+		const resetKey = props.own?.atom;
+		if (Object.is(resetKey, state.resetKey)) {
 			return null;
 		}
-		return { caught: undefined, resetKey: props.resetKey };
+		return { caught: undefined, resetKey };
 	}
 
 	override render(): React.ReactNode {
@@ -131,7 +135,12 @@ class Catcher extends React.Component<CatcherProps, CatcherState> {
 			return this.props.children;
 		}
 		const error = caught.error;
-		const handler = this.props.catches(error);
+		const own = this.props.own;
+		const read = FailedReads.get(error);
+		const handler =
+			own !== undefined && read !== undefined && read.atom !== own.atom
+				? undefined
+				: handlerFor(this.props.handlers, error);
 		if (handler === undefined) {
 			throw error;
 		}
@@ -141,7 +150,8 @@ class Catcher extends React.Component<CatcherProps, CatcherState> {
 		return handler({
 			error: claimed,
 			reset: () => {
-				this.props.refresh(error);
+				const failed = read ?? own;
+				failed?.registry.refresh(failed.atom);
 				this.setState({ caught: undefined });
 			},
 		});
@@ -207,23 +217,8 @@ export const AtomErrorBoundary = <A, E>(
 	props: AtomErrorBoundaryProps<A, E>,
 ): React.ReactNode => {
 	const registry = React.useContext(RegistryContext);
-	const atom = props.atom;
-	const handlers: Handlers = props.catchTags;
 	return (
-		<Catcher
-			catches={(error) => {
-				const read = FailedReads.get(error);
-				if (read !== undefined && read.atom !== atom) {
-					return undefined;
-				}
-				return handlerFor(handlers, error);
-			}}
-			refresh={(error) => {
-				const read = FailedReads.get(error) ?? { atom, registry };
-				read.registry.refresh(read.atom);
-			}}
-			resetKey={atom}
-		>
+		<Catcher handlers={props.catchTags} own={{ atom: props.atom, registry }}>
 			{props.children}
 		</Catcher>
 	);
@@ -305,11 +300,6 @@ const isMounted = (at: Mounted | undefined, boundary: Internal): boolean => {
 	return false;
 };
 
-const refreshFailedRead = (error: unknown): void => {
-	const read = FailedReads.get(error);
-	read?.registry.refresh(read.atom);
-};
-
 /**
  * Creates a shared error boundary that claims some errors by `_tag`, returned
  * as `[Boundary, useBoundary]`.
@@ -377,6 +367,9 @@ export const createErrorBoundary = <
 		displayName: `${options.name}Boundary`,
 	};
 
+	// React Compiler compiles `Boundary` as if `options`, `handlers` and
+	// `boundary` were module-level values, and moves a closure over them out
+	// of this function, so `Boundary` creates no closures.
 	const Boundary = (props: {
 		readonly children?: React.ReactNode | undefined;
 	}) => {
@@ -387,10 +380,7 @@ export const createErrorBoundary = <
 			);
 		}
 		return (
-			<Catcher
-				catches={(error) => handlerFor(handlers, error)}
-				refresh={refreshFailedRead}
-			>
+			<Catcher handlers={handlers}>
 				<MountedBoundaries value={{ boundary, parent: above }}>
 					{props.children}
 				</MountedBoundaries>
