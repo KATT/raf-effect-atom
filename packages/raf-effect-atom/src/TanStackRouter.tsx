@@ -78,6 +78,12 @@ export interface RouterAtomsOptions<TRouter extends AnyRouter> {
  *   default registry does. An atom's own `Atom.setIdleTTL` or
  *   `Atom.keepAlive` wins. The server's request registry lives for one
  *   request, so it has none.
+ * - `initialValues` are values both registries start with, as
+ *   `AtomRegistry.make`'s `initialValues`, such as the session the server
+ *   verified or a readable atom that provides the request's `fetch`. The
+ *   server's request registry keeps those atoms mounted until it's disposed.
+ *   The browser's registry drops an atom no component reads, value included,
+ *   so make one whose value must outlive its readers `Atom.keepAlive`.
  * - `seed` runs on the server's request registry before the loaders start
  *   atoms in it, as `RequestRegistry.make`'s does: set what the request's
  *   atoms need, such as its cookie. It can be async. The browser's registry
@@ -103,6 +109,7 @@ export interface RouterAtomsOptions<TRouter extends AnyRouter> {
  */
 export const makeRegistry = (options?: {
 	readonly defaultIdleTTL?: number | undefined;
+	readonly initialValues?: RequestRegistry.InitialValues | undefined;
 	readonly seed?: RequestRegistry.Seed | undefined;
 }): AtomRegistry.AtomRegistry => Registry.make(options);
 

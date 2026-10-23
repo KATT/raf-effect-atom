@@ -9,11 +9,19 @@ import {
 } from "@tanstack/react-router";
 import { screen } from "@testing-library/react";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
+import * as Atom from "effect/reactivity/Atom";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 
 import { type LoadedHandle, Loader, RequestRegistry } from "../src/index.ts";
 import { makeRegistry, setupRouterAtoms } from "../src/TanStackRouter.tsx";
-import { counter, gated, later, serve, viewer } from "./fixtures/issues.ts";
+import {
+	counter,
+	gated,
+	later,
+	requestName,
+	serve,
+	viewer,
+} from "./fixtures/issues.ts";
 import { renderInBrowser, renderOnServer } from "./fixtures/router.tsx";
 
 describe("setupRouterAtoms", () => {
@@ -72,6 +80,15 @@ describe("setupRouterAtoms", () => {
 		assert.include(response.html, "Hello, ada");
 		using _app = await renderInBrowser("/greeting", response.html);
 		assert.isDefined(screen.getByText("Hello, ada"));
+	});
+
+	it("renders and hydrates an atom that reads the request registry's initial value", async () => {
+		const response = await renderOnServer("/welcome", {
+			initialValues: [Atom.initialValue(requestName, "ada")],
+		});
+		assert.include(response.html, "Welcome, ada");
+		using _app = await renderInBrowser("/welcome", response.html);
+		assert.isDefined(screen.getByText("Welcome, ada"));
 	});
 
 	it("disposes the request registry when the response finishes", async () => {
@@ -165,6 +182,13 @@ describe("makeRegistry", () => {
 	it("makes a browser registry where there's a window", () => {
 		using registry = disposable(makeRegistry());
 		assert.isFalse(RequestRegistry.isRequestRegistry(registry.value));
+	});
+
+	it("starts the browser's registry with initialValues", () => {
+		using registry = disposable(
+			makeRegistry({ initialValues: [Atom.initialValue(requestName, "ada")] }),
+		);
+		assert.strictEqual(registry.value.get(requestName), "ada");
 	});
 
 	it("keeps an unread atom for defaultIdleTTL, 400 ms by default", async () => {
