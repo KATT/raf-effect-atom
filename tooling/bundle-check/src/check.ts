@@ -21,7 +21,7 @@ interface Report {
 	/** Chunks checked through their source maps, relative to the client dir. */
 	readonly chunks: ReadonlyArray<string>;
 	readonly leaks: ReadonlyArray<Leak>;
-	/** JavaScript files with no source map next to them, such as Rolldown's runtime. */
+	/** JavaScript files with no source map, such as Rolldown's runtime. */
 	readonly unmapped: ReadonlyArray<string>;
 }
 
@@ -41,6 +41,12 @@ const SourceMap = Schema.fromJsonString(
 );
 
 const scheme = /^[a-z][\w+.-]*:\/+/i;
+
+/**
+ * A chunk's link to its map. Turbopack names a map after its contents rather
+ * than its chunk, so `<chunk>.map` doesn't find it.
+ */
+const sourceMappingUrl = /\/\/# sourceMappingURL=(?!data:)(\S+)\s*$/;
 
 const toPosix = (file: string) => file.replaceAll("\\", "/");
 
@@ -103,9 +109,26 @@ export const check = Effect.fn("check")(function* (options: {
 		return yield* new NoSourceMaps({ dir: options.clientDir });
 	}
 	const mapped = new Set(maps);
-	const unmapped = files.filter(
-		(file) => /\.[cm]?js$/.test(file) && !mapped.has(`${file}.map`),
-	);
+	const chunkOf = new Map<string, string>();
+	const unmapped: Array<string> = [];
+	for (const chunk of files.filter((file) => /\.[cm]?js$/.test(file))) {
+		const contents = yield* fs.readFileString(
+			path.join(options.clientDir, chunk),
+		);
+		const url = sourceMappingUrl.exec(contents)?.[1];
+		const map =
+			url === undefined
+				? `${chunk}.map`
+				: toPosix(path.join(path.dirname(chunk), url));
+		if (mapped.has(map)) {
+			chunkOf.set(map, chunk);
+		} else {
+			unmapped.push(chunk);
+		}
+	}
+
+	const chunkName = (map: string) =>
+		chunkOf.get(map) ?? map.replace(/\.map$/, "");
 
 	const leaks: Array<Leak> = [];
 	for (const map of maps) {
@@ -121,7 +144,7 @@ export const check = Effect.fn("check")(function* (options: {
 			for (const pkg of options.forbidden) {
 				if (belongsTo(file, options.root, pkg)) {
 					leaks.push({
-						chunk: map.replace(/\.map$/, ""),
+						chunk: chunkName(map),
 						packageName: pkg.name,
 						source,
 					});
@@ -130,7 +153,7 @@ export const check = Effect.fn("check")(function* (options: {
 		}
 	}
 	return {
-		chunks: maps.map((map) => map.replace(/\.map$/, "")),
+		chunks: maps.map(chunkName),
 		leaks,
 		unmapped,
 	} satisfies Report;

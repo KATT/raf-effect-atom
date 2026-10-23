@@ -108,36 +108,43 @@ describe("check", () => {
 		}).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 	);
 
-	it.effect("matches Turbopack's project paths and node_modules", () =>
-		Effect.gen(function* () {
-			const map = (sources: ReadonlyArray<string>) =>
-				JSON.stringify({ mappings: "", sources, version: 3 });
-			const root = yield* writeTree({
-				"client/a.js": "",
-				"client/a.js.map": map([
-					"turbopack:///[project]/libs/backend/index.js",
-					"turbopack:///[project]/libs/contract/index.js",
-				]),
-				"client/b.js": "",
-				"client/b.js.map": map([
-					"../node_modules/.pnpm/server-lib@1.0.0/node_modules/server-lib/index.js",
-				]),
-				"client/runtime.js": "",
-			});
-			const report = yield* check({
-				clientDir: `${root}/client`,
-				forbidden: [backend, { dir: undefined, name: "server-lib" }],
-				root,
-			});
-			assert.deepStrictEqual(
-				report.leaks.map((leak) => [leak.chunk, leak.packageName]),
-				[
-					["a.js", "@fixture/backend"],
-					["b.js", "server-lib"],
-				],
-			);
-			assert.deepStrictEqual(report.unmapped, ["runtime.js"]);
-		}).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+	it.effect(
+		"matches Turbopack's project paths, map names and node_modules",
+		() =>
+			Effect.gen(function* () {
+				const map = (sources: ReadonlyArray<string>) =>
+					JSON.stringify({ mappings: "", sources, version: 3 });
+				const root = yield* writeTree({
+					"client/0x1f.js.map": map([
+						"turbopack:///[project]/libs/backend/index.js",
+					]),
+					"client/a.js": "",
+					"client/a.js.map": map([
+						"turbopack:///[project]/libs/backend/index.js",
+						"turbopack:///[project]/libs/contract/index.js",
+					]),
+					"client/b.js": "",
+					"client/b.js.map": map([
+						"../node_modules/.pnpm/server-lib@1.0.0/node_modules/server-lib/index.js",
+					]),
+					"client/c.js": "//# sourceMappingURL=0x1f.js.map\n",
+					"client/runtime.js": "",
+				});
+				const report = yield* check({
+					clientDir: `${root}/client`,
+					forbidden: [backend, { dir: undefined, name: "server-lib" }],
+					root,
+				});
+				assert.deepStrictEqual(
+					report.leaks.map((leak) => [leak.chunk, leak.packageName]),
+					[
+						["c.js", "@fixture/backend"],
+						["a.js", "@fixture/backend"],
+						["b.js", "server-lib"],
+					],
+				);
+				assert.deepStrictEqual(report.unmapped, ["runtime.js"]);
+			}).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 	);
 
 	it.effect("fails when the build has no source maps to read", () =>
