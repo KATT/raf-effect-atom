@@ -17,7 +17,7 @@
 ## Verifying changes
 
 - Test programmatically: unit tests, type checks, builds, `curl` against a dev server or a deployment.
-- Drive the example apps and the site's demos with headless Chrome, and check RPC requests with `curl` against the apps' RPC routes. Only use computer use for things that need taste: how a UI looks or feels.
+- Drive the example apps and the site's demos with headless Chrome, and check RPC requests with `curl` against the apps' RPC routes. The `verify-examples` skill ([`.agents/skills/verify-examples`](.agents/skills/verify-examples/SKILL.md)) launches the apps, drives them, and has a recipe per feature. Only use computer use for things that need taste: how a UI looks or feels.
 - Don't record videos or screen recordings.
 - After pushing a change to `www` or an example, check that its production Vercel deployment is Ready and that the changed page or route works there. **Never guess a hostname**: copy it from the Vercel project's settings or the deployment.
 
