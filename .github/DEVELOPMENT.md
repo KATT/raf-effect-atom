@@ -37,7 +37,7 @@ pnpm format:check
 pnpm knip
 ```
 
-Also run the docs site's build when `www`, its samples or the packages changed.
+Also run the docs site's build (`pnpm build:www`) when `www`, its samples or the packages changed.
 
 ## Commits
 
