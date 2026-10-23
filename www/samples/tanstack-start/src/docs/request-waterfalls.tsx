@@ -4,7 +4,7 @@ import {
 	createRoute,
 } from "@tanstack/react-router";
 import { Effect } from "effect";
-import { AsyncResult } from "effect/reactivity";
+import { AsyncResult, Atom } from "effect/reactivity";
 import {
 	type Handle,
 	Loader,
@@ -19,8 +19,6 @@ import { assignee, issue } from "~/issues.ts";
 
 declare const atoms: Loader.Loader;
 declare const id: IssueId;
-/** What a one-time token grants. It only runs in the browser. */
-declare const connection: (token: string) => ReturnType<typeof issue>;
 /** A user by id, from an API the app can't reshape. */
 declare const user: (id: UserId) => ReturnType<typeof assignee>;
 
@@ -87,39 +85,39 @@ const userHandle = AsyncResult.isSuccess(found)
 // #endregion dependent
 
 // #region browser-only
-// The router's context: getRouter reads `entry` from the URL fragment in the
-// browser, and erases it there. On the server it's undefined.
+// Only the browser can ask: the atom runs there, so it needs no
+// serialization key.
+const notifications = Atom.make(
+	Effect.promise(() => navigator.permissions.query({ name: "notifications" })),
+).pipe(Atom.map(AsyncResult.map((status) => status.state)));
+
 const appRoot = createRootRouteWithContext<{
 	readonly atoms: Loader.Loader;
-	readonly entry: { readonly token: string } | undefined;
 }>()();
 
-const connectRoute = createRoute({
+const settingsRoute = createRoute({
 	getParentRoute: () => appRoot,
-	path: "/connect",
-	// The server renders the pending component; the loader and the page run
-	// in the browser, where the token is.
-	ssr: false,
-	pendingComponent: () => <p>Opening the connection…</p>,
+	path: "/settings",
 	loader: ({ context }) => ({
-		connection:
-			context.entry === undefined
-				? undefined
-				: context.atoms.prefetch(connection, context.entry.token),
+		// The server renders the page without it; the browser's read starts it.
+		notifications: context.atoms.prefetchInBrowser(notifications),
 	}),
 });
 
-// The page passes the loader's handle down, as for any other route.
-function Connection(props: { connection: Handle<typeof connection> }) {
-	const result = useAtomResult(
-		useAuthBoundary().wrap(connection),
-		props.connection,
+// The page renders on the server; the boundary waits for the browser.
+function SettingsPage(props: { notifications: Handle<typeof notifications> }) {
+	return (
+		<Suspense fallback={<p>Checking notifications…</p>}>
+			<NotificationSetting notifications={props.notifications} />
+		</Suspense>
 	);
-	return AsyncResult.isSuccess(result) ? (
-		<h1>{result.value.title}</h1>
-	) : (
-		<p>This link has expired.</p>
-	);
+}
+
+function NotificationSetting(props: {
+	notifications: Handle<typeof notifications>;
+}) {
+	const result = useAtomResult(notifications, props.notifications);
+	return <p>Notifications: {result.value}</p>;
 }
 // #endregion browser-only
 

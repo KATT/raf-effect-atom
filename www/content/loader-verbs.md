@@ -30,6 +30,7 @@ tanstack-start/src/docs/loader-verbs.ts#derived
 - Use `prefetch` for data the route needs but its loader doesn't: it streams in while the page renders.
 - Use `ensure` when the loader needs the result, or the page shouldn't render without it.
 - Use `fetch` when the loader must not see a result from before it ran, such as after a write.
+- Use `prefetchInBrowser` for a read that needs what only the browser has, such as a token in the URL's fragment: the server leaves it to the browser. See [Inputs only the browser has](./request-waterfalls.md#inputs-only-the-browser-has).
 
 Below, three copies of an app differ only in the verb their issue route's loader calls. The router keeps the old page until the loader returns, so a verb that waits blocks the navigation, and a page whose atom has no result yet shows a skeleton until it streams in.
 

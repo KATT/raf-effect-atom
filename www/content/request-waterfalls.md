@@ -112,16 +112,18 @@ Each keystroke navigates, and the loader starts the search for the text the URL 
 
 ## Inputs only the browser has
 
-Some inputs never reach the server: a one-time token in the URL's fragment, or an OAuth callback the browser erases from the address bar before anything reads it. A loader on the server can't start what they pick, and setting them in an atom after hydration starts the read during a render instead.
+Some reads need what only the browser has: a one-time token in the URL's fragment, a credential in `sessionStorage`, or a browser API such as [`navigator.permissions`](https://developer.mozilla.org/en-US/docs/Web/API/Permissions/query). A loader on the server can't start them, and starting them from a `useEffect` after hydration waits for that render.
 
-On TanStack Start, make the route client-only with [`ssr: false`](https://tanstack.com/start/latest/docs/framework/react/guide/selective-ssr#ssr-false). The server renders its `pendingComponent`. In the browser, the router runs its loader before the page renders, during hydration or the navigation. The browser's `getRouter` reads the input, erases it from the URL and puts it in the router context, and the loader starts the atom with it as the family's argument:
+`prefetchInBrowser(source, ...args)` starts them from the same loader as the rest of the page. In the browser it's `prefetch`. On the server it starts nothing and returns a handle marked to start in the browser: the server renders the page around the read and the nearest [Suspense](https://react.dev/reference/react/Suspense) boundary's fallback, and the browser's read starts the atom as it hydrates that boundary:
 
 ```sample
 tanstack-start/src/docs/request-waterfalls.tsx#browser-only
 ```
 
-- The atom needs no serialization key, since the server never starts it.
-- An input that can arrive on any page, such as a pairing link, gets a client-only route of its own. That route's loader uses it and redirects.
+- The atom reads what only the browser has inside its effect, so it needs no serialization key: the server never starts it, and the arguments the loader passes are what the URL holds.
+- On client navigations the loader runs in the browser, so the request starts with the page's other atoms. After a server render it starts once the boundary hydrates, the earliest the browser can, and the waterfall check doesn't report it.
+- Read it under a Suspense boundary. The server's read throws, so React renders the boundary's fallback and the browser renders the boundary; with no boundary around it, the server can't render the page. React reports the throw to the server's [`onError`](https://react.dev/reference/react-dom/server/renderToReadableStream#parameters) and the browser's [`onRecoverableError`](https://react.dev/reference/react-dom/client/hydrateRoot#parameters), as for any boundary the server leaves to the browser.
+- On Next.js, a server component calls `prefetchInBrowser` from `raf-effect-atom/next` and passes the handle to a client component. On React Router, loaders call it on `atoms`, like the other verbs.
 
 ## Escape hatches
 
@@ -177,6 +179,6 @@ Lazy route components are another waterfall: the code has to download before it 
 - Put the state that picks data in the URL: search params, a search box's text included, and routes for dialogs.
 - Start every atom before awaiting any, and give `Effect.all` a `concurrency`.
 - Shape data so a route's inputs come from the URL, not from other atoms.
-- Start what browser-only inputs pick, such as a token in the URL's fragment, in a client-only route's loader.
+- Start reads that need what only the browser has, such as a token in the URL's fragment, with `prefetchInBrowser` in the loader, and read them under Suspense.
 - Start an atom a click or a submit picks in its handler, and one whose input only a render finds with `useWaterfall`, a known cost.
 - Keep `<WaterfallDetection mode="throw">` in the root layout, so development finds the rest.
