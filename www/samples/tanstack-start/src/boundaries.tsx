@@ -2,11 +2,28 @@ import { createErrorBoundary } from "effect-atom-boundary";
 
 import { IssuesClient } from "./issues-client.ts";
 
+// #region app
+// Every procedure fails with RpcClientError when the request doesn't reach
+// the server, so the app catches it once.
+export const [AppBoundary, useAppBoundary] = createErrorBoundary({
+	name: "App",
+	errors: IssuesClient,
+	catchTags: {
+		RpcClientError: ({ reset }) => (
+			<p>
+				Can't reach the server. <button onClick={reset}>Try again</button>
+			</p>
+		),
+	},
+});
+// #endregion app
+
 // #region auth
-// Every procedure can fail with Unauthorized, so the app catches it once.
+// Under the App boundary: every procedure can fail with Unauthorized too.
 export const [AuthBoundary, useAuthBoundary] = createErrorBoundary({
 	name: "Auth",
 	errors: IssuesClient,
+	parent: AppBoundary,
 	catchTags: {
 		Unauthorized: ({ reset }) => (
 			<p>
@@ -18,8 +35,8 @@ export const [AuthBoundary, useAuthBoundary] = createErrorBoundary({
 // #endregion auth
 
 // #region issue
-// Under the Auth boundary: it claims IssueNotFound, and Unauthorized still
-// goes up to Auth.
+// Under the Auth boundary: it claims IssueNotFound, and Unauthorized and
+// RpcClientError still go up the chain.
 export const [IssueBoundary, useIssueBoundary] = createErrorBoundary({
 	name: "Issue",
 	errors: IssuesClient,

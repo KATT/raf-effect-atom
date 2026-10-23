@@ -31,13 +31,19 @@ tanstack-start/src/issues.ts#atoms
 tanstack-start/src/router.tsx#router
 ```
 
-The root route types the loader verbs on the router context and mounts the app's sign-in boundary.
+The root route types the loader verbs on the router context and mounts the app's boundaries.
 
 ```sample
 tanstack-start/src/routes/__root.tsx#root
 ```
 
 ## 4. The boundaries
+
+Each boundary catches failures by tag, and passes the rest up the chain: the issue boundary catches `IssueNotFound`, the sign-in boundary `Unauthorized`, and the app boundary Effect RPC's [`RpcClientError`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/rpc/RpcClientError.ts), which every procedure fails with when the request doesn't reach the server. See [Shared boundaries](./shared-boundaries.md).
+
+```sample
+tanstack-start/src/boundaries.tsx#app
+```
 
 ```sample
 tanstack-start/src/boundaries.tsx#auth

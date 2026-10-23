@@ -4,7 +4,7 @@ import { createErrorBoundary } from "effect-atom-boundary";
 import { AsyncResult } from "effect/reactivity";
 import { useAtomResult } from "raf-effect-atom";
 
-import { AuthBoundary, useAuthBoundary } from "~/boundaries.tsx";
+import { AppBoundary, useAppBoundary } from "~/boundaries.tsx";
 import { IssuesClient } from "~/issues-client.ts";
 import { issue } from "~/issues.ts";
 
@@ -12,7 +12,7 @@ declare const id: IssueId;
 
 // #region narrowed
 function IssueTitle(props: { id: IssueId }) {
-	const result = useAtomResult(useAuthBoundary().wrap(issue(props.id)));
+	const result = useAtomResult(useAppBoundary().wrap(issue(props.id)));
 	if (AsyncResult.isSuccess(result)) {
 		return <h1>{result.value.title}</h1>;
 	}
@@ -21,30 +21,28 @@ function IssueTitle(props: { id: IssueId }) {
 	//    ^?
 	return Match.valueTags(error, {
 		IssueNotFound: (notFound) => <p>There's no issue #{notFound.id}.</p>,
-		RpcClientError: (unreachable) => (
-			<p>Couldn't reach the server: {unreachable.reason.message}</p>
-		),
+		Unauthorized: () => <p>Sign in to see this issue.</p>,
 	});
 }
 // #endregion narrowed
 
 // #region misspelled
 createErrorBoundary({
-	name: "Auth",
+	name: "App",
 	errors: IssuesClient,
 	catchTags: {
-		// @ts-expect-error -- 2561: no procedure fails with Unauthorised
-		Unauthorised: () => <p>Sign in</p>,
+		// @ts-expect-error -- 2561: no procedure fails with RpcClientEror
+		RpcClientEror: () => <p>Can't reach the server.</p>,
 	},
 });
 // #endregion misspelled
 
-// #region app
+// #region mounted
 function App() {
 	return (
-		<AuthBoundary>
+		<AppBoundary>
 			<IssueTitle id={id} />
-		</AuthBoundary>
+		</AppBoundary>
 	);
 }
-// #endregion app
+// #endregion mounted

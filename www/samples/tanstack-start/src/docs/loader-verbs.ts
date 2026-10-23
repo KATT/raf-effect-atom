@@ -30,10 +30,9 @@ if (Option.isSome(error)) {
 		IssueNotFound: () => {
 			throw notFound();
 		},
-		// Left in the result: <AuthBoundary> catches it when the page reads
-		// the atom.
+		// Left in the result: <AuthBoundary> and <AppBoundary> catch them
+		// when the page reads the atom.
 		Unauthorized: () => undefined,
-		// Left in the result: the page renders it.
 		RpcClientError: () => undefined,
 	});
 }

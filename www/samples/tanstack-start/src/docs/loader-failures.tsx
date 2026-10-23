@@ -16,7 +16,7 @@ export const Route = createFileRoute("/issues/$id")({
 		const error = AsyncResult.error(result);
 		//    ^?
 		// Only IssueNotFound becomes a 404. Unauthorized and RpcClientError
-		// stay in the result, for the page to read.
+		// stay in the result, for the page's boundaries.
 		if (
 			Option.isSome(error) &&
 			Predicate.isTagged(error.value, "IssueNotFound")

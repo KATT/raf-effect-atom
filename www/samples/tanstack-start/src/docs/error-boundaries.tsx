@@ -12,17 +12,15 @@ export function IssuePanel(props: { id: IssueId }) {
 	return (
 		<AtomErrorBoundary
 			atom={issue(props.id)}
-			// claim throws every tag the atom fails with, and a tag with no
-			// handler here goes to the boundaries above: name each one.
+			// claim throws every tag the atom fails with. RpcClientError has no
+			// handler here, so it goes on to the app's boundary above.
 			catchTags={{
 				IssueNotFound: ({ error }) => <p>There's no issue #{error.id}.</p>,
-				RpcClientError: ({ reset }) => (
+				Unauthorized: ({ reset }) => (
 					<p>
-						Couldn't reach the server.{" "}
-						<button onClick={reset}>Try again</button>
+						You're signed out. <button onClick={reset}>Try again</button>
 					</p>
 				),
-				Unauthorized: () => <p>Sign in to see this issue.</p>,
 			}}
 		>
 			<Suspense fallback={<p>Loading…</p>}>

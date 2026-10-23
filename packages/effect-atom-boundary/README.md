@@ -46,21 +46,21 @@ function IssuePage(props: { readonly id: number }) {
 </AtomErrorBoundary>;
 ```
 
-`createErrorBoundary` makes a shared boundary for failures that belong to the app, such as being signed out. `errors` names what the errors come from: an `AtomRpc` client, an atom, or an atom family. The hook's `wrap(atom)` turns what the boundary and the ones above it claim into defects, so a read that returns typed failures and throws defects, such as [`raf-effect-atom`](https://github.com/KATT/raf-effect-atom/tree/main/packages/raf-effect-atom)'s `useAtomResult`, gets a result typed without them:
+`createErrorBoundary` makes a shared boundary for failures that belong to the app, such as Effect RPC's `RpcClientError`, which every procedure fails with when the request doesn't reach the server. `errors` names what the errors come from: an `AtomRpc` client, an atom, or an atom family. The hook's `wrap(atom)` turns what the boundary and the ones above it claim into defects, so a read that returns typed failures and throws defects, such as [`raf-effect-atom`](https://github.com/KATT/raf-effect-atom/tree/main/packages/raf-effect-atom)'s `useAtomResult`, gets a result typed without them:
 
 ```tsx
 import { createErrorBoundary } from "effect-atom-boundary";
 import { useAtomResult } from "raf-effect-atom";
 
-const [AuthBoundary, useAuthBoundary] = createErrorBoundary({
-	name: "Auth",
+const [AppBoundary, useAppBoundary] = createErrorBoundary({
+	name: "App",
 	errors: Issues,
-	catchTags: { Unauthorized: ({ reset }) => <SignIn onSignedIn={reset} /> },
+	catchTags: { RpcClientError: ({ reset }) => <Offline onRetry={reset} /> },
 });
 
 function IssueTitle(props: { readonly id: number }) {
-	const result = useAtomResult(useAuthBoundary().wrap(issue(props.id)));
-	// AsyncResult<Issue, IssueNotFound | RpcClientError>: Unauthorized is claimed
+	const result = useAtomResult(useAppBoundary().wrap(issue(props.id)));
+	// AsyncResult<Issue, IssueNotFound | Unauthorized>: RpcClientError is claimed
 }
 ```
 
@@ -68,7 +68,7 @@ function IssueTitle(props: { readonly id: number }) {
 
 ## For coding agents
 
-Handle each failure by its tag, in a boundary's `catchTags` or by `_tag` in the component. Don't render one message for every failure or branch on `error.message`. The full rules, with the reason for each: [For coding agents](https://raf-effect-atom.katt.dev/docs/coding-agents). The docs as markdown: [llms.txt](https://raf-effect-atom.katt.dev/llms.txt).
+Catch `RpcClientError` once, in a boundary around the app. Handle each failure by its tag, in a boundary's `catchTags` or by `_tag` in the component. Don't render one message for every failure or branch on `error.message`. The full rules, with the reason for each: [For coding agents](https://raf-effect-atom.katt.dev/docs/coding-agents). The docs as markdown: [llms.txt](https://raf-effect-atom.katt.dev/llms.txt).
 
 ## Credits
 

@@ -1,6 +1,5 @@
 import type { IssueId } from "@examples/contract";
-import { Effect, Option } from "effect";
-import { AsyncResult } from "effect/reactivity";
+import { Effect } from "effect";
 import { Loader, useAtomResult, useWaterfall } from "raf-effect-atom";
 import { Suspense, use, useState } from "react";
 import { RegistryContext } from "@effect/atom-react";
@@ -16,12 +15,6 @@ declare const id: IssueId;
 function IssuePage(props: { issueId: IssueId }) {
 	// Starts GetIssue, and suspends until it settles.
 	const result = useAtomResult(useIssueBoundary().wrap(issue(props.issueId)));
-	if (AsyncResult.isFailure(result)) {
-		// useAtomResult throws defects, so a failure it returns has a typed error.
-		const error = Option.getOrThrow(AsyncResult.error(result));
-		//    ^?
-		return <p>Couldn't reach the server: {error.reason.message}</p>;
-	}
 	return (
 		<article>
 			<h1>{result.value.title}</h1>
@@ -37,11 +30,6 @@ function Assignee(props: { issueId: IssueId }) {
 	const result = useAtomResult(
 		useIssueBoundary().wrap(assignee(props.issueId)),
 	);
-	if (AsyncResult.isFailure(result)) {
-		const error = Option.getOrThrow(AsyncResult.error(result));
-		//    ^?
-		return <p>Couldn't load the assignee: {error.reason.message}</p>;
-	}
 	return <p>{result.value.name}</p>;
 }
 // #endregion fetch-on-render
@@ -82,12 +70,6 @@ function AssigneeCell(props: { issueId: IssueId }) {
 	const result = useAtomResult(
 		useIssueBoundary().wrap(useWaterfall(assignee(props.issueId))),
 	);
-	if (AsyncResult.isFailure(result)) {
-		// useAtomResult throws defects, so a failure it returns has a typed error.
-		const error = Option.getOrThrow(AsyncResult.error(result));
-		//    ^?
-		return <td>Couldn't load the assignee: {error.reason.message}</td>;
-	}
 	return <td>{result.value.name}</td>;
 }
 // #endregion use-waterfall

@@ -15,7 +15,7 @@ tanstack-start/src/routes/issues.$id.tsx#component
 
 `useAtomResult(atom)` returns the settled result, typed failures included: check it with `AsyncResult.isFailure` or [`AsyncResult.match`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/reactivity/AsyncResult.ts). A defect or an interruption isn't a typed failure: it throws `Cause.squash(cause)` to the error boundaries above.
 
-To send some failures to an `effect-atom-boundary` boundary, read the atom its claims wrap: `useAtomResult(useIssueBoundary().wrap(issue(id)))` throws the claimed failures to their boundaries, as defects, and returns a result typed without them. `raf-effect-atom` doesn't import `effect-atom-boundary`.
+To send some failures to an `effect-atom-boundary` boundary, read the atom its claims wrap: `useAtomResult(useIssueBoundary().wrap(issue(id)))` throws the claimed failures to their boundaries, as defects, and returns a result typed without them. When the boundaries claim every failure, as the issue route's do, no typed failure is left and the result is typed as a success: the component reads `result.value` without a check. `raf-effect-atom` doesn't import `effect-atom-boundary`.
 
 While a failed atom refreshes, such as after a boundary's `reset`, the read suspends instead of returning the old failure again.
 

@@ -37,8 +37,9 @@ A component reads the atom with `useAtomResult`, which waits for a streamed resu
 import { useAtomResult } from "raf-effect-atom";
 
 function IssueTitle(props: { readonly id: number }) {
-	const result = useAtomResult(useNotFoundBoundary().wrap(issue(props.id)));
-	// AsyncResult<Issue, Unauthorized | RpcClientError>: IssueNotFound is claimed
+	const result = useAtomResult(useIssueBoundary().wrap(issue(props.id)));
+	// Success<Issue, never>: its boundaries claim every failure
+	return <h1>{result.value.title}</h1>;
 }
 ```
 

@@ -5,7 +5,7 @@ section: effect-atom-boundary
 order: 1
 ---
 
-`effect-atom-boundary` gives Effect Atom typed [error boundaries](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary). An atom's `AsyncResult` carries its error type, such as `IssueNotFound | Unauthorized | RpcClientError` for an [`AtomRpc`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/reactivity/AtomRpc.ts) query. A boundary catches those failures by `_tag`: its `catchTags` keys come from the atom's error type, so UI code never imports an error class, and a misspelled tag doesn't compile.
+`effect-atom-boundary` gives Effect Atom typed [error boundaries](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary). An atom's `AsyncResult` carries its error type, such as `IssueNotFound | Unauthorized | RpcClientError` for an [`AtomRpc`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/reactivity/AtomRpc.ts) query: the errors its procedure declares, and Effect RPC's [`RpcClientError`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/rpc/RpcClientError.ts), which every procedure fails with when the request doesn't reach the server or the answer doesn't decode. A boundary catches those failures by `_tag`: its `catchTags` keys come from the atom's error type, so UI code never imports an error class, and a misspelled tag doesn't compile.
 
 It needs only `effect`, [`@effect/atom-react`](https://github.com/Effect-TS/effect/tree/effect%404.0.6/packages/atom/react) and React. It works the same with or without `raf-effect-atom`.
 
@@ -47,4 +47,4 @@ tanstack-start/src/docs/error-boundaries.tsx#misspelled
 - A defect or an interruption isn't a typed error: the read throws `Cause.squash(cause)` to the app's own error boundary.
 - A claimed failure is a defect inside the wrapped atom's value, so code that inspects that value, such as `AsyncResult.error`, sees no typed error. Read the atom itself to inspect its failure.
 
-For failures that belong to the app rather than to one atom, such as being signed out, use a [shared boundary](./shared-boundaries.md).
+For failures that belong to the app rather than to one atom, such as `RpcClientError` or being signed out, use a [shared boundary](./shared-boundaries.md) around the app. A tag with no handler in an `AtomErrorBoundary` goes on to it, as `RpcClientError` does above.
