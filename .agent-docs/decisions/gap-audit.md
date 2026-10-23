@@ -201,16 +201,15 @@ const [AuthBoundary, useAuthBoundary] = createErrorBoundary({
 });
 
 function IssueTitle(props: { readonly id: number }) {
-	const auth = useAuthBoundary();
-	const result = useAtomResult(issue(props.id), auth);
+	const result = useAtomResult(useAuthBoundary().wrap(issue(props.id)));
 	// result's error: IssueNotFound | RpcClientError (Unauthorized is claimed)
 	return <Title result={result} />;
 }
 ```
 
-- **Type requirement, tested:** a `catchTags` key that isn't one of the atom's tags is a compile error (on `AtomErrorBoundary` through the object literal's excess-property check; on `createErrorBoundary` through a `const` type parameter whose extra keys map to `never`); a handler's `error` is `Extract<E, { _tag: K }>`; `useAtomResult` through a boundary returns `Exclude<E, { _tag: claimed }>`. The package ships a type test (`*.test-d.ts` / `expectTypeOf`) whose UI file imports only the `AtomRpc` client and the atoms, never an error class, with `@ts-expect-error` on a misspelled tag and a wrong field. The sketch above typechecked, including those cases.
+- **Type requirement, tested:** a `catchTags` key that isn't one of the atom's tags is a compile error (on `AtomErrorBoundary` through the object literal's excess-property check; on `createErrorBoundary` through a `const` type parameter whose extra keys map to `never`); a handler's `error` is `Extract<E, { _tag: K }>`; a boundary's `wrap(atom)` is typed `AsyncResult<A, Exclude<E, { _tag: claimed }>>`. The package ships a type test (`*.test-d.ts` / `expectTypeOf`) whose UI file imports only the `AtomRpc` client and the atoms, never an error class, with `@ts-expect-error` on a misspelled tag and a wrong field. The sketch above typechecked, including those cases.
 - **Runtime:** `Cause.findErrorOption` on the failure, then `Predicate.isTagged(error, tag)` for each claimed tag, nearest boundary first. A defect or interruption throws `Cause.squash` to an ordinary React error boundary, as #227 does.
-- **The claiming primitive** is exported on its own: `claim(atom, registry, result, boundary)` either throws the claimed error (recorded in #227's `failedReads` WeakMap with its atom and registry, so `reset` can refresh that atom) or returns the narrowed result. `useAtomResult` is that primitive inside a hook. The boundary value carries `claim` as a method, so `raf-effect-atom`'s read hook calls it without importing `effect-atom-boundary` at runtime; it imports only types, through an optional peer dependency.
+- **Claiming is a wrapper atom** (superseded the `claim(atom, registry, result, boundary)` primitive and the claims argument, see [boundary-wrap-read-api.md](./boundary-wrap-read-api.md)): `wrap(atom)` turns a claimed failure into a defect, recorded in #227's `failedReads` WeakMap with its atom and registry so `reset` can refresh that atom. The packages don't depend on each other.
 - **Reset** refreshes the failed atom and clears the boundary; while the atom refreshes, the read suspends instead of throwing the old error again (#227's `waiting` check).
 - **Known issue, pinned by a test:** an intermittent duplicate request after a boundary catches a failed first load (#222 / #223). The test counts RPC calls through client middleware: first load fails (1 call), reset (exactly 1 more), and no further calls across re-renders and StrictMode.
 
@@ -258,7 +257,7 @@ export const Route = createFileRoute("/issues/$id")({
 
 ### The read hook
 
-`useAtomResult(atom, boundary?)` from `raf-effect-atom`: waits for a streamed result, reads with `useAtomSuspense(atom, { includeFailure: true })` through `hydrated(atom)`, releases the loader's lease, then passes the result to `boundary.claim` when given. One read hook whether or not the app uses `effect-atom-boundary`.
+`useAtomResult(atom)` from `raf-effect-atom`: waits for a streamed result, reads with `useAtomSuspense(atom, { includeFailure: true })` through `hydrated(atom)`, releases the loader's lease, returns typed failures and throws defects. For a derived atom (a boundary's `wrap`) it does all of that on the atom its `initialValueTarget` points at. See [boundary-wrap-read-api.md](./boundary-wrap-read-api.md).
 
 ## Examples and docs this implies
 
