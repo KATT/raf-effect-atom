@@ -7,11 +7,11 @@ import { Data, Effect, FileSystem, Option, Path, Schema } from "effect";
 import satori, { type Font } from "satori";
 
 import {
+	backdropSvg,
 	type CardAssets,
 	cardElement,
 	type OgCard,
 	ogImageSize,
-	orbitSvg,
 } from "./card.ts";
 
 export { OgCard } from "./card.ts";
@@ -83,16 +83,16 @@ export const loadOgRenderer = Effect.fn("loadOgRenderer")(function* (
 		),
 	);
 	const assets: CardAssets = {
-		logo: dataUri("image/svg+xml", new TextEncoder().encode(options.logoSvg)),
 		// A bitmap, so each card composites it instead of redrawing its paths.
-		orbit: dataUri(
+		backdrop: dataUri(
 			"image/png",
-			new Resvg(orbitSvg, {
+			new Resvg(backdropSvg, {
 				fitTo: { mode: "width", value: ogImageSize.width },
 			})
 				.render()
 				.asPng(),
 		),
+		logo: dataUri("image/svg+xml", new TextEncoder().encode(options.logoSvg)),
 	};
 	const cacheDir = options.cacheDir;
 

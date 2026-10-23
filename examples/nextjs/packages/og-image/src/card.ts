@@ -48,18 +48,32 @@ const colors = {
 
 /** Images the layouts draw, as `data:` URLs. */
 export interface CardAssets {
+	/** {@link backdropSvg}, as a bitmap. */
+	readonly backdrop: string;
 	readonly logo: string;
-	readonly orbit: string;
 }
 
+/** From a corner of the card to the opposite one: CSS's `farthest-corner`. */
+const diagonal = Math.hypot(ogImageSize.width, ogImageSize.height);
+
 /**
- * The orbit behind the text: the logo's, drawn at the card's scale, at half
+ * Behind the text: a violet glow from the top right and a teal one from the
+ * bottom left, then the logo's orbit, drawn at the card's scale, at half
  * opacity and fading out toward the text on the left. The electron sits on
- * the outer orbit, where it clears the text. The fade is drawn here rather
- * than as a CSS mask on the card, which resvg would composite on every card.
+ * the outer orbit, where it clears the text. It's drawn as SVG rather than
+ * as CSS gradients and masks on the card, which resvg would composite on
+ * every card.
  */
-export const orbitSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+export const backdropSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
 	<defs>
+		<radialGradient id="violet-glow" cx="1200" cy="0" r="${diagonal}" gradientUnits="userSpaceOnUse">
+			<stop offset="0" stop-color="${colors.violet}" stop-opacity="${0x40 / 255}" />
+			<stop offset="0.5" stop-color="${colors.violet}" stop-opacity="0" />
+		</radialGradient>
+		<radialGradient id="teal-glow" cx="0" cy="630" r="${diagonal}" gradientUnits="userSpaceOnUse">
+			<stop offset="0" stop-color="${colors.teal}" stop-opacity="${0x2e / 255}" />
+			<stop offset="0.45" stop-color="${colors.teal}" stop-opacity="0" />
+		</radialGradient>
 		<linearGradient id="orbit" x1="560" y1="560" x2="1180" y2="40" gradientUnits="userSpaceOnUse">
 			<stop offset="0" stop-color="${colors.teal}" />
 			<stop offset="1" stop-color="${colors.violet}" />
@@ -76,6 +90,8 @@ export const orbitSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12
 			<rect width="1200" height="630" fill="url(#fade)" />
 		</mask>
 	</defs>
+	<rect width="1200" height="630" fill="url(#violet-glow)" />
+	<rect width="1200" height="630" fill="url(#teal-glow)" />
 	<g mask="url(#fade-mask)" opacity="0.5">
 		<g transform="rotate(-35 930 315)">
 			<ellipse cx="930" cy="315" rx="400" ry="160" fill="none" stroke="url(#orbit)" stroke-width="4" />
@@ -110,26 +126,10 @@ const box = (style: CSSProperties, ...children: ReadonlyArray<ReactNode>) =>
 const paragraph = (style: CSSProperties, lines: number, text: string) =>
 	h("div", { style: { display: "block", lineClamp: lines, ...style } }, text);
 
-const fill = (style: CSSProperties) =>
-	box({
-		height: "100%",
-		left: 0,
-		position: "absolute",
-		top: 0,
-		width: "100%",
-		...style,
-	});
-
 const backdrop = (assets: CardAssets) => [
-	fill({
-		backgroundImage: `radial-gradient(circle at 100% 0%, ${colors.violet}40 0%, ${colors.violet}00 50%)`,
-	}),
-	fill({
-		backgroundImage: `radial-gradient(circle at 0% 100%, ${colors.teal}2e 0%, ${colors.teal}00 45%)`,
-	}),
 	h("img", {
 		height: ogImageSize.height,
-		src: assets.orbit,
+		src: assets.backdrop,
 		style: {
 			left: 0,
 			position: "absolute",
