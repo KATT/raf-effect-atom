@@ -9,7 +9,7 @@ import { writeSession } from "./settings.ts";
 /**
  * Around the app: the request didn't reach the server, or its answer didn't
  * decode. Effect RPC fails every procedure with `RpcClientError` then, so
- * the app catches it once, and `Try again` loads the atom that failed again.
+ * the app catches it once, and `Try again` loads every atom that failed again.
  */
 export const [AppBoundary] = createErrorBoundary({
 	catchTags: {

@@ -64,7 +64,7 @@ function IssueTitle(props: { readonly id: number }) {
 }
 ```
 
-`reset` refreshes the atom that failed and renders the children again.
+`reset` refreshes every atom whose failure the boundary has a handler for, and renders the children again.
 
 ## For coding agents
 

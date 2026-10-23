@@ -11,7 +11,7 @@ Some failures belong to the app rather than to the component that read them. Eve
 tanstack-start/src/boundaries.tsx#app
 ```
 
-`errors` names what the errors come from, for the types only: an `AtomRpc` client (the errors of all its procedures), an atom, or an atom family. `name` names the boundary in messages and React DevTools: `"App"` is `<AppBoundary>`. `reset` refreshes the atom whose read failed, so `Try again` loads it again once the server is back.
+`errors` names what the errors come from, for the types only: an `AtomRpc` client (the errors of all its procedures), an atom, or an atom family. `name` names the boundary in messages and React DevTools: `"App"` is `<AppBoundary>`. `reset` refreshes every atom that failed with a tag the boundary handles, so `Try again` loads the page again once the server is back.
 
 ## Reads under the boundary
 
@@ -53,7 +53,7 @@ boundary-chain
 
 ## Matching is by tag
 
-A shared boundary catches a claimed tag from any atom read under it, not only from the atoms its claims wrapped. `reset` refreshes the atom whose read threw the failure.
+A shared boundary catches a claimed tag from any atom read under it, not only from the atoms its claims wrapped. `reset` refreshes every atom in the registry whose failure has a tag the boundary handles, not only the one whose read threw: one outage fails every atom on the page, and one `reset` loads them all again.
 
 ## Reading a wrapped atom
 

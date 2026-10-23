@@ -80,6 +80,27 @@ export class Issues extends AtomRpc.Service<Issues>()("Issues", {
 
 export const issue = (id: number) => Issues.query("GetIssue", { id });
 
+const keyed = { reactivityKeys: ["issues"], timeToLive: "1 minute" } as const;
+
+/** `issue` with a serialization key and reactivity keys, as an app's. */
+export const keyedIssue = (id: number) =>
+	Issues.query("GetIssue", { id }, { ...keyed, serializationKey: String(id) });
+
+/**
+ * `Issues` again. Its queries have `keyedIssue`'s keys but are other atoms,
+ * as a family member is once the garbage collector takes it and a read
+ * makes it again.
+ */
+class Remade extends AtomRpc.Service<Remade>()("Remade", {
+	group: IssuesRpc,
+	makeEffect: RpcTest.makeClient(IssuesRpc, { flatten: true }),
+	protocol: handlers,
+}) {}
+
+/** `keyedIssue(id)` made again: another atom with the same key. */
+export const remadeIssue = (id: number) =>
+	Remade.query("GetIssue", { id }, { ...keyed, serializationKey: String(id) });
+
 /**
  * `issue` with a serialization key that keeps its hydrated value on its
  * first read, as `raf-effect-atom`'s `hydrated` copy does.

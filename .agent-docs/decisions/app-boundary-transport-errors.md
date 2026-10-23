@@ -5,5 +5,5 @@
 - **The www demos fail a request on the client** (`dropNext` in the demo kit: `RequestLog`'s client middleware fails it with an `RpcClientError` whose reason is a `WorkerSendError`), so a reader can watch it climb to `<AppBoundary>` without stopping a server.
 - **Domain errors stay visible and granular:** `IssueNotFound` at `IssueBoundary`, `Unauthorized` at `AuthBoundary`, each with its handler shown in the docs.
 - **`useAtomResult` is typed as `AsyncResult.Success<A, never>` when no typed failure is left**, so a fully claimed read uses `result.value` without a dead failure branch.
-- **Known gap:** one outage fails every atom on the page. `reset` refreshes the atom whose failure the boundary caught; a second atom whose failure arrived after the page unmounted doesn't load again (library bug, being fixed). The examples' recipe covers one failed atom until then.
+- **One outage fails every atom on the page,** and one `Try again` loads them all: a shared boundary's `reset` refreshes every failure it handles ([boundary-reset-every-failure.md](./boundary-reset-every-failure.md)).
 - **Rejected:** a component-level `LoadFailed` per read (repeats one transport message in every component, and the user had to learn what `RpcClientError` is to read the snippets), and reloading the page from the fallback (loses the registry; `reset` is the boundary's retry).

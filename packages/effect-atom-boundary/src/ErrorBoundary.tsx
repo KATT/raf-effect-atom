@@ -15,6 +15,7 @@ import * as Option from "effect/Option";
 import * as Predicate from "effect/Predicate";
 import type * as AsyncResult from "effect/reactivity/AsyncResult";
 import type * as Atom from "effect/reactivity/Atom";
+import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as AtomRpc from "effect/reactivity/AtomRpc";
 import * as React from "react";
 
@@ -26,6 +27,7 @@ import {
 } from "./Claim.ts";
 import * as FailedReads from "./internal/failedReads.ts";
 import * as Prerender from "./internal/prerender.tsx";
+import * as Refresh from "./internal/refresh.ts";
 import { variance } from "./internal/variance.ts";
 import * as Wrap from "./internal/wrap.ts";
 
@@ -38,7 +40,11 @@ import * as Wrap from "./internal/wrap.ts";
  */
 export interface CatchTagProps<E> {
 	readonly error: E;
-	/** Refreshes the atom that failed and renders the children again. */
+	/**
+	 * Refreshes what failed and renders the children again: an
+	 * `AtomErrorBoundary`'s atom, or every atom in the registry whose failure a
+	 * `createErrorBoundary` boundary has a handler for.
+	 */
 	readonly reset: () => void;
 }
 
@@ -116,7 +122,11 @@ interface CatcherProps {
 	 * `AtomErrorBoundary`'s atom: a failure another atom's read threw goes to
 	 * the boundaries above, and a new atom clears a caught failure.
 	 */
-	readonly own?: FailedReads.FailedRead | undefined;
+	// oxlint-disable-next-line typescript/no-explicit-any -- any atom's result
+	readonly own?: Atom.Atom<any> | undefined;
+	readonly registry: AtomRegistry.AtomRegistry;
+	/** Refreshes what failed, in the registry of the read that threw. */
+	readonly reset: (registry: AtomRegistry.AtomRegistry) => void;
 }
 
 interface CatcherState {
@@ -127,7 +137,7 @@ interface CatcherState {
 class Catcher extends React.Component<CatcherProps, CatcherState> {
 	override state: CatcherState = {
 		caught: undefined,
-		resetKey: this.props.own?.atom,
+		resetKey: this.props.own,
 	};
 
 	static getDerivedStateFromError(error: unknown): Partial<CatcherState> {
@@ -138,7 +148,7 @@ class Catcher extends React.Component<CatcherProps, CatcherState> {
 		props: CatcherProps,
 		state: CatcherState,
 	): Partial<CatcherState> | null {
-		const resetKey = props.own?.atom;
+		const resetKey = props.own;
 		if (Object.is(resetKey, state.resetKey)) {
 			return null;
 		}
@@ -158,7 +168,7 @@ class Catcher extends React.Component<CatcherProps, CatcherState> {
 		const own = this.props.own;
 		const read = FailedReads.get(error);
 		const Handler =
-			own !== undefined && read !== undefined && read.atom !== own.atom
+			own !== undefined && read !== undefined && read.atom !== own
 				? undefined
 				: handlerFor(this.props.handlers, error);
 		if (Handler === undefined) {
@@ -173,8 +183,7 @@ class Catcher extends React.Component<CatcherProps, CatcherState> {
 			<Handler
 				error={claimed}
 				reset={() => {
-					const failed = read ?? own;
-					failed?.registry.refresh(failed.atom);
+					this.props.reset(read?.registry ?? this.props.registry);
 					this.setState({ caught: undefined });
 				}}
 			/>
@@ -273,7 +282,11 @@ export const AtomErrorBoundary: AtomErrorBoundaryComponent = Object.assign(
 					)
 				}
 				handlers={handlers}
-				own={{ atom, registry }}
+				own={atom}
+				registry={registry}
+				reset={(current) => {
+					Refresh.node(current, atom);
+				}}
 			>
 				{props.children}
 			</Catcher>
@@ -402,6 +415,11 @@ const isMounted = (at: Mounted | undefined, boundary: Internal): boolean => {
  * of `errors`' error type, so a misspelled tag is a type error and each
  * handler's `error` is typed.
  *
+ * A handler's `reset` refreshes every atom in the registry whose settled
+ * failure has a tag this boundary handles, not only the one whose read threw:
+ * one outage fails every atom on the page, and an atom that fails after the
+ * handler replaced the children throws to no boundary.
+ *
  * React runs no error boundaries on the server, so during server rendering
  * it looks through the registry's atoms before rendering its children, and
  * renders its handler for a settled failure it catches. It only sees atoms
@@ -462,17 +480,28 @@ export const createErrorBoundary = <
 		claims,
 		displayName: `${options.name}Boundary`,
 	};
+	const catches = (
+		value: Option.Option<unknown>,
+	): Prerender.Caught | undefined =>
+		caughtBy(handlers, Option.flatMap(value, Prerender.settledError));
 	const find: Prerender.Find = (registry) => {
 		for (const node of registry.getNodes().values()) {
-			const caught = caughtBy(
-				handlers,
-				Option.flatMap(node.valueOption(), Prerender.settledError),
-			);
+			const caught = catches(node.valueOption());
 			if (caught !== undefined) {
 				return caught;
 			}
 		}
 		return undefined;
+	};
+	// One outage fails every atom on the page, and an atom whose failure
+	// settles after the handler replaced the children throws to no boundary.
+	// A refresh marks its dependents waiting, so each query refreshes once.
+	const reset = (registry: AtomRegistry.AtomRegistry): void => {
+		for (const node of Array.from(registry.getNodes().values())) {
+			if (catches(node.valueOption()) !== undefined) {
+				registry.refresh(node.atom);
+			}
+		}
 	};
 
 	// React Compiler compiles `Boundary` as if `options`, `handlers`, `find`
@@ -482,13 +511,19 @@ export const createErrorBoundary = <
 		readonly children?: React.ReactNode | undefined;
 	}) => {
 		const above = React.useContext(MountedBoundaries);
+		const registry = React.useContext(RegistryContext);
 		if (parent && !isMounted(above, parent)) {
 			throw new Error(
 				`<${boundary.displayName}> needs <${parent.displayName}>, its parent, above it`,
 			);
 		}
 		return (
-			<Catcher find={find} handlers={handlers}>
+			<Catcher
+				find={find}
+				handlers={handlers}
+				registry={registry}
+				reset={reset}
+			>
 				<MountedBoundaries value={{ boundary, parent: above }}>
 					{props.children}
 				</MountedBoundaries>

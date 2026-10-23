@@ -20,7 +20,13 @@ import {
 	createErrorBoundary,
 } from "../src/index.ts";
 import { CompiledNotFound, type IssueNotFound } from "./fixtures/Handlers.tsx";
-import { issue, Issues, serve } from "./fixtures/Issues.ts";
+import {
+	issue,
+	Issues,
+	keyedIssue,
+	remadeIssue,
+	serve,
+} from "./fixtures/Issues.ts";
 
 const [OfflineBoundary, useOfflineBoundary] = createErrorBoundary({
 	catchTags: { Offline: () => <p>Offline</p> },
@@ -61,15 +67,23 @@ const useRead = <A, E>(
 	return result;
 };
 
-function Title(props: { readonly id: number }) {
-	const result = useAtomSuspense(AtomErrorBoundary.claim(issue(props.id)), {
+interface TitleProps {
+	readonly id: number;
+	/** The query it reads, `issue` unless given. */
+	readonly of?: typeof issue | undefined;
+}
+
+function Title(props: TitleProps) {
+	const of = props.of ?? issue;
+	const result = useAtomSuspense(AtomErrorBoundary.claim(of(props.id)), {
 		suspendOnWaiting: true,
 	});
 	return <p>{result.value.title}</p>;
 }
 
-function ClaimedTitle(props: { readonly id: number }) {
-	const result = useRead(useAuthBoundary().wrap(issue(props.id)));
+function ClaimedTitle(props: TitleProps) {
+	const of = props.of ?? issue;
+	const result = useRead(useAuthBoundary().wrap(of(props.id)));
 	if (AsyncResult.isSuccess(result)) {
 		return <p>{result.value.title}</p>;
 	}
@@ -117,12 +131,15 @@ function AtomBoundaryTree(props: {
 	);
 }
 
-function ChainTree(props: { readonly id: number }) {
+function ChainTree(props: {
+	readonly id: number;
+	readonly of?: typeof issue | undefined;
+}) {
 	return (
 		<OfflineBoundary>
 			<AuthBoundary>
 				<React.Suspense fallback={<p>Loading</p>}>
-					<ClaimedTitle id={props.id} />
+					<ClaimedTitle id={props.id} of={props.of} />
 				</React.Suspense>
 			</AuthBoundary>
 		</OfflineBoundary>
@@ -226,6 +243,24 @@ describe("AtomErrorBoundary", () => {
 		expect(server.requests(1)).toBe(2);
 	});
 
+	it("refreshes the atom the registry runs for its key on reset", async () => {
+		using server = serve({ 1: ["missing", "found"] });
+		using _errors = silenceCaughtErrors();
+		using app = mount();
+		app.registry.mount(keyedIssue(1));
+		await settle();
+		await app.render(
+			<AtomErrorBoundary atom={remadeIssue(1)} catchTags={catchIssueTags}>
+				<React.Suspense fallback={<p>Loading</p>}>
+					<Title id={1} of={remadeIssue} />
+				</React.Suspense>
+			</AtomErrorBoundary>,
+		);
+		await click("No issue 1");
+		expect(screen.getByText("Issue 1")).toBeDefined();
+		expect(server.requests(1)).toBe(2);
+	});
+
 	it("clears a caught failure when its atom changes", async () => {
 		using _server = serve({ 1: ["missing"] });
 		using _errors = silenceCaughtErrors();
@@ -276,6 +311,44 @@ describe("createErrorBoundary", () => {
 		await click("Signed out: expired");
 		expect(screen.getByText("Issue 1")).toBeDefined();
 		expect(server.requests(1)).toBe(2);
+	});
+
+	it("refreshes the atom the registry runs for its key on reset", async () => {
+		using server = serve({ 1: ["signed-out", "found"] });
+		using _errors = silenceCaughtErrors();
+		using app = mount();
+		app.registry.mount(keyedIssue(1));
+		await settle();
+		await app.render(<ChainTree id={1} of={remadeIssue} />);
+		await click("Signed out: expired");
+		expect(screen.getByText("Issue 1")).toBeDefined();
+		expect(server.requests(1)).toBe(2);
+	});
+
+	it("refreshes every failure it has a handler for on reset", async () => {
+		using server = serve({
+			1: ["signed-out", "found"],
+			2: ["signed-out", "found"],
+			3: ["missing"],
+		});
+		using _errors = silenceCaughtErrors();
+		using app = mount();
+		await app.render(
+			<OfflineBoundary>
+				<AuthBoundary>
+					{[1, 2, 3].map((id) => (
+						<React.Suspense fallback={<p>Loading</p>} key={id}>
+							<ClaimedTitle id={id} of={keyedIssue} />
+						</React.Suspense>
+					))}
+				</AuthBoundary>
+			</OfflineBoundary>,
+		);
+		await click("Signed out: expired");
+		expect(screen.getByText("Issue 1")).toBeDefined();
+		expect(screen.getByText("Issue 2")).toBeDefined();
+		expect(screen.getByText("Result: IssueNotFound")).toBeDefined();
+		expect([1, 2, 3].map(server.requests)).toEqual([2, 2, 1]);
 	});
 
 	it("wraps an atom once, so every render reads the same atom", async () => {
