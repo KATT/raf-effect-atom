@@ -32,3 +32,15 @@
 - When the docs name a third-party API, option, or concept (TanStack Router's `loader`, Next.js's `headers()`, an Effect module), link its official documentation at its first mention on the page. Check that each link and anchor resolves.
 - [`.agent-docs/`](.agent-docs/) is agent-owned working memory (decisions, bootstrap context, notes worth keeping across sessions). Read it when starting non-trivial work; update it when you learn or decide something durable. See [`.agent-docs/README.md`](.agent-docs/README.md).
 - Decisions are one file each in `.agent-docs/decisions/`: add a new file rather than appending to an existing one. They hold the short version; the full reasoning is the body of the commit that wrote them (`git log -- <file>`).
+
+<!-- vendor-src:start -->
+
+## Vendored Source
+
+Source for this project's key dependencies is vendored under `.repos/`, pinned to the installed versions. When a question is about how one of these libraries actually behaves, read its vendored source — implementation, tests, examples — instead of relying on docs, memory, or web search. The trees are read-only reference material; see `.repos/AGENTS.md` before touching or citing them.
+
+### Vendored packages
+
+- `effect@4.0.5` → `.repos/effect`
+
+<!-- vendor-src:end -->

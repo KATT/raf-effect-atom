@@ -2,5 +2,19 @@
 	"$schema": "https://unpkg.com/vendor-src/schema.json",
 	"dir": ".repos",
 	"rootAgentsMd": true,
-	"repos": {}
+	"repos": {
+		"effect": {
+			"packages": ["effect"],
+			"url": "https://github.com/Effect-TS/effect.git",
+			"version": "4.0.5",
+			"ref": "effect@4.0.5",
+			"ignore": [
+				"scratchpad/**",
+				"**/.github/**",
+				"**/.vscode/**",
+				"**/.changeset/**",
+				"**/pnpm-lock.yaml"
+			]
+		}
+	}
 }
