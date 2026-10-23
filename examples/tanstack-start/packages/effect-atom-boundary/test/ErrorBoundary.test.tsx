@@ -84,7 +84,7 @@ function Title(props: TitleProps) {
 
 function ClaimedTitle(props: TitleProps) {
 	const of = props.of ?? issue;
-	const result = useRead(useAuthBoundary().wrap(of)(props.id));
+	const result = useRead(useAuthBoundary(of)(props.id));
 	if (AsyncResult.isSuccess(result)) {
 		return <p>{result.value.title}</p>;
 	}
@@ -356,10 +356,10 @@ describe("createErrorBoundary", () => {
 		using _server = serve();
 		using app = mount();
 		function Same() {
-			const claims = useAuthBoundary();
-			const first = claims.wrap(issue(1));
-			const same =
-				claims.wrap(issue(1)) === first && claims.wrap(issue(2)) !== first;
+			const first = useAuthBoundary(issue(1));
+			const again = useAuthBoundary(issue(1));
+			const other = useAuthBoundary(issue(2));
+			const same = again === first && other !== first;
 			return <p>{same ? "Same" : "Different"}</p>;
 		}
 		await app.render(
@@ -378,12 +378,11 @@ describe("createErrorBoundary", () => {
 		using _server = serve();
 		using app = mount();
 		function Same() {
-			const claims = useAuthBoundary();
-			const family = claims.wrap(issue);
+			const family = useAuthBoundary(issue);
+			const again = useAuthBoundary(issue);
+			const one = useAuthBoundary(issue(1));
 			const same =
-				claims.wrap(issue) === family &&
-				family(1) === claims.wrap(issue(1)) &&
-				family(2) !== family(1);
+				again === family && family(1) === one && family(2) !== family(1);
 			return <p>{same ? "Same" : "Different"}</p>;
 		}
 		await app.render(
@@ -413,7 +412,7 @@ describe("createErrorBoundary", () => {
 		using _errors = silenceCaughtErrors();
 		using app = mount();
 		function Lonely() {
-			useOfflineBoundary();
+			useOfflineBoundary(issue);
 			return null;
 		}
 		await app.render(<Lonely />);
@@ -483,7 +482,7 @@ describe("a handler that's a component", () => {
 			name: "NotFound",
 		});
 		function Read() {
-			const result = useRead(useNotFoundBoundary().wrap(issue(1)));
+			const result = useRead(useNotFoundBoundary(issue(1)));
 			return <p>{AsyncResult.isSuccess(result) ? result.value.title : null}</p>;
 		}
 		await app.render(
@@ -594,7 +593,7 @@ function SessionText(props: {
 }
 
 function SharedSessionText() {
-	return <SessionText atom={useSessionBoundary().wrap(session)} />;
+	return <SessionText atom={useSessionBoundary(session)} />;
 }
 
 describe("two registries failing with one error object", () => {

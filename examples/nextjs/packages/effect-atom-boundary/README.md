@@ -17,7 +17,7 @@ npm install effect-atom-boundary effect @effect/atom-react react
 
 ## Usage
 
-A boundary catches the tags its `catchTags` name, and no others. `createErrorBoundary` makes one, with a hook whose `wrap(atom)`, or `wrap(family)` for an atom family, turns the tags it and the boundaries above it catch into defects. A read that returns typed failures and throws defects, such as [`raf-effect-atom`](https://github.com/KATT/raf-effect-atom/tree/main/packages/raf-effect-atom)'s `useAtomResult`, throws those to their boundaries and returns the failures left, typed without them:
+A boundary catches the tags its `catchTags` name, and no others. `createErrorBoundary` makes one, with a hook that takes an atom, or an atom family, and turns the tags it and the boundaries above it catch into defects. A read that returns typed failures and throws defects, such as [`raf-effect-atom`](https://github.com/KATT/raf-effect-atom/tree/main/packages/raf-effect-atom)'s `useAtomResult`, throws those to their boundaries and returns the failures left, typed without them:
 
 ```tsx
 import { Match, Option } from "effect";
@@ -39,7 +39,7 @@ const [IssueBoundary, useIssueBoundary] = createErrorBoundary({
 });
 
 function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
-	const result = useAtomResult(useIssueBoundary().wrap(issue), props.issue);
+	const result = useAtomResult(useIssueBoundary(issue), props.issue);
 	if (AsyncResult.isSuccess(result)) {
 		return <h1>{result.value.title}</h1>;
 	}

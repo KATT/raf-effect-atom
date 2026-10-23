@@ -33,7 +33,7 @@ declare const process: {
 /**
  * A source with the same arguments and success type as `S`, and any error:
  * the sources whose handles `S` reads, such as the source an error
- * boundary's `wrap(S)` wraps.
+ * boundary's hook narrows into `S`.
  */
 type Readable<S> = S extends (
 	...args: infer Args
@@ -52,7 +52,7 @@ type Readable<S> = S extends (
  * Use in the component a loader, a server component or `useWaterfall` gave
  * the handle to. The source can be the one the verb started, or one derived
  * from it whose atoms point at its atoms with `initialValueTarget`, such as
- * an error boundary's `wrap(source)`.
+ * the family an error boundary's hook returns for `source`.
  *
  * **Details**
  *

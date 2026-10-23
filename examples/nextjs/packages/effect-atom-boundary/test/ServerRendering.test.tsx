@@ -62,8 +62,8 @@ const useRead = <A, E>(
 };
 
 function SharedTitle(props: { readonly id: number }) {
-	useAuthBoundary();
-	const result = useRead(useIssueBoundary().wrap(hydratedIssue(props.id)));
+	useAuthBoundary(hydratedIssue);
+	const result = useRead(useIssueBoundary(hydratedIssue(props.id)));
 	return (
 		<p>{AsyncResult.isSuccess(result) ? result.value.title : "Not caught"}</p>
 	);

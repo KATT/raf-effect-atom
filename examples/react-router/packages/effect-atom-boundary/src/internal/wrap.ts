@@ -3,7 +3,7 @@ import * as Option from "effect/Option";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
 
-import type { Wrap } from "../Claim.ts";
+import type { UseErrorBoundary } from "../Claim.ts";
 import * as FailedReads from "./failedReads.ts";
 
 // oxlint-disable-next-line typescript/no-explicit-any -- any atom's result
@@ -12,14 +12,15 @@ type AnyAtom = Atom.Atom<AsyncResult.AsyncResult<any, any>>;
 type Family = (...args: ReadonlyArray<unknown>) => AnyAtom;
 
 /**
- * Returns a `wrap` for the errors `owns` claims, memoized per atom and per
- * family so a component reads the same derived atom on every render.
+ * Returns what a boundary's hook returns for the errors `owns` claims,
+ * memoized per atom and per family so a component reads the same derived
+ * atom on every render.
  *
  * @internal
  */
 export const make = <Tags extends string>(
 	owns: (error: unknown) => boolean,
-): Wrap<Tags> => {
+): UseErrorBoundary<Tags> => {
 	const wrapped = new WeakMap<AnyAtom, AnyAtom>();
 	const families = new WeakMap<Family, Family>();
 	const wrapAtom = (source: AnyAtom): AnyAtom => {
@@ -63,5 +64,7 @@ export const make = <Tags extends string>(
 	// SAFETY: the overloads type what each branch returns: a wrapped atom for
 	// an atom, a family of wrapped atoms for a family.
 	return ((source: AnyAtom | Family) =>
-		Atom.isAtom(source) ? wrapAtom(source) : wrapFamily(source)) as Wrap<Tags>;
+		Atom.isAtom(source)
+			? wrapAtom(source)
+			: wrapFamily(source)) as UseErrorBoundary<Tags>;
 };

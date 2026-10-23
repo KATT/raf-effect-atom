@@ -61,7 +61,7 @@ const [NotFoundBoundary, useNotFoundBoundary] = createErrorBoundary({
 });
 
 function WrappedTitle(props: { readonly issue: IssueHandle }) {
-	const result = useAtomResult(useNotFoundBoundary().wrap(issue), props.issue);
+	const result = useAtomResult(useNotFoundBoundary(issue), props.issue);
 	return (
 		<p>{AsyncResult.isSuccess(result) ? result.value.title : "Not found"}</p>
 	);

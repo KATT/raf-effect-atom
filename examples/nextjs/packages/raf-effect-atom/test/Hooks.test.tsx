@@ -45,7 +45,7 @@ const [NotFoundBoundary, useNotFoundBoundary] = createErrorBoundary({
 type IssueHandle = Handle<typeof issue>;
 
 function Title(props: { readonly issue: IssueHandle }) {
-	const result = useAtomResult(useNotFoundBoundary().wrap(issue), props.issue);
+	const result = useAtomResult(useNotFoundBoundary(issue), props.issue);
 	if (AsyncResult.isSuccess(result)) {
 		return <p>{result.value.title}</p>;
 	}

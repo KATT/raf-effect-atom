@@ -13,7 +13,7 @@ import { issue, refreshIssues, updateBody, updateTitle } from "~/issues.ts";
 
 /** The issue's title, status, date and description, each editable in place. */
 export function IssueDetail(props: { readonly issue: Handle<typeof issue> }) {
-	const result = useAtomResult(useIssueBoundary().wrap(issue), props.issue);
+	const result = useAtomResult(useIssueBoundary(issue), props.issue);
 	const current = result.value;
 	return (
 		<div className="grid gap-6">

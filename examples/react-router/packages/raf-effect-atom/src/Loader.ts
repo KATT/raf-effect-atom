@@ -171,8 +171,8 @@ const rejectDefects = <A, E>(
  *   is. Takes a lease either way. The component that reads the handle
  *   suspends until the result settles. On a request registry whose async
  *   seed is still running, it waits for the seed first.
- * - A derived atom that isn't serializable, such as an error boundary's
- *   `wrap(source)`, starts the first serializable atom its
+ * - A derived atom that isn't serializable, such as the one an error
+ *   boundary's hook returns, starts the first serializable atom its
  *   `initialValueTarget` chain points at, the one `useAtomResult` reads it
  *   through: the lease, the handle's key and what the server sends are
  *   that atom's. `ensure` and `fetch` wait for the derived atom's own

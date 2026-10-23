@@ -40,10 +40,7 @@ export function Comments(props: {
 }
 
 function CommentPage(props: { readonly page: Handle<typeof commentPage> }) {
-	const result = useAtomResult(
-		useIssueBoundary().wrap(commentPage),
-		props.page,
-	);
+	const result = useAtomResult(useIssueBoundary(commentPage), props.page);
 	const [more, setMore] = useState<Handle<typeof commentPage>>();
 	const registry = use(RegistryContext);
 	const [issueId, cursor] = props.page.args;
