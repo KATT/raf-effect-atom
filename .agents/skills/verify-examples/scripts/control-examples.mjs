@@ -54,6 +54,15 @@ add --exact for an exact match, --nth <i> for the i-th match (0-based).
 A name written as /pattern/ is a case-insensitive regular expression.
 Apps: ${Object.keys(apps).join(", ")}.`;
 
+function isRunning(pid) {
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 function fail(message) {
 	console.error(message);
 	process.exit(1);
@@ -362,7 +371,17 @@ const commands = {
 				console.log(`Chrome pid ${pid} wasn't running`);
 			}
 			rmSync(PID_FILE, { force: true });
-			rmSync(`${STATE_DIR}/profile`, { force: true, recursive: true });
+			// Chrome keeps writing to its profile while it exits.
+			const sleeper = new Int32Array(new SharedArrayBuffer(4));
+			for (let i = 0; i < 50 && isRunning(pid); i++) {
+				Atomics.wait(sleeper, 0, 0, 100);
+			}
+			rmSync(`${STATE_DIR}/profile`, {
+				force: true,
+				maxRetries: 5,
+				recursive: true,
+				retryDelay: 100,
+			});
 			return;
 		}
 		fail("Usage: control-examples chrome start|stop");
