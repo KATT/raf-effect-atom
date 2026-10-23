@@ -21,6 +21,12 @@ tanstack-start/src/docs/loader-verbs.ts#verbs
 - Use `ensure` when the loader needs the result, or the page shouldn't render without it.
 - Use `fetch` when the loader must not see a result from before it ran, such as after a write.
 
+Below, three copies of an app differ only in the verb their issue route's loader calls. The router keeps the old page until the loader returns, so a verb that waits blocks the navigation, and a page whose atom has no result yet shows a skeleton until it streams in.
+
+```demo
+loader-verbs
+```
+
 ## Typed failures are results
 
 `ensure` and `fetch` don't reject on a typed failure: they return the `AsyncResult`, so the loader can decide what a failure means, and otherwise the page renders it through a boundary. Only a defect or an interruption rejects.
