@@ -325,6 +325,114 @@ export const result = <S extends Source>(
 	return settledResult as SettledResult<SuccessOf<S>, ErrorOf<S>>;
 };
 
+type Handlers = Readonly<
+	Record<
+		string,
+		((error: unknown) => Effect.Effect<unknown, unknown, unknown>) | undefined
+	>
+>;
+
+type HandlerFailures<Cases> = {
+	[K in keyof Cases]: Cases[K] extends (
+		...args: never
+	) => Effect.Effect<unknown, infer E, unknown>
+		? E
+		: never;
+}[keyof Cases];
+
+type HandlerServices<Cases> = {
+	[K in keyof Cases]: Cases[K] extends (
+		...args: never
+	) => Effect.Effect<unknown, unknown, infer R>
+		? R
+		: never;
+}[keyof Cases];
+
+const handle = (
+	handlers: Handlers,
+	error: unknown,
+): Effect.Effect<unknown, unknown, unknown> => {
+	for (const [tag, handler] of Object.entries(handlers)) {
+		if (handler !== undefined && Predicate.isTagged(error, tag)) {
+			return handler(error);
+		}
+	}
+	return Effect.void;
+};
+
+/**
+ * Runs a handler when the settled result behind the handle of `ensure` or
+ * `fetch` is a typed failure with one of the given tags, and returns the
+ * handle unchanged.
+ *
+ * **When to use**
+ *
+ * Use in an Effect loader to turn one failure into the router's control
+ * flow, such as a missing record into its not-found page, and leave every
+ * other failure in the registry for an error boundary to render.
+ *
+ * **Details**
+ *
+ * The keys are the tags of the source's typed failures. A handler's failure
+ * fails the loader; its success is ignored. A success, a failure with
+ * another tag, or a failure without a tag returns the handle as is.
+ *
+ * **Example**
+ *
+ * ```ts
+ * import { Loader } from "raf-effect-atom"
+ * import { RouteLoader } from "raf-effect-atom/tanstack-router"
+ *
+ * const program = Loader.ensure(issue, 1).pipe(
+ *   Loader.catchTags({ IssueNotFound: () => RouteLoader.notFound() }),
+ * )
+ * ```
+ *
+ * @stability unstable
+ * @category error handling
+ * @since 0.1.0
+ */
+export const catchTags: <
+	S extends Source,
+	Cases extends {
+		[K in Extract<ErrorOf<S>, { _tag: string }>["_tag"]]+?: (
+			error: Extract<ErrorOf<S>, { _tag: K }>,
+		) => Effect.Effect<unknown, unknown, unknown>;
+	} & (unknown extends ErrorOf<S>
+		? unknown
+		: {
+				[
+					K in Exclude<
+						keyof Cases,
+						Extract<ErrorOf<S>, { _tag: string }>["_tag"]
+					>
+				]: never;
+			}),
+>(
+	cases: Cases,
+) => <E, R>(
+	self: Effect.Effect<LoadedHandle<S>, E, R>,
+) => Effect.Effect<
+	LoadedHandle<S>,
+	E | HandlerFailures<Cases>,
+	R | HandlerServices<Cases>
+> = (cases) => {
+	// SAFETY: each handler takes the error of the tag it's under, which
+	// `handle` checks before calling it.
+	const handlers = cases as Handlers;
+	return (self) =>
+		// SAFETY: the handlers' failures and services are in the return type.
+		Effect.tap(self, (loadedHandle) => {
+			const settledResult = result(loadedHandle);
+			return AsyncResult.isFailure(settledResult)
+				? Option.match(Cause.findErrorOption(settledResult.cause), {
+						onNone: () => Effect.void,
+						onSome: (error) => handle(handlers, error),
+					})
+				: Effect.void;
+		}) as never;
+};
+
 /**
  * The loader verbs as Promises over one registry, as the framework
  * integrations put them on the router context.
@@ -349,6 +457,14 @@ export interface Loader {
 		source: S,
 		...args: ArgsOf<S>
 	) => Handle<S>;
+	/**
+	 * Runs an Effect with the registry and the lease TTL provided, as a
+	 * Promise that rejects with `Cause.squash` of a failure.
+	 */
+	readonly run: <A, E>(
+		effect: Effect.Effect<A, E, AtomRegistry.AtomRegistry>,
+		options?: Effect.RunOptions | undefined,
+	) => Promise<A>;
 }
 
 /**
@@ -384,9 +500,9 @@ export const make = (
 		options?.leaseTTL === undefined
 			? undefined
 			: Duration.fromInputUnsafe(options.leaseTTL);
-	const provide = <A>(
-		effect: Effect.Effect<A, never, AtomRegistry.AtomRegistry>,
-	): Effect.Effect<A> => {
+	const provide = <A, E>(
+		effect: Effect.Effect<A, E, AtomRegistry.AtomRegistry>,
+	): Effect.Effect<A, E> => {
 		const provided = Effect.provideService(
 			effect,
 			AtomRegistry.AtomRegistry,
@@ -403,5 +519,6 @@ export const make = (
 			Effect.runPromise(provide(fetch(source, ...args))),
 		prefetch: (source, ...args) =>
 			Effect.runSync(provide(prefetch(source, ...args))),
+		run: (effect, runOptions) => Effect.runPromise(provide(effect), runOptions),
 	};
 };
