@@ -15,6 +15,7 @@ const STATE_DIR = process.env.VERIFY_EXAMPLES_DIR ?? "/tmp/verify-examples";
 const PID_FILE = `${STATE_DIR}/chrome.pid`;
 
 const apps = {
+	nextjs: { filter: "@examples/nextjs", port: 3007 },
 	"react-router": { filter: "@examples/react-router", port: 3006 },
 	"tanstack-start": { filter: "@examples/tanstack-start", port: 3005 },
 };

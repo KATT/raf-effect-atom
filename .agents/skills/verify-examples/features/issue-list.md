@@ -37,3 +37,4 @@ Commands:
 - Status labels in rows are `aria-label`s, not text, so `$CE wait --text` / `--gone` can't see them. Wait on `Showing … of <total> issues` (each filter has its own total) or with `--eval`.
 - Status counts and pages are all refreshed after a status change elsewhere settles (see [status changes](status-changes.md)).
 - React Router: `/prefetch/issues` has no search until you pick a filter or a sort; the filter links always carry both (`?sort=newest&status=open`). A search the list can't read (`?status=bogus`) answers 404 with `Nothing here.`
+- Next.js: a client navigation changes the URL only once the server's response arrives, and until then the links still carry the old search. A click sent before the last one landed keeps its stale filter: in **Back to the default**, `Newest` clicked right after `All` keeps `status=open`. Wait between them (`$CE wait --eval 'location.search.includes("status=all")'`).

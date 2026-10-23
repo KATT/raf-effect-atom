@@ -13,8 +13,8 @@
 	"scripts": {
 		"build": "next build",
 		"check:bundle": "bundle-check .next/static --forbid @examples/db --forbid @examples/backend",
-		"dev": "next dev --port 3006",
-		"start": "next start --port 3006",
+		"dev": "next dev --port 3007",
+		"start": "next start --port 3007",
 		"test:browser": "vp test",
 		"typecheck": "tsc"
 	},

@@ -7,10 +7,11 @@ description: Launch and drive the raf-effect-atom example issue tracker in headl
 
 The example apps are one issue tracker on several stacks, so one feature map ([`features/README.md`](features/README.md)) covers all of them. A change to one app is proven in that app; a change to `examples/.shared/` or `packages/` is proven in every app.
 
-| App              | Start                                        | Port | Data layer                                       |
-| ---------------- | -------------------------------------------- | ---- | ------------------------------------------------ |
-| `tanstack-start` | `pnpm --filter @examples/tanstack-start dev` | 3005 | Effect RPC at `POST /rpc`, in-process during SSR |
-| `react-router`   | `pnpm --filter @examples/react-router dev`   | 3006 | Effect RPC at `POST /rpc`, in-process during SSR |
+| App              | Start                                        | Port | Data layer                                                 |
+| ---------------- | -------------------------------------------- | ---- | ---------------------------------------------------------- |
+| `tanstack-start` | `pnpm --filter @examples/tanstack-start dev` | 3005 | Effect RPC at `POST /rpc`, in-process during SSR           |
+| `react-router`   | `pnpm --filter @examples/react-router dev`   | 3006 | Effect RPC at `POST /rpc`, in-process during SSR           |
+| `nextjs`         | `pnpm --filter @examples/nextjs dev`         | 3007 | Effect RPC at `POST /rpc`, in-process in server components |
 
 Add a row (and an `apps` entry in the helper) when an app lands.
 
