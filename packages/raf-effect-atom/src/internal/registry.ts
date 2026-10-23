@@ -14,9 +14,10 @@ const defaultIdleTTL = 400;
  */
 export const make = (options?: {
 	readonly defaultIdleTTL?: number | undefined;
+	readonly seed?: RequestRegistry.Seed | undefined;
 }): AtomRegistry.AtomRegistry =>
 	isServer()
-		? RequestRegistry.make()
+		? RequestRegistry.make({ seed: options?.seed })
 		: AtomRegistry.make({
 				defaultIdleTTL: options?.defaultIdleTTL ?? defaultIdleTTL,
 				scheduleTask,

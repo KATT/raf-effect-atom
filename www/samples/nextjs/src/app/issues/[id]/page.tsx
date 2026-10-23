@@ -20,7 +20,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
 	return (
 		// The request registry's results go to the browser, still-loading ones
 		// as promises.
-		<HydrateAtoms state={dehydrate()}>
+		<HydrateAtoms state={await dehydrate()}>
 			<IssueBoundary>
 				<IssuePage assignee={assigneeHandle} issue={issueHandle} />
 			</IssueBoundary>

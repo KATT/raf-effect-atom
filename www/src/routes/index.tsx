@@ -347,8 +347,8 @@ const stepsByMode = {
 						<code>ensure</code> waits for one the page can’t lay out without.
 						Each returns a handle, which the page passes to the client component
 						that reads the atom. <code>HydrateAtoms</code> sends{" "}
-						<code>dehydrate()</code> to the browser’s registry, with the results
-						still loading as promises, so nothing is fetched twice.
+						<code>await dehydrate()</code> to the browser’s registry, with the
+						results still loading as promises, so nothing is fetched twice.
 					</p>
 				</>
 			),

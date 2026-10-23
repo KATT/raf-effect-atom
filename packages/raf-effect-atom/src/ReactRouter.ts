@@ -91,6 +91,28 @@ export interface MiddlewareArgs {
 	readonly context: {
 		readonly set: (context: AtomsContext, value: RequestAtoms) => void;
 	};
+	readonly request: Request;
+}
+
+/**
+ * Options for `atomsMiddleware`.
+ *
+ * @stability unstable
+ * @category models
+ * @since 0.2.0
+ */
+export interface AtomsMiddlewareOptions {
+	/**
+	 * Runs on each request's registry before the loaders, with the request,
+	 * to set what its atoms need, such as its cookie. The middleware waits
+	 * for one that returns a promise.
+	 */
+	readonly seed?:
+		| ((
+				registry: AtomRegistry.AtomRegistry,
+				request: Request,
+		  ) => void | Promise<void>)
+		| undefined;
 }
 
 /**
@@ -105,23 +127,50 @@ export interface MiddlewareArgs {
  * then. When `next` doesn't return a `Response`, as Data Mode's
  * `query` can, the registry is left to be collected with the request.
  *
+ * `seed` runs on the new registry before `next`, so every loader's atoms
+ * start with what it sets.
+ *
  * **Gotchas**
  *
  * It's server middleware: export it as the root route's `middleware`, not
  * `clientMiddleware`. In the browser, the root's `RegistryProvider` holds
  * the registry.
  *
+ * **Example**
+ *
+ * ```ts
+ * export const middleware = [
+ *   atomsMiddleware(atomsContext, {
+ *     // In-process RPC calls send the page request's cookie.
+ *     seed: (registry, request) =>
+ *       registry.set(requestCookie, request.headers.get("cookie") ?? undefined)
+ *   })
+ * ]
+ * ```
+ *
  * @stability unstable
  * @category integrations
  * @since 0.1.0
  */
 export const atomsMiddleware =
-	(context: AtomsContext) =>
+	(context: AtomsContext, options?: AtomsMiddlewareOptions) =>
 	async <Result>(
 		args: MiddlewareArgs,
 		next: () => Promise<Result>,
 	): Promise<Result> => {
-		const registry = RequestRegistry.make();
+		const seed = options?.seed;
+		const registry = RequestRegistry.make({
+			seed:
+				seed === undefined
+					? undefined
+					: (created) => seed(created, args.request),
+		});
+		try {
+			await RequestRegistry.settled(registry);
+		} catch (error) {
+			registry.dispose();
+			throw error;
+		}
 		const loader = Loader.make(registry);
 		args.context.set(context, {
 			...loader,

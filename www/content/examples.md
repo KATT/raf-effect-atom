@@ -18,8 +18,10 @@ CodeSandbox opens the issue list's route file, and the preview shows the running
 ## How each one starts atoms
 
 - **TanStack Start**: route [`loader`](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading)s start atoms with the `Loader` on the router context, and `setupRouterAtoms` streams what the server's loaders started into the browser's registry (see [TanStack Start](./tanstack-start.md)). After the first page, loaders run in the browser, so `ensure` shows what the registry already holds at once.
-- **Next.js**: server components start atoms with `prefetch`, `ensure` and `fetch` from `raf-effect-atom/next`, and `<HydrateAtoms state={dehydrate()}>` hands them to the client components under it. Every navigation renders on the server in a new request registry, so `ensure` waits as long as `fetch`.
+- **Next.js**: server components start atoms with `prefetch`, `ensure` and `fetch` from `raf-effect-atom/next`, and `<HydrateAtoms state={await dehydrate()}>` hands them to the client components under it. Every navigation renders on the server in a new request registry, so `ensure` waits as long as `fetch`.
 - **React Router**: server [`loader`](https://reactrouter.com/start/framework/data-loading)s start atoms in the request's registry and return `atoms.dehydrate()`, which the route renders under `<HydrationBoundary>` (see [Hydration](./hydration.md)). Every navigation runs the loaders on the server, so here too `ensure` waits as long as `fetch`.
+
+The backend reads the session and latency from cookies, so on the server each app seeds the request registry with the page request's cookie, which its RPC protocol sends: `makeRegistry({ seed })` on TanStack Start, `atomsMiddleware(atomsContext, { seed })` on React Router, and the verbs from `makeRequestAtoms({ seed })` on Next.js, whose seed awaits `headers()`.
 
 ## What they cover
 
