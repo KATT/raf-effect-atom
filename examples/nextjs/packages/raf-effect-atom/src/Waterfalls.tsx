@@ -86,7 +86,7 @@ export const WaterfallDetection = (props: {
 
 /**
  * Starts a source's atom during render and returns its handle, for an input
- * only a render knows, such as a debounced search query.
+ * only a render knows, such as an id read from another atom's result.
  *
  * **When to use**
  *

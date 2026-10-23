@@ -432,8 +432,8 @@ const either = (
  *
  * Use in a framework integration, in loaders that are async functions, or
  * in an event handler that starts an atom before the state change that
- * renders its reader, for state that can't be in the URL, such as a
- * search-as-you-type query. In Effect code, use the verbs directly, and run
+ * renders its reader, for a choice a click or a submit makes that doesn't
+ * belong in the URL. In Effect code, use the verbs directly, and run
  * the Effect on the registry with `run`.
  *
  * **Details**
