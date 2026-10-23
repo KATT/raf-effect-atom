@@ -46,6 +46,18 @@ jobs:
       - uses: ./.github/actions/prepare
       - run: pnpm test
 
+  # Packs each package the way its release does, then installs the tarballs
+  # into a fresh npm project and imports and type-checks every subpath
+  # (`tooling/pack-check`). The Release workflow only runs after this passes.
+  pack_check:
+    name: Pack Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/prepare
+      - run: pnpm build
+      - run: pnpm check:pack
+
   # Each example app's `check:bundle` names its client build output and the
   # server-only packages that must stay out of it (`tooling/bundle-check`).
   bundle_check:

@@ -7,7 +7,7 @@ This is a Vite+ / pnpm monorepo. The publishable packages live in `packages/`:
 | `packages/effect-atom-boundary` | `effect-atom-boundary` |
 | `packages/raf-effect-atom`      | `raf-effect-atom`      |
 
-Each package has its own `README.md`, shown on npm. The root `LICENSE` and `CHANGELOG.md` are shared: each package's `prepack` copies them in, so the tarball includes them without a second copy in git.
+Each package has its own `README.md`, shown on npm, and its own `CHANGELOG.md`, written by its release. The root `LICENSE` is shared: each package's `prepack` copies it in, so the tarball includes it without a second copy in git.
 
 Tools live in `tooling/` and are written in TypeScript with Effect, run with plain `node`:
 
@@ -15,6 +15,7 @@ Tools live in `tooling/` and are written in TypeScript with Effect, run with pla
 | ------------------------------ | -------------------------------------------------------------- |
 | `tooling/oxlint-plugins`       | The custom lint rules `.oxlintrc.json` loads                   |
 | `tooling/conventional-commits` | Checks commit subjects (`commit-msg` hook, `Commits` workflow) |
+| `tooling/pack-check`           | Packs the packages and installs the tarballs in an npm project |
 | `tooling/vercel-ignore`        | Vercel's Ignored Build Step                                    |
 | `tooling/og-image`             | The sites' social cards (`og:image`), rendered at build time   |
 
@@ -38,7 +39,7 @@ pnpm format:check
 pnpm knip
 ```
 
-Also run the docs site's build (`pnpm build:www`) when `www`, its samples or the packages changed. When an example app or the packages changed, build the examples (`pnpm -r --filter "./examples/*" build`), then run their `check:bundle` and `test:browser` scripts the same way. `test:browser` drives Google Chrome against each app's production build.
+When the packages changed, build and pack them (`pnpm build && pnpm check:pack`): each tarball must have its `LICENSE`, `README.md`, built `exports` with their `.d.mts`, no `workspace:` or `catalog:` ranges, and `"use client"` where the source has it, then install with its peers in a fresh npm project, import in Node and type-check under `nodenext` and `bundler` resolution. Also run the docs site's build (`pnpm build:www`) when `www`, its samples or the packages changed. When an example app or the packages changed, build the examples (`pnpm -r --filter "./examples/*" build`), then run their `check:bundle` and `test:browser` scripts the same way. `test:browser` drives Google Chrome against each app's production build.
 
 ## Commits
 
@@ -85,36 +86,46 @@ The apps' dev servers allow CodeSandbox's preview host, `*.csb.app` (Vite's `ser
 
 ## Releasing / npm publish
 
-Each package has its own version, changelog (`packages/<package>/CHANGELOG.md`) and tag (`effect-atom-boundary@x.y.z`). Its latest tag is the version source, and only commits that touch its directory count. Each has a release-it config in [`release-it/`](../release-it).
+Each package has its own version, changelog (`packages/<package>/CHANGELOG.md`) and tag (`effect-atom-boundary@x.y.z`). Each has a release-it config in [`release-it/`](../release-it).
 
-The maintainer starts [`.github/workflows/release.yaml`](./workflows/release.yaml) by hand from the Actions tab, for all packages or one. A gate picks the packages with commits since their own latest tag, then runs [release-it](https://github.com/release-it/release-it) from the repo root for each, one after the other:
+### What triggers a release
 
-1. Computes the next version from the conventional commits since the package's latest tag that touch `packages/<package>`, and updates its `CHANGELOG.md` (the first release writes its whole history). `feat`, `fix`, and `perf` decide the bump; the other types are listed without bumping, and a release with none of the three is a patch.
+[`.github/workflows/release.yaml`](./workflows/release.yaml) runs after **CI passes on a push to `main`**, for the commit CI checked (and by hand from the Actions tab, for all packages or one). Its gate looks at each package on its own:
+
+- **Released**: the package has a commit that changed a file under `packages/<package>/` since its latest tag (any file there: source, tests, README, `package.json`).
+- **Skipped**: nothing under `packages/<package>/` changed. Commits to `www`, the examples, `tooling` or `.agent-docs` never release anything, and a change to one package doesn't release the other. A commit's scope doesn't matter, only the files it touches.
+- **Skipped**: `main` already moved past the commit CI checked. The CI run for the newer commit starts its own release, so a commit that hasn't passed CI is never published.
+
+The packages that pass the gate are released one after the other, each with [release-it](https://github.com/release-it/release-it) run from the repo root:
+
+1. Computes the next version from the conventional commits since the package's latest tag that touch `packages/<package>`, and updates its `CHANGELOG.md` (the first release writes its whole history). While a package is `0.x` (`preMajor`), a breaking change (`!`) bumps the minor; `feat`, `fix` and `perf` bump the patch. Other types are listed without bumping, and a release with none of them is a patch.
 2. Writes the version into `packages/<package>/package.json`.
-3. Builds the package and copies the root `LICENSE` into it.
+3. Builds the package.
 4. Checks `main` hasn't moved since the run checked it out; if it has, it stops and leaves the release to a later run.
-5. Publishes the package (`pnpm pack` + `npm publish`, using npm trusted publishing over OIDC, no `NPM_TOKEN`). `pnpm pack` rewrites `workspace:*` and `catalog:` to real versions.
-6. Only after publishing: commits `chore(release): <package>@x.y.z`, tags it `<package>@x.y.z`, pushes, and creates a GitHub Release.
+5. Publishes the package (`pnpm pack` + `npm publish`, using npm trusted publishing over OIDC, no `NPM_TOKEN`). `pnpm pack` runs `prepack` (copies `LICENSE`) and rewrites `workspace:*` and `catalog:` to real versions; CI's Pack Check packs the same way on every push.
+6. Only after publishing: commits `chore(release): <package>@x.y.z`, tags it `<package>@x.y.z`, pushes with the workflow's own token, and creates a GitHub Release. That push doesn't start CI again.
 
 Do not set `NODE_AUTH_TOKEN` / `NPM_TOKEN` in the release job: a placeholder token disables OIDC.
 
 ### One-time setup
 
-1. **GitHub secret `ACCESS_TOKEN`**: a PAT that can push to `main` and create releases.
-2. **First publish from your machine.** npm only lets you add a trusted publisher to a package that already exists, so each package is published once by hand, with provenance off:
+Until a package is on npm, the gate skips it with a warning, so `main` stays green.
+
+1. **First publish from your machine.** npm only lets you add a trusted publisher to a package that already exists, so each package is published once by hand, as `0.0.0` with provenance off. The first automatic release then writes the changelog from the whole history and picks the real first version:
 
    ```shell
    npm login
    pnpm build
    for pkg in effect-atom-boundary raf-effect-atom; do
-   	cp LICENSE packages/$pkg/LICENSE
    	(cd packages/$pkg && pnpm pack --out package.tgz && npm publish package.tgz --access public --provenance=false && rm package.tgz)
    done
    ```
 
-3. **Trusted publisher** for each package, pointing at this repo's release workflow:
+2. **Trusted publisher** for each package, pointing at this repo's release workflow:
 
    ```shell
    npm trust github effect-atom-boundary --file release.yaml --repo KATT/raf-effect-atom --allow-publish -y
    npm trust github raf-effect-atom --file release.yaml --repo KATT/raf-effect-atom --allow-publish -y
    ```
+
+3. Start the Release workflow by hand once (Actions → Release → Run workflow → `all`), or push a commit that touches a package.

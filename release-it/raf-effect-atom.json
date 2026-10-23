@@ -12,7 +12,7 @@
 	},
 	"hooks": {
 		"after:bump": "pnpm --filter raf-effect-atom exec npm pkg set version=${version}",
-		"before:git:release": "pnpm --filter \"raf-effect-atom...\" build && cp LICENSE packages/raf-effect-atom/LICENSE && git fetch -q origin main && { test \"$(git rev-parse FETCH_HEAD)\" = \"$(git rev-parse HEAD)\" || { echo 'main moved during this release; the newer run releases it.'; exit 1; }; } && pnpm --filter raf-effect-atom run publish:npm"
+		"before:git:release": "pnpm --filter \"raf-effect-atom...\" build && git fetch -q origin main && { test \"$(git rev-parse FETCH_HEAD)\" = \"$(git rev-parse HEAD)\" || { echo 'main moved during this release; the newer run releases it.'; exit 1; }; } && pnpm --filter raf-effect-atom run publish:npm"
 	},
 	"npm": false,
 	"plugins": {

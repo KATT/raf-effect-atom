@@ -1,0 +1,25 @@
+{
+	"name": "@tooling/pack-check",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Packs each publishable package the way its release does, checks the tarball, and installs, imports and type-checks it in a fresh npm project",
+	"type": "module",
+	"sideEffects": false,
+	"bin": {
+		"pack-check": "./src/bin/pack-check.ts"
+	},
+	"scripts": {
+		"test": "vp test",
+		"typecheck": "tsc"
+	},
+	"dependencies": {
+		"@effect/platform-node": "catalog:",
+		"effect": "catalog:"
+	},
+	"devDependencies": {
+		"@effect/vitest": "catalog:",
+		"@types/node": "24.19.2",
+		"typescript": "7.0.2",
+		"vite-plus": "1.4.0"
+	}
+}

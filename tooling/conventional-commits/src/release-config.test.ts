@@ -43,6 +43,7 @@ const PackageJson = Schema.fromJsonString(
 	Schema.Struct({
 		name: Schema.String,
 		private: Schema.optional(Schema.Boolean),
+		scripts: Schema.optional(Schema.Record(Schema.String, Schema.String)),
 	}),
 );
 
@@ -109,10 +110,6 @@ describe("release-it/<package>.json", () => {
 					).ok,
 				).toBe(true);
 				expect(config.hooks["after:bump"]).toContain(`--filter ${name} `);
-				// `files` lists LICENSE; the package directory has no copy.
-				expect(config.hooks["before:git:release"]).toContain(
-					`cp LICENSE ${dir}/LICENSE`,
-				);
 				expect(config.hooks["before:git:release"]).toContain(
 					`pnpm --filter ${name} run publish:npm`,
 				);
@@ -134,7 +131,8 @@ describe("release-it/<package>.json", () => {
 			}
 			for (const dir of yield* fs.readDirectory(path.join(repo, "packages"))) {
 				const manifest = path.join(repo, "packages", dir, "package.json");
-				if (!(yield* fs.exists(manifest))) {
+				const info = yield* fs.stat(path.join(repo, "packages", dir));
+				if (info.type !== "Directory" || !(yield* fs.exists(manifest))) {
 					continue;
 				}
 				const pkg = yield* Schema.decodeEffect(PackageJson)(
@@ -143,6 +141,8 @@ describe("release-it/<package>.json", () => {
 				if (pkg.private !== true) {
 					expect(pkg.name).toBe(dir);
 					expect(names).toContain(pkg.name);
+					// `files` lists LICENSE; the package directory has no copy in git.
+					expect(pkg.scripts?.["prepack"]).toBe("cp ../../LICENSE LICENSE");
 				}
 			}
 		}).pipe(Effect.provide(NodeServices.layer)),

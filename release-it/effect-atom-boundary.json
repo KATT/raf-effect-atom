@@ -12,7 +12,7 @@
 	},
 	"hooks": {
 		"after:bump": "pnpm --filter effect-atom-boundary exec npm pkg set version=${version}",
-		"before:git:release": "pnpm --filter \"effect-atom-boundary...\" build && cp LICENSE packages/effect-atom-boundary/LICENSE && git fetch -q origin main && { test \"$(git rev-parse FETCH_HEAD)\" = \"$(git rev-parse HEAD)\" || { echo 'main moved during this release; the newer run releases it.'; exit 1; }; } && pnpm --filter effect-atom-boundary run publish:npm"
+		"before:git:release": "pnpm --filter \"effect-atom-boundary...\" build && git fetch -q origin main && { test \"$(git rev-parse FETCH_HEAD)\" = \"$(git rev-parse HEAD)\" || { echo 'main moved during this release; the newer run releases it.'; exit 1; }; } && pnpm --filter effect-atom-boundary run publish:npm"
 	},
 	"npm": false,
 	"plugins": {

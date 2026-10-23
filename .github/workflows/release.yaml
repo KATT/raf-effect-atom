@@ -1,10 +1,16 @@
-# Run by hand from the Actions tab: publishing stays the maintainer's call
-# until the packages exist on npm and trusted publishing is set up (see
-# .github/DEVELOPMENT.md). To release on every push to main, add `push:
-# branches: [main]` here; the gate and the stale-main check already handle it.
+# Runs after CI passes on a push to main, for the commit CI checked, and
+# publishes each package with commits touching its directory since its own
+# latest tag. Also runs by hand from the Actions tab, for all packages or one.
 name: Release
 
 on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       package:
@@ -16,6 +22,8 @@ on:
           - effect-atom-boundary
           - raf-effect-atom
 
+# One release at a time; a newer run waits, and replaces any run already
+# waiting, since it releases everything the older one would have.
 concurrency:
   group: ${{ github.workflow }}
 
@@ -23,11 +31,13 @@ jobs:
   # Pick the packages with commits since their own latest tag, so a run with
   # nothing publishable skips install/build.
   gate:
-    # release-it pushes "chore(release): <package>@x.y.z"; a push trigger would
-    # otherwise re-run on it.
-    if: "${{ !startsWith(github.event.head_commit.message, 'chore(release)') }}"
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push')
     outputs:
       packages: ${{ steps.check.outputs.packages }}
+      sha: ${{ steps.check.outputs.sha }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -39,9 +49,17 @@ jobs:
         # release-it/<package>.json. Before a package's first tag, every
         # commit under it counts.
         env:
+          CHECKED: ${{ github.event.workflow_run.head_sha }}
           SELECTED: ${{ inputs.package || 'all' }}
         run: |
+          sha=$(git rev-parse HEAD)
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
           release=()
+          if [ -n "$CHECKED" ] && [ "$CHECKED" != "$sha" ]; then
+            echo "main moved past ${CHECKED}, the commit CI checked; the CI run for ${sha} releases it."
+            echo "packages=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           for config in release-it/*.json; do
             pkg=$(basename "$config" .json)
             if [ "$SELECTED" != all ] && [ "$SELECTED" != "$pkg" ]; then
@@ -55,10 +73,20 @@ jobs:
             fi
             if [ "$count" -eq 0 ]; then
               echo "${pkg}: no commits touching packages/${pkg} since ${latest}; skipping."
-            else
-              echo "${pkg}: ${count} commits since ${latest}."
-              release+=("$pkg")
+              continue
             fi
+            # Trusted publishing can only be set up on a package that exists,
+            # so the first version is published by hand (.github/DEVELOPMENT.md).
+            if ! view=$(npm view "$pkg" name 2>&1); then
+              if grep -q E404 <<< "$view"; then
+                echo "::warning title=${pkg} is not on npm yet::Publish it once by hand and add the trusted publisher (.github/DEVELOPMENT.md, One-time setup). Skipping ${count} commits."
+                continue
+              fi
+              echo "$view"
+              exit 1
+            fi
+            echo "${pkg}: ${count} commits since ${latest}."
+            release+=("$pkg")
           done
           echo "packages=$(jq -cn '$ARGS.positional' --args "${release[@]}")" >> "$GITHUB_OUTPUT"
 
@@ -77,11 +105,12 @@ jobs:
       matrix:
         package: ${{ fromJSON(needs.gate.outputs.packages) }}
     steps:
+      # The workflow's own token pushes the release commit and tag, so that
+      # push doesn't start CI, and through it this workflow, again.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: main
-          token: ${{ secrets.ACCESS_TOKEN }}
       - uses: ./.github/actions/prepare
       - uses: actions/setup-node@v7
         with:
@@ -95,12 +124,21 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: Release
         env:
-          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          CHECKED: ${{ needs.gate.outputs.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
           # Trusted Publishing uses OIDC; a placeholder NODE_AUTH_TOKEN from
           # setup-node would make npm skip the OIDC exchange.
           NODE_AUTH_TOKEN: ""
           PACKAGE: ${{ matrix.package }}
         run: |
+          # Past the gate's commit, main may only have this run's own release
+          # commits. Anything else hasn't passed CI yet; its own run releases it.
+          untested=$(git log --format=%s "${CHECKED}..HEAD" | grep -v '^chore(release): ' || true)
+          if [ -n "$untested" ]; then
+            echo "main has commits CI hasn't checked yet; their CI run releases ${PACKAGE}:"
+            echo "$untested"
+            exit 0
+          fi
           set +e
           pnpm exec release-it --ci --verbose --config "release-it/${PACKAGE}.json" > /tmp/release-it.log 2>&1
           code=$?

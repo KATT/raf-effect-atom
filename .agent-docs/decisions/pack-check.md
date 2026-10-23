@@ -1,0 +1,8 @@
+# CI packs and installs the packages before any release (human asked; details agent)
+
+- Human: make sure the published packages work, checked on CI. `tooling/pack-check` (`pnpm check:pack`, after `pnpm build`; CI's Pack Check job) packs each non-private package in `packages/` with `pnpm pack`, the same command `publish:npm` runs, so `prepack` and `publishConfig` apply exactly as in a release.
+- It fails when a tarball lacks `LICENSE` / `README.md`, keeps a `workspace:` or `catalog:` range, has an `exports` target outside `dist/` or missing, an entry `.mjs` without its `.d.mts`, or a `src/` module that starts with `"use client"` (after its header comment) built without it.
+- Then it installs the tarballs with every peer range (optional ones too, ranges from both packages intersected) into a fresh **npm** project outside the workspace, imports every subpath in Node, and type-checks an import of each with the workspace `tsc` under `nodenext` and `bundler` resolution with `skipLibCheck: false`, so a declaration that imports an undeclared package fails.
+- npm, not pnpm, for the consumer: it's what most users run, and it rejects conflicting peer ranges. Peers come from the registry at their declared ranges, so a new peer release that breaks the packages turns CI red, as it would for users.
+- Lost: publint and `@arethetypeswrong/cli`. Their checks overlap with the ones above, and a real install plus import catches what they can't (an undeclared runtime import). Revisit if CommonJS or a `types` condition is ever added.
+- Proven by breaking the output on purpose (deleting a `.d.mts`, stripping `"use client"`, importing an undeclared package from a `.d.mts`): each fails the check.

@@ -7,12 +7,12 @@
 ## Commits go straight to `main`
 
 - No feature branches and no pull requests. Commit each step that works and push it to `origin main` right away (`git push origin main`).
-- Before every push, run the checks in [`.github/DEVELOPMENT.md`](.github/DEVELOPMENT.md#before-you-push): tests, typecheck, lint, format, knip, and the `www` build when `www`, its samples or the packages changed. Never push a commit you know is red.
+- Before every push, run the checks in [`.github/DEVELOPMENT.md`](.github/DEVELOPMENT.md#before-you-push): tests, typecheck, lint, format, knip, `pnpm build && pnpm check:pack` when the packages changed, and the `www` build when `www`, its samples or the packages changed. Never push a commit you know is red.
 - If CI on `main` goes red, the next commit fixes it, before anything else.
 - Never force push, rewrite `main`'s history, or amend a pushed commit. Fix forward.
 - Every subject is a [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) (`type(scope)!: description`, types from `release-it/<package>.json`). The `commit-msg` hook and the `Commits` workflow check it, because release-it reads these subjects for the changelog and the version bump.
 - The commit body holds what a PR description would: what changed, the alternatives you rejected and why, and what you verified. Durable decisions also go in `.agent-docs/decisions/`.
-- Never run release-it or `npm publish`. The Release workflow is started by hand by the maintainer.
+- Never run release-it or `npm publish`. The Release workflow publishes on its own after CI passes on `main`, for every package with commits under `packages/<package>/` since its last tag, so a green push that touches a package ships it. Breaking changes still land straight on `main`: mark them with `!`, and while a package is 0.x they bump the minor.
 
 ## Verifying changes
 
