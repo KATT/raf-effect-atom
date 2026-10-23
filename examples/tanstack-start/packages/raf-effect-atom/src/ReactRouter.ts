@@ -291,7 +291,7 @@ const browserAtomsOf = (registry: AtomRegistry.AtomRegistry): RequestAtoms => {
  *
  * @stability unstable
  * @category integrations
- * @since 0.2.0
+ * @since 0.2.1
  */
 export const clientAtomsMiddleware =
 	(context: AtomsContext) =>
