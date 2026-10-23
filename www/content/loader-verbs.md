@@ -13,6 +13,8 @@ tanstack-start/src/docs/loader-verbs.ts#verbs
 
 Each verb takes a source, an atom family or one atom, and the family's arguments: `atoms.ensure(issue, id)` starts `issue(id)`.
 
+A source can be a derived atom with no serialization key that points at a serializable one with Effect's `initialValueTarget`, such as an [error boundary](./shared-boundaries.md#reading-a-wrapped-atom)'s `wrap(issue)`. The verbs start the atom it points at, the one [`useAtomResult`](./reading-atoms.md) reads it through: the lease, the handle's key and what the server sends are that atom's, and `ensure` and `fetch` wait for the derived atom's own result. The server sends a result still loading as a promise only when that atom holds an `AsyncResult`; one that holds another value, such as an `Option` snapshot, crosses with the value it has when the loaders finish, so point a derived atom at an `AsyncResult` atom, or `ensure` it.
+
 | Verb       | Starts the atom                          | Waits                             | When the atom has a result | Returns         |
 | ---------- | ---------------------------------------- | --------------------------------- | -------------------------- | --------------- |
 | `prefetch` | if it isn't in the registry              | never                             | leaves it alone            | a handle        |
@@ -53,7 +55,7 @@ A loader runs before the route renders, and an atom nobody has mounted is evicte
 
 Each request has its own registry, so `ensure` waits like `fetch` and nothing refreshes in the background. Only atoms in the registry when the loaders finish are sent to the browser; an atom first read during render runs again there. Start every atom a page reads from its loader.
 
-In development, a verb fails fast when a loader on the server starts an atom without a serialization key, since the browser would request it again.
+In development, a verb fails fast when a loader on the server starts an atom without a serialization key that doesn't point at one with `initialValueTarget`, since the browser would request it again.
 
 ## Aborted requests
 

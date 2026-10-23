@@ -57,6 +57,6 @@ A shared boundary catches a claimed tag from any atom read under it, not only fr
 
 ## Reading a wrapped atom
 
-The wrapper is a derived atom with no serialization key: start the atom itself in loaders, and read the wrapper in components with the handle the loader returned. It points at the atom with Effect's `initialValueTarget`, which `raf-effect-atom`'s `useAtomResult` follows to hydrate the atom and wait for its streamed result.
+The wrapper is a derived atom with no serialization key that points at the atom with Effect's `initialValueTarget`. `raf-effect-atom`'s loader verbs follow it to start the atom, and its `useAtomResult` follows it to hydrate the atom and wait for its streamed result, so a loader can start either the atom or the wrapper, and a component reads the wrapper with the handle the loader returned.
 
 `useAtomSuspense` with `includeFailure` returns claimed failures instead of throwing them, and without it throws every failure, including the ones left. Under a shared boundary, use a read that throws only defects: `raf-effect-atom`'s `useAtomResult`, or your own over `useAtomSuspense(atom, { includeFailure: true, suspendOnWaiting: true })`.

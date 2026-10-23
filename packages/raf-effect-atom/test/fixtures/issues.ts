@@ -103,6 +103,22 @@ export const remadeIssue = (id: number) =>
 		{ reactivityKeys: ["issues"], serializationKey: String(id) },
 	);
 
+/**
+ * A derived atom with no serialization key that points at `issue(id)` with
+ * `initialValueTarget`, as a boundary's wrapper does.
+ */
+export const titled = Atom.family((id: number) =>
+	Object.assign(
+		Atom.transform(issue(id), (get) =>
+			AsyncResult.map(get(issue(id)), (found) => ({
+				...found,
+				title: `Titled ${found.title}`,
+			})),
+		),
+		{ initialValueTarget: issue(id) },
+	),
+);
+
 /** A query atom without a `serializationKey`, which never hydrates. */
 export const unkeyedIssue = (id: number) => Issues.query("GetIssue", { id });
 

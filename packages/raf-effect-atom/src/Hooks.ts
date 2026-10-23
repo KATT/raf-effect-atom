@@ -43,24 +43,6 @@ type Readable<S> = S extends (
 		: never;
 
 /**
- * The atom the loader started and the server sent: the first serializable
- * atom in `atom`'s `initialValueTarget` chain, starting with `atom`. An
- * AtomRpc query is serializable itself, though it points at an inner atom.
- */
-const sourceOf = (atom: Atom.Atom<unknown>): Atom.Atom<unknown> => {
-	for (
-		let target: Atom.Atom<unknown> | undefined = atom;
-		target !== undefined;
-		target = target.initialValueTarget
-	) {
-		if (Atom.isSerializable(target)) {
-			return target;
-		}
-	}
-	return atom;
-};
-
-/**
  * Reads a handle through React Suspense, through the source that made it: a
  * result streamed from the server, a hydrated one, or one a loader started.
  *
@@ -146,7 +128,7 @@ export const useAtomResult = <S extends Source>(
 	const registry = React.useContext(RegistryContext);
 	const atom = Handles.atomOf(source, handle.args);
 	Registry.requireRequestRegistry(registry, "useAtomResult");
-	const target = sourceOf(atom);
+	const target = Handles.sourceOf(atom);
 	const started = hydrated(target);
 	const read = target === atom ? hydrated(atom) : atom;
 	const key = Leases.keyOf(started);
