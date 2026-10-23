@@ -2,7 +2,7 @@
 title: TanStack Start
 description: raf-effect-atom/tanstack-router makes a registry per request, puts the loader verbs on the router context, and streams the registry to the browser.
 section: raf-effect-atom
-order: 4
+order: 5
 ---
 
 `raf-effect-atom/tanstack-router` connects the loader verbs to [TanStack Router](https://tanstack.com/router/latest) and [TanStack Start](https://tanstack.com/start/latest). This site uses it too: each page is an atom its route's loader starts, prerendered to static HTML.

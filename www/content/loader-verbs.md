@@ -5,7 +5,7 @@ section: raf-effect-atom
 order: 1
 ---
 
-When a component starts its own data, nested components wait for each other: a page with an issue, its assignee and its comments makes three requests one after another. React's guidance is to start fetching before rendering, in the router's [loader](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading). `raf-effect-atom` adds three verbs that start atoms there, in the registry the page renders from.
+When a component starts its own data, nested components wait for each other: a page with an issue, its assignee and its comments makes three requests one after another, a [request waterfall](./request-waterfalls.md). React's guidance is to start fetching before rendering, in the router's [loader](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading). `raf-effect-atom` adds three verbs that start atoms there, in the registry the page renders from.
 
 ```sample
 tanstack-start/src/docs/loader-verbs.ts#verbs

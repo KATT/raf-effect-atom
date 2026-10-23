@@ -2,7 +2,7 @@
 title: Reading atoms
 description: useAtomResult reads an atom a loader started or the server streamed, waits for it under Suspense, and passes failures to a boundary's claims.
 section: raf-effect-atom
-order: 2
+order: 3
 ---
 
 Components read the atoms their loader started with `raf-effect-atom`'s `useAtomResult`. It suspends like [`useAtomSuspense`](https://github.com/Effect-TS/effect/tree/effect%404.0.6/packages/atom/react) until the atom has a result, and returns it:

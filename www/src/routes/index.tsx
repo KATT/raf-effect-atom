@@ -76,7 +76,7 @@ const features: ReadonlyArray<{
 	{
 		body: "Loaders start every atom a page needs at the same time, before anything renders.",
 		icon: <RouteIcon />,
-		slug: "loader-verbs",
+		slug: "request-waterfalls",
 		title: "No waterfalls",
 	},
 	{

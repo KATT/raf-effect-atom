@@ -2,7 +2,7 @@
 title: Streaming and hydration
 description: How the server's registry reaches the browser, with results still loading crossing as promises and typed failures decoded by Schema.
 section: raf-effect-atom
-order: 3
+order: 4
 ---
 
 On the server, each request renders from its own registry. Once the loaders have started their atoms, `Hydration.dehydrate(registry)` encodes every serializable atom in it:
