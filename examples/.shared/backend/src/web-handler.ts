@@ -1,6 +1,6 @@
 import { HttpRouter } from "effect/http";
 
-import { RpcRoutes } from "./RpcRoutes.ts";
+import { RpcRoutes } from "./rpc-routes.ts";
 
 /**
  * `POST /rpc` as a fetch handler (`webHandler.handler`), for each app's one

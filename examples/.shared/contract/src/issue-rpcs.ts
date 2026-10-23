@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { Rpc, RpcGroup } from "effect/rpc";
 
-import { Authorization } from "./Authorization.ts";
+import { Authorization } from "./authorization.ts";
 import {
 	Comment,
 	CommentId,
@@ -14,14 +14,14 @@ import {
 	IssuePage,
 	IssueStatus,
 	User,
-} from "./Issue.ts";
+} from "./issue.ts";
 import {
 	EmptyBody,
 	EmptyComment,
 	EmptyTitle,
 	IssueNotFound,
-} from "./IssueErrors.ts";
-import { Latency } from "./Latency.ts";
+} from "./issue-errors.ts";
+import { Latency } from "./latency.ts";
 
 /**
  * The issue tracker's procedures. Each declares only the errors it can raise;

@@ -3,9 +3,9 @@ import { Issues } from "@examples/db";
 import { Layer } from "effect";
 import { RpcSerialization, RpcServer } from "effect/rpc";
 
-import { AuthorizationLayer } from "./Authorization.ts";
-import { IssueHandlersNoDeps } from "./IssueHandlers.ts";
-import { LatencyLayer } from "./Latency.ts";
+import { AuthorizationLayer } from "./authorization.ts";
+import { IssueHandlersNoDeps } from "./issue-handlers.ts";
+import { LatencyLayer } from "./latency.ts";
 
 /** Where the apps and the standalone server serve the procedures. */
 export const RPC_PATH = "/rpc";

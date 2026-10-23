@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { IssueId } from "./Issue.ts";
+import { IssueId } from "./issue.ts";
 
 export class IssueNotFound extends Schema.TaggedError<IssueNotFound>()(
 	"IssueNotFound",

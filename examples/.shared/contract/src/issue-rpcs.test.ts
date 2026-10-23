@@ -2,11 +2,11 @@ import { assert, describe, it } from "@effect/vitest";
 import { DateTime, Effect, Exit, Option, Schema } from "effect";
 import { Rpc } from "effect/rpc";
 
-import { Unauthorized } from "./Authorization.ts";
-import { Issue, IssueId, UserId } from "./Issue.ts";
-import { EmptyTitle, IssueNotFound } from "./IssueErrors.ts";
-import { IssueRpcs } from "./IssueRpcs.ts";
-import { decodeLatencyCookie } from "./Latency.ts";
+import { Unauthorized } from "./authorization.ts";
+import { Issue, IssueId, UserId } from "./issue.ts";
+import { EmptyTitle, IssueNotFound } from "./issue-errors.ts";
+import { IssueRpcs } from "./issue-rpcs.ts";
+import { decodeLatencyCookie } from "./latency.ts";
 
 /** What an exit looks like after the wire: JSON text, decoded again. */
 const overTheWire = Effect.fnUntraced(function* (
