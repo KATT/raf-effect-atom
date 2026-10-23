@@ -2,7 +2,7 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig({
 	pack: {
-		entry: ["src/index.ts", "src/next.ts", "src/tanstack-router.tsx"],
+		entry: ["src/index.ts", "src/Next.ts", "src/TanStackRouter.tsx"],
 		unbundle: true,
 	},
 	test: {

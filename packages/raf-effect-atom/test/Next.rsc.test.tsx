@@ -11,8 +11,8 @@ import {
 	renderToReadableStream,
 } from "react-server-dom-webpack/server";
 
-import * as Hydration from "../src/hydration.ts";
-import * as Next from "../src/internal/next-server.ts";
+import * as Hydration from "../src/Hydration.ts";
+import * as Next from "../src/internal/next.ts";
 import { counter, issue, IssueNotFound, serve } from "./fixtures/issues.ts";
 
 const reference = {

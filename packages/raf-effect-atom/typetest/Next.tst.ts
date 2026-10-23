@@ -4,7 +4,7 @@ import type * as EffectHydration from "effect/reactivity/Hydration";
 import { describe, expect, it } from "tstyche";
 
 import type { Loader } from "../src/index.ts";
-import * as Next from "../src/next.ts";
+import * as Next from "../src/Next.ts";
 import { issue } from "../test/fixtures/issues.ts";
 
 type IssueError = Atom.Failure<ReturnType<typeof issue>>;

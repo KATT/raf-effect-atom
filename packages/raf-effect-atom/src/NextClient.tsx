@@ -13,7 +13,7 @@ import * as Registry from "./internal/registry.ts";
 import {
 	HydrationBoundary,
 	type HydrationBoundaryProps,
-} from "./react-hydration.tsx";
+} from "./ReactHydration.tsx";
 
 /**
  * Provides the client components' registry: a request registry while Next.js

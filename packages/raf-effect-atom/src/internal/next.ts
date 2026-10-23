@@ -4,9 +4,9 @@ import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as EffectHydration from "effect/reactivity/Hydration";
 import * as React from "react";
 
-import * as Hydration from "../hydration.ts";
-import * as Loader from "../loader.ts";
-import * as RequestRegistry from "../request-registry.ts";
+import * as Hydration from "../Hydration.ts";
+import * as Loader from "../Loader.ts";
+import * as RequestRegistry from "../RequestRegistry.ts";
 
 // Server components evaluate this module, so it must not import
 // `@effect/atom-react`, which needs React's client APIs.

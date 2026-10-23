@@ -6,7 +6,7 @@ import * as Schema from "effect/Schema";
 import * as React from "react";
 
 import { Loader, useAtomResult } from "../src/index.ts";
-import { HydrateAtoms, RegistryProvider } from "../src/next.ts";
+import { HydrateAtoms, RegistryProvider } from "../src/Next.ts";
 import { settle } from "./fixtures/browser.tsx";
 import { issue, IssueNotFound, serve } from "./fixtures/issues.ts";
 import { load } from "./fixtures/server.ts";

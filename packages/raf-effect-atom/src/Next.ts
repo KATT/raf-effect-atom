@@ -14,8 +14,8 @@ import type * as Atom from "effect/reactivity/Atom";
 import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as EffectHydration from "effect/reactivity/Hydration";
 
-import * as internal from "./internal/next-server.ts";
-import type * as Loader from "./loader.ts";
+import * as internal from "./internal/next.ts";
+import type * as Loader from "./Loader.ts";
 
 export {
 	/**
@@ -26,7 +26,7 @@ export {
 	 * @since 0.1.0
 	 */
 	RegistryProvider,
-} from "./next-client.tsx";
+} from "./NextClient.tsx";
 
 /**
  * Returns the request registry of the server render in progress.

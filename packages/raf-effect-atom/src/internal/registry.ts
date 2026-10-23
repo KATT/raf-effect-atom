@@ -1,7 +1,7 @@
 import { scheduleTask } from "@effect/atom-react";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 
-import * as RequestRegistry from "../request-registry.ts";
+import * as RequestRegistry from "../RequestRegistry.ts";
 
 export const isServer = (): boolean => !("window" in globalThis);
 

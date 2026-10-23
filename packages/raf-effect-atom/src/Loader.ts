@@ -32,10 +32,10 @@ import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 
-import { hydrated } from "./hydration.ts";
+import { hydrated } from "./Hydration.ts";
 import { isDevelopment } from "./internal/development.ts";
 import * as Leases from "./internal/leases.ts";
-import { isRequestRegistry } from "./request-registry.ts";
+import { isRequestRegistry } from "./RequestRegistry.ts";
 
 /**
  * A settled `AsyncResult`: what `ensure` and `fetch` return.

@@ -14,13 +14,13 @@ import type * as Atom from "effect/reactivity/Atom";
 import type { ClaimedResult, ErrorBoundaryClaims } from "effect-atom-boundary";
 import * as React from "react";
 
-import { hydrated } from "./hydration.ts";
+import { hydrated } from "./Hydration.ts";
 import { isDevelopment } from "./internal/development.ts";
 import * as Leases from "./internal/leases.ts";
 import * as Pending from "./internal/pending.ts";
 import * as Registry from "./internal/registry.ts";
-import type { SettledResult } from "./loader.ts";
-import { isRequestRegistry } from "./request-registry.ts";
+import type { SettledResult } from "./Loader.ts";
+import { isRequestRegistry } from "./RequestRegistry.ts";
 
 /**
  * Reads an `AsyncResult` atom through React Suspense: a result streamed from

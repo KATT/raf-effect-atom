@@ -34,8 +34,8 @@
 	"sideEffects": false,
 	"exports": {
 		".": "./src/index.ts",
-		"./next": "./src/next.ts",
-		"./tanstack-router": "./src/tanstack-router.tsx"
+		"./next": "./src/Next.ts",
+		"./tanstack-router": "./src/TanStackRouter.tsx"
 	},
 	"scripts": {
 		"build": "vp pack",
@@ -82,8 +82,8 @@
 		"access": "public",
 		"exports": {
 			".": "./dist/index.mjs",
-			"./next": "./dist/next.mjs",
-			"./tanstack-router": "./dist/tanstack-router.mjs"
+			"./next": "./dist/Next.mjs",
+			"./tanstack-router": "./dist/TanStackRouter.mjs"
 		},
 		"provenance": true
 	}

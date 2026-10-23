@@ -35,9 +35,9 @@ import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as EffectHydration from "effect/reactivity/Hydration";
 import * as React from "react";
 
-import * as Hydration from "./hydration.ts";
+import * as Hydration from "./Hydration.ts";
 import * as Registry from "./internal/registry.ts";
-import * as RequestRegistry from "./request-registry.ts";
+import * as RequestRegistry from "./RequestRegistry.ts";
 
 /**
  * The key `setupRouterAtoms` adds to the router's dehydrated state.
