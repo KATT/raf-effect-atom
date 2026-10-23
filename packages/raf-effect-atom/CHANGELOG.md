@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.6...raf-effect-atom%400.3.0) (2026-10-23)
+
+### ⚠ BREAKING CHANGES
+
+- **raf-effect-atom:** `raf-effect-atom/next` is `raf-effect-atom/rsc`, without `dehydrate`; write `<HydrationBoundary registry={getRegistry()}>` from `raf-effect-atom` instead of `<HydrateAtoms state={await dehydrate()}>`, and import `RegistryProvider` from `raf-effect-atom`.
+
+### Features
+
+- **raf-effect-atom:** import HydrationBoundary from raf-effect-atom in server components, and the RSC verbs from raf-effect-atom/rsc ([bf7fdbc](https://github.com/KATT/raf-effect-atom/commit/bf7fdbcde2e9f785bd276a08117aefa359051b82))
+
 ## [0.2.6](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.5...raf-effect-atom%400.2.6) (2026-10-23)
 
 ### Features
