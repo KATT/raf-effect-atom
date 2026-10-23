@@ -12,7 +12,7 @@ Every page arrives with its data in the HTML: the route's loader starts the page
 
 ## How to get to it (user POV)
 
-- Open any URL directly (address bar, reload, or a shared link). Client-side navigations call `/rpc` from the browser instead (React Router: they request the next page's `<path>.data` from the server, which runs the loaders; see Gotchas).
+- Open any URL directly (address bar, reload, or a shared link). Client-side navigations call `/rpc` from the browser instead.
 
 ## Driving it with control-examples
 
@@ -32,7 +32,7 @@ React puts `<!-- -->` between text parts, so strip those before grepping.
 ## Gotchas
 
 - `/issues` redirects to `/prefetch/issues`, which adds `?sort=newest&status=all` on TanStack Start; use `curl -L`. React Router leaves the defaults out of the URL.
-- React Router: every navigation, not only the first page, runs the route's loaders on the server, in a new request registry, and returns the dehydrated atoms as `<path>.data` (Single Fetch). So the browser's `/rpc` calls are only what no loader starts: `Load more` pages and writes. "To see that the filter catches data requests" there, press `Load more`.
+- React Router: only the first page's loaders run on the server, in the request's registry, and stream their atoms in with the HTML. Each route exports the same function as its `clientLoader`, so later navigations run it in the browser's registry and its atoms call `/rpc`. The root's loader, which reads the settings cookies, doesn't revalidate, so no navigation requests `<path>.data`.
 - Next.js: likewise, every navigation renders the next page's server components on the server, in a new request registry, and the browser gets their payload from a request with an `_rsc` search parameter. The browser's `/rpc` calls are only `Load more` pages and writes; clicking `Issues` in **No refetch on hydrate** shows the list's second page.
 - React Router: React's server renderer outlines a finished section once the HTML before it passes 12.8 KB (`progressiveChunkSize`), and this app's shell is past that by the first section. A section whose data was ready still arrives as a skeleton followed by its content, later in the same response. The streaming check holds; don't read skeletons in the HTML as data the server didn't have (see [loader verb](loader-verb.md)).
 - The browser posts to `/rpc/`, with a trailing slash. Match with `startsWith("/rpc")`: an exact `=== "/rpc"` never fires and passes for the wrong reason. Next.js redirects `/rpc/` to `/rpc` (308), so its browser posts to `/rpc`.

@@ -227,7 +227,7 @@ The verbs keep raf-query's names: `prefetch`, `ensure`, `fetch`. Effect-flavoure
 
 - Every verb takes a **lease**: `registry.mount(atom)`, released when a component mounts the atom (the read hook takes over) or after a lease TTL (30 s default), so the 400 ms idle TTL can't evict a loader's atom before its route renders.
 - Typed failures **don't reject**: `ensure` and `fetch` return the `AsyncResult`, so a loader can `redirect` / `notFound` on a tag with `AsyncResult.match`, and otherwise the failure renders through a boundary. Only defects reject.
-- **On the server** every request has its own registry, so `ensure` waits like `fetch` and nothing revalidates in the background. Server-only code (Next.js server components, React Router server loaders) uses `prefetch` to stream and `ensure` to block.
+- **On the server** every request has its own registry, so `ensure` waits like `fetch` and nothing revalidates in the background. Server-only code (Next.js server components, and React Router loaders on the first page) uses `prefetch` to stream and `ensure` to block.
 - The core is Effect (`Loader.prefetch(atom): Effect<void, never, AtomRegistry>` and so on); the integrations expose the same verbs as Promises on the router context, because loaders are async functions.
 
 ```ts

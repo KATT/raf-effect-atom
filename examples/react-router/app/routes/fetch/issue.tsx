@@ -7,7 +7,7 @@ import { parseIssueId } from "~/params.ts";
 
 import type { Route } from "./+types/issue";
 
-export async function loader(args: Route.LoaderArgs) {
+async function load(args: Route.LoaderArgs) {
 	const issueId = parseIssueId(args.params.issueId);
 	const atoms = args.context.get(atomsContext);
 	// The assignee and the comments stream in; the page waits for a fresh
@@ -19,6 +19,11 @@ export async function loader(args: Route.LoaderArgs) {
 	};
 	return { atoms: atoms.dehydrate(), handles, issueId };
 }
+
+export const loader = load;
+// After the first page, the same loader runs in the browser, over its
+// registry.
+export const clientLoader = load;
 
 export default function Page(props: Route.ComponentProps) {
 	return (

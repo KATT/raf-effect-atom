@@ -10,7 +10,7 @@ import type { Route } from "./+types/issues.$id";
 
 // #region hero
 // #region loader
-export async function loader({ context, params }: Route.LoaderArgs) {
+async function load({ context, params }: Route.LoaderArgs) {
 	const id = Schema.decodeSync(IssueIdFromString)(params.id);
 	const atoms = context.get(atomsContext);
 	const handles = {
@@ -22,6 +22,11 @@ export async function loader({ context, params }: Route.LoaderArgs) {
 	// The registry's results go to the browser, still-loading ones as promises.
 	return { atoms: atoms.dehydrate(), handles };
 }
+
+// The first page loads on the server; after it, the same function runs in
+// the browser, where `ensure` finds what the registry already holds.
+export const loader = load;
+export const clientLoader = load;
 
 export default function Page({ loaderData }: Route.ComponentProps) {
 	return (

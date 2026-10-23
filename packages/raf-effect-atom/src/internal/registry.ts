@@ -22,3 +22,22 @@ export const make = (options?: {
 				defaultIdleTTL: options?.defaultIdleTTL ?? defaultIdleTTL,
 				scheduleTask,
 			});
+
+let mounted: AtomRegistry.AtomRegistry | undefined;
+
+/**
+ * Records the browser registry a `RegistryProvider` provides while it's
+ * mounted, for code outside React, such as React Router's client
+ * middleware. Returns the cleanup that forgets it.
+ */
+export const mount = (registry: AtomRegistry.AtomRegistry): (() => void) => {
+	mounted = registry;
+	return () => {
+		if (mounted === registry) {
+			mounted = undefined;
+		}
+	};
+};
+
+/** The browser registry of the mounted `RegistryProvider`, if one is. */
+export const current = (): AtomRegistry.AtomRegistry | undefined => mounted;

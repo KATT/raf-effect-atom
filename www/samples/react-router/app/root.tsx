@@ -1,6 +1,7 @@
 import { WaterfallDetection } from "raf-effect-atom";
 import {
 	atomsMiddleware,
+	clientAtomsMiddleware,
 	RegistryProvider,
 } from "raf-effect-atom/react-router";
 import type { ReactNode } from "react";
@@ -15,6 +16,10 @@ import type { Route } from "./+types/root";
 // Gives each server request its own registry, which every loader reads.
 export const middleware: Array<Route.MiddlewareFunction> = [
 	atomsMiddleware(atomsContext),
+];
+// Gives client loaders the browser's registry, under the same context.
+export const clientMiddleware: Array<Route.ClientMiddlewareFunction> = [
+	clientAtomsMiddleware(atomsContext),
 ];
 
 export function Layout({ children }: { children: ReactNode }) {

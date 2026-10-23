@@ -389,8 +389,9 @@ const stepsByMode = {
 					<code>atomsMiddleware</code> gives each server request its own
 					registry, under a router context every loader reads. In the browser,
 					the root’s <code>RegistryProvider</code> holds the registry each
-					route’s <code>HydrationBoundary</code> fills. The root also turns on{" "}
-					<code>WaterfallDetection</code> and catches{" "}
+					route’s <code>HydrationBoundary</code> fills, and{" "}
+					<code>clientAtomsMiddleware</code> hands it to client loaders. The
+					root also turns on <code>WaterfallDetection</code> and catches{" "}
 					<code>RpcClientError</code> and <code>Unauthorized</code> once, for
 					every page.
 				</p>
@@ -405,9 +406,10 @@ const stepsByMode = {
 			body: (
 				<>
 					<p>
-						React Router runs the loader on the server as soon as a navigation
-						starts. Every atom the page needs starts there, at the same time,
-						before anything renders.
+						React Router runs the loader as soon as a navigation starts: on the
+						server for the first page, and in the browser after that, as the
+						route’s <code>clientLoader</code>. Every atom the page needs starts
+						there, at the same time, before anything renders.
 					</p>
 					<p>
 						<code>prefetch</code> starts an atom without waiting, and{" "}
