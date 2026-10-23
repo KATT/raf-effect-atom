@@ -4,15 +4,14 @@ import { type Handle, useAtomResult } from "raf-effect-atom";
 import { Suspense } from "react";
 
 import { IssueBoundary, useIssueBoundary } from "~/boundaries.tsx";
-import { assignee, issue, IssueIdFromString } from "~/issues.ts";
+import { assignee, issue, IssueParams } from "~/issues.ts";
 
 // #region hero
 // #region route
 export const Route = createFileRoute("/issues/$id")({
 	params: {
-		parse: (params) => ({
-			id: Schema.decodeSync(IssueIdFromString)(params.id),
-		}),
+		parse: (params) => Schema.decodeUnknownSync(IssueParams)(params),
+		stringify: Schema.encodeSync(IssueParams),
 	},
 	loader: async ({ context, params }) => ({
 		// Starts the assignee; it streams in while the page renders.

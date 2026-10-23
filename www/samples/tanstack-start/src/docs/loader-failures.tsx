@@ -3,14 +3,13 @@ import { Option, Predicate, Schema } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import { Loader } from "raf-effect-atom";
 
-import { issue, IssueIdFromString } from "~/issues.ts";
+import { issue, IssueParams } from "~/issues.ts";
 
 // #region not-found
 export const Route = createFileRoute("/issues/$id")({
 	params: {
-		parse: (params) => ({
-			id: Schema.decodeSync(IssueIdFromString)(params.id),
-		}),
+		parse: (params) => Schema.decodeUnknownSync(IssueParams)(params),
+		stringify: Schema.encodeSync(IssueParams),
 	},
 	loader: async ({ context, params }) => {
 		const handle = await context.atoms.ensure(issue, params.id);

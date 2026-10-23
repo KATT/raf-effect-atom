@@ -32,6 +32,8 @@ tanstack-start/src/routes/__root.tsx#root
 tanstack-start/src/routes/issues.$id.tsx#route
 ```
 
+[`params.parse`](https://tanstack.com/router/latest/docs/framework/react/api/router/RouteOptionsType#params-parse-method) decodes `$id` with a [Schema](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/Schema.ts) built on the contract's `IssueId`, the one the RPCs decode with, and [`params.stringify`](https://tanstack.com/router/latest/docs/framework/react/api/router/RouteOptionsType#params-stringify-method) encodes it back. The loader, the page and links all take an `IssueId`, and an `$id` that isn't one goes to the route's error component.
+
 Only atoms in the registry when the loaders finish are sent to the browser. An atom first read during render runs again there, so start every atom a page reads from its loader.
 
 With `defaultPreload: "intent"`, hovering a link runs its loader, so the atoms start before the click.
