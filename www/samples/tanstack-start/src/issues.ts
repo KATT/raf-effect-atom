@@ -11,6 +11,7 @@ export const IssueIdFromString = Schema.NumberFromString.pipe(
 // #region atoms
 // A serialization key lets the server send the result to the browser.
 export const issue = (id: IssueId) =>
+	//          ^?
 	IssuesClient.query("GetIssue", { id }, { serializationKey: `${id}` });
 
 export const assignee = (issueId: IssueId) =>

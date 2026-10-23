@@ -1,5 +1,6 @@
 import type { IssueId } from "@examples/contract";
-import { Effect } from "effect";
+import { notFound } from "@tanstack/react-router";
+import { Effect, Match, Option } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import { Loader } from "raf-effect-atom";
 
@@ -21,8 +22,20 @@ await atoms.fetch(issue(id));
 // #endregion verbs
 
 // #region match
-if (AsyncResult.isFailure(result)) {
-	// The typed failure is in the result; the loader decides what to do.
+const error = AsyncResult.error(result);
+//    ^?
+if (Option.isSome(error)) {
+	// One case per tag the atom can fail with; a missing one doesn't compile.
+	Match.valueTags(error.value, {
+		IssueNotFound: () => {
+			throw notFound();
+		},
+		// Left in the result: <AuthBoundary> catches it when the page reads
+		// the atom.
+		Unauthorized: () => undefined,
+		// Left in the result: the page renders it.
+		RpcClientError: () => undefined,
+	});
 }
 // #endregion match
 

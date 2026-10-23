@@ -3,7 +3,7 @@ import { Button } from "@examples/ui/components/button";
 import { Skeleton } from "@examples/ui/components/skeleton";
 import { cn } from "@examples/ui/lib/utils";
 import { IssueId } from "@examples/contract";
-import { type Cause, Option } from "effect";
+import { Option } from "effect";
 import {
 	AsyncResult,
 	Atom,
@@ -26,7 +26,7 @@ import {
 	serverEventsAtom,
 	setLatency,
 } from "~/demo-kit/client.ts";
-import { ErrorNotice } from "~/demo-kit/controls.tsx";
+import { IssueFailure } from "~/demo-kit/issue-failure.tsx";
 import { defineDemo } from "~/demo-kit/define.ts";
 import { useNow } from "~/demo-kit/now.ts";
 import {
@@ -38,7 +38,6 @@ import {
 import {
 	type AtomPhase,
 	atomTracksAtom,
-	failureOf,
 	phaseOf,
 	requestsAtom,
 	type TracedRequest,
@@ -354,11 +353,7 @@ function SentState(props: { readonly load: PageLoad }) {
 function IssueHeading(props: { readonly load: number }) {
 	const result = useAtomResult(pageAtoms(props.load).issue);
 	if (AsyncResult.isFailure(result)) {
-		return (
-			<ErrorNotice caughtBy="the page" type={failureTag(result.cause)}>
-				The issue didn’t load.
-			</ErrorNotice>
-		);
+		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
 	return (
 		<div className="grid gap-0.5">
@@ -372,21 +367,15 @@ function IssueHeading(props: { readonly load: number }) {
 
 function Assignee(props: { readonly load: number }) {
 	const result = useAtomResult(pageAtoms(props.load).assignee);
+	if (AsyncResult.isFailure(result)) {
+		return <IssueFailure caughtBy="the assignee" failure={result} />;
+	}
 	return (
 		<p className="text-xs text-muted-foreground">
 			Assigned to{" "}
-			<span className="font-medium text-foreground">
-				{AsyncResult.isSuccess(result)
-					? result.value.name
-					: failureTag(result.cause)}
-			</span>
+			<span className="font-medium text-foreground">{result.value.name}</span>
 		</p>
 	);
-}
-
-function failureTag(cause: Cause.Cause<unknown>) {
-	const outcome = failureOf(cause);
-	return outcome.status === "failure" ? outcome.error : "unknown";
 }
 
 function BrowserPage(props: { readonly load: PageLoad }) {

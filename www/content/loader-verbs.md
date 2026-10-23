@@ -31,6 +31,8 @@ loader-verbs
 
 `ensure` and `fetch` don't reject on a typed failure: they return the `AsyncResult`, so the loader can decide what a failure means, and otherwise the page renders it through a boundary. Only a defect or an interruption rejects.
 
+The result's error type lists every tag the atom can fail with, so a loader can decide tag by tag. [`Match.valueTags`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/Match.ts) takes one handler per tag, and doesn't compile when one is missing.
+
 ```sample
 tanstack-start/src/docs/loader-verbs.ts#match
 ```

@@ -14,6 +14,9 @@ export const Route = createFileRoute("/issues/$id")({
 	loader: async ({ context, params }) => {
 		const result = await context.atoms.ensure(issue(params.id));
 		const error = AsyncResult.error(result);
+		//    ^?
+		// Only IssueNotFound becomes a 404. Unauthorized and RpcClientError
+		// stay in the result, for the page to read.
 		if (
 			Option.isSome(error) &&
 			Predicate.isTagged(error.value, "IssueNotFound")

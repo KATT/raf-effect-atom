@@ -15,8 +15,8 @@ import { useAtomResult } from "raf-effect-atom";
 import { Suspense, useState } from "react";
 
 import { IssuesClient } from "~/demo-kit/client.ts";
-import { ErrorNotice } from "~/demo-kit/controls.tsx";
 import { defineDemo } from "~/demo-kit/define.ts";
+import { IssueFailure } from "~/demo-kit/issue-failure.tsx";
 import { useNow, useReducedMotion } from "~/demo-kit/now.ts";
 import {
 	BrowserWindow,
@@ -25,12 +25,11 @@ import {
 	navigationsAtom,
 	useDemoRouter,
 } from "~/demo-kit/router.tsx";
-import { formatMs, phaseText, stateFill } from "~/demo-kit/state.tsx";
+import { formatMs, stateFill } from "~/demo-kit/state.tsx";
 import {
 	type AtomPhase,
 	type AtomTrack,
 	atomTracksAtom,
-	failureOf,
 } from "~/demo-kit/trace.ts";
 
 const verbs = ["prefetch", "ensure", "fetch"] as const;
@@ -84,14 +83,7 @@ function IssueContent(props: {
 }) {
 	const result = useAtomResult(props.atom);
 	if (AsyncResult.isFailure(result)) {
-		return (
-			<ErrorNotice
-				caughtBy="the page"
-				type={phaseText(failureOf(result.cause))}
-			>
-				The issue didn’t load.
-			</ErrorNotice>
-		);
+		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
 	const issue = result.value;
 	return (
