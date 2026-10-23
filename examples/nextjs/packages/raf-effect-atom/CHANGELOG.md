@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.1](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.0...raf-effect-atom%400.2.1) (2026-10-23)
+
+### Features
+
+- **raf-effect-atom:** run React Router loaders in the browser after the first page ([bee00a9](https://github.com/KATT/raf-effect-atom/commit/bee00a981fd24fcdc9d746053dcd73dbc7ebc853)), references [#41](https://github.com/KATT/raf-effect-atom/issues/41) [#41](https://github.com/KATT/raf-effect-atom/issues/41)
+
 ## [0.2.0](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.1.0...raf-effect-atom%400.2.0) (2026-10-23)
 
 ### ⚠ BREAKING CHANGES
