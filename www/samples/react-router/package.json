@@ -1,0 +1,35 @@
+{
+	"name": "@samples/react-router",
+	"version": "0.0.0",
+	"private": true,
+	"description": "The React Router Framework Mode app the docs' code blocks are written against: the shared RPC contract, served from a resource route",
+	"type": "module",
+	"imports": {
+		"#rpc-transport": {
+			"browser": "./app/rpc-transport.ts",
+			"default": "./app/rpc-transport.server.ts"
+		}
+	},
+	"scripts": {
+		"typecheck": "react-router typegen && tsc"
+	},
+	"dependencies": {
+		"@effect/atom-react": "4.0.6",
+		"@examples/backend": "workspace:*",
+		"@examples/contract": "workspace:*",
+		"effect": "catalog:",
+		"effect-atom-boundary": "workspace:*",
+		"raf-effect-atom": "workspace:*",
+		"react": "19.3.1",
+		"react-dom": "19.3.1",
+		"react-router": "8.5.0"
+	},
+	"devDependencies": {
+		"@react-router/dev": "8.5.0",
+		"@types/node": "24.19.2",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"typescript": "7.0.2",
+		"vite": "8.3.5"
+	}
+}

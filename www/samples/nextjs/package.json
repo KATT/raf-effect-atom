@@ -1,0 +1,29 @@
+{
+	"name": "@samples/nextjs",
+	"version": "0.0.0",
+	"private": true,
+	"description": "The Next.js App Router app the docs' code blocks are written against: the shared RPC contract, served from a route handler",
+	"type": "module",
+	"imports": {
+		"#rpc-transport": {
+			"react-server": "./src/rpc-transport.server.ts",
+			"default": "./src/rpc-transport.ts"
+		}
+	},
+	"scripts": {
+		"typecheck": "tsc"
+	},
+	"dependencies": {
+		"@effect/atom-react": "4.0.6",
+		"@examples/backend": "workspace:*",
+		"@examples/contract": "workspace:*",
+		"effect": "catalog:",
+		"effect-atom-boundary": "workspace:*",
+		"raf-effect-atom": "workspace:*",
+		"react": "19.3.1"
+	},
+	"devDependencies": {
+		"@types/react": "19.3.0",
+		"typescript": "7.0.2"
+	}
+}

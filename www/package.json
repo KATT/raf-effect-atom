@@ -33,6 +33,8 @@
 		"@effect/platform-node": "catalog:",
 		"@effect/vitest": "catalog:",
 		"@rolldown/plugin-babel": "0.2.4",
+		"@samples/nextjs": "workspace:*",
+		"@samples/react-router": "workspace:*",
 		"@samples/tanstack-start": "workspace:*",
 		"@shikijs/rehype": "4.5.0",
 		"@shikijs/twoslash": "4.5.0",
