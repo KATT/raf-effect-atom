@@ -4,10 +4,12 @@ import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Option from "effect/Option";
+import * as Predicate from "effect/Predicate";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import * as EffectHydration from "effect/reactivity/Hydration";
+import * as Schema from "effect/Schema";
 
 import { Hydration, Loader, RequestRegistry } from "../src/index.ts";
 import {
@@ -307,6 +309,46 @@ describe("request registries", () => {
 			assert.strictEqual(server.requests(2), 1);
 		}).pipe(Effect.provide(RequestRegistry.layer)),
 	);
+
+	it("follow Atom.swr to the keyed atom it wraps, which picks a seed or a live query", async () => {
+		let requests = 0;
+		const live = Atom.make(
+			Effect.sync(() => {
+				requests += 1;
+				return "live";
+			}),
+		);
+		const view = (seed: Option.Option<string>) =>
+			Atom.readable((get) =>
+				Option.isSome(seed) ? AsyncResult.success(seed.value) : get(live),
+			).pipe(
+				Atom.serializable({
+					key: "view",
+					schema: AsyncResult.Schema({ success: Schema.String }),
+				}),
+				Atom.setIdleTTL("1 minute"),
+				Atom.swr({ staleTime: "1 minute" }),
+			);
+		const sent = async (seed: Option.Option<string>) => {
+			using registry = disposable(RequestRegistry.make());
+			const handle = await Loader.make(registry).ensure(view(seed));
+			assert.strictEqual(handle.key, "view");
+			return EffectHydration.toValues(Hydration.dehydrate(registry)).map(
+				(entry) => [
+					entry.key,
+					Predicate.hasProperty(entry.value, "value")
+						? entry.value.value
+						: undefined,
+				],
+			);
+		};
+		assert.deepStrictEqual(await sent(Option.some("seeded")), [
+			["view", "seeded"],
+		]);
+		assert.strictEqual(requests, 0);
+		assert.deepStrictEqual(await sent(Option.none()), [["view", "live"]]);
+		assert.strictEqual(requests, 1);
+	});
 
 	it.live("refuse a derived atom that points at nothing serializable", () =>
 		Effect.gen(function* () {
