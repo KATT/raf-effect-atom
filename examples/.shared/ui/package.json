@@ -28,8 +28,8 @@
 		"typescript": "7.0.2"
 	},
 	"peerDependencies": {
-		"react": "19.2.0",
-		"react-dom": "19.2.0"
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0"
 	},
 	"dependencies": {
 		"@base-ui/react": "1.9.0",
