@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 export default {
+	// Otherwise `next dev` writes `AGENTS.md` here whenever it detects a coding
+	// agent. The repo's root `AGENTS.md` covers this app.
+	agentRules: false,
 	// `bundle-check` reads which modules the browser gets from the client
 	// build's source maps.
 	productionBrowserSourceMaps: true,
