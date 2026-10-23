@@ -36,10 +36,7 @@ export const make = <Tags extends string>(
 			if (Option.isNone(error) || !owns(error.value)) {
 				return result;
 			}
-			FailedReads.record(error.value, {
-				atom: source,
-				registry: get.registry,
-			});
+			FailedReads.record(get.registry, error.value, source);
 			return AsyncResult.failure(Cause.die(error.value), {
 				previousSuccess: result.previousSuccess,
 				waiting: result.waiting,

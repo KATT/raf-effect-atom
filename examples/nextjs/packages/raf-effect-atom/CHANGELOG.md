@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.0](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.1.0...raf-effect-atom%400.2.0) (2026-10-23)
+
+### ⚠ BREAKING CHANGES
+
+- **raf-effect-atom:** `dehydrate()` from `raf-effect-atom/next` returns a
+
+### Features
+
+- **raf-effect-atom:** seed each request registry, async seeds included ([62b6180](https://github.com/KATT/raf-effect-atom/commit/62b618098df87e711ddb4c1d633e191ba3353438))
+
 ## 0.1.0 (2026-10-23)
 
 ### ⚠ BREAKING CHANGES

@@ -125,7 +125,7 @@ interface CatcherProps {
 	// oxlint-disable-next-line typescript/no-explicit-any -- any atom's result
 	readonly own?: Atom.Atom<any> | undefined;
 	readonly registry: AtomRegistry.AtomRegistry;
-	/** Refreshes what failed, in the registry of the read that threw. */
+	/** Refreshes what failed in `registry`, the boundary's. */
 	readonly reset: (registry: AtomRegistry.AtomRegistry) => void;
 }
 
@@ -166,9 +166,10 @@ class Catcher extends React.Component<CatcherProps, CatcherState> {
 		}
 		const error = caught.error;
 		const own = this.props.own;
-		const read = FailedReads.get(error);
+		const registry = this.props.registry;
+		const failed = FailedReads.get(registry, error);
 		const Handler =
-			own !== undefined && read !== undefined && read.atom !== own
+			own !== undefined && failed !== undefined && failed !== own
 				? undefined
 				: handlerFor(this.props.handlers, error);
 		if (Handler === undefined) {
@@ -183,7 +184,7 @@ class Catcher extends React.Component<CatcherProps, CatcherState> {
 			<Handler
 				error={claimed}
 				reset={() => {
-					this.props.reset(read?.registry ?? this.props.registry);
+					this.props.reset(registry);
 					this.setState({ caught: undefined });
 				}}
 			/>
@@ -236,8 +237,10 @@ const claimEvery = Wrap.make<string>(
  * **Gotchas**
  *
  * A failure without a handler, or one thrown by a read of another atom, goes
- * to the error boundaries above. A handler renders as a component: one written
- * inline mounts again, losing its state, each time the parent renders.
+ * to the error boundaries above. `reset` refreshes the atom in the registry
+ * the boundary renders in, not in a `RegistryContext` provided under it. A
+ * handler renders as a component: one written inline mounts again, losing its
+ * state, each time the parent renders.
  *
  * **Example** (Catching a missing issue)
  *
@@ -421,8 +424,9 @@ const isMounted = (at: Mounted | undefined, boundary: Internal): boolean => {
  * of `errors`' error type, so a misspelled tag is a type error and each
  * handler's `error` is typed.
  *
- * A handler's `reset` refreshes every atom in the registry whose settled
- * failure has a tag this boundary handles, not only the one whose read threw:
+ * A handler's `reset` refreshes every atom in the registry the boundary
+ * renders in whose settled failure has a tag this boundary handles, not only
+ * the one whose read threw:
  * one outage fails every atom on the page, and an atom that fails after the
  * handler replaced the children throws to no boundary.
  *
