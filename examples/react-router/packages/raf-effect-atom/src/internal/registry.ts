@@ -45,6 +45,8 @@ export const make = (options?: {
 				scheduleTask,
 			});
 
+// Set only from `RegistryProvider`'s effect, which never runs during server
+// rendering, so it never holds a request's registry.
 let mounted: AtomRegistry.AtomRegistry | undefined;
 
 /**
