@@ -499,6 +499,7 @@
 			"files": [
 				"examples/*/src/**/*.{ts,tsx}",
 				"examples/*/app/**/*.{ts,tsx}",
+				"examples/.shared/*/src/**/*.{ts,tsx}",
 				"www/samples/*/src/**/*.{ts,tsx}",
 				"www/samples/react-router*/app/**/*.{ts,tsx}"
 			],
@@ -507,6 +508,48 @@
 				"react/no-unstable-nested-components": "off",
 				"react/rules-of-hooks": "off",
 				"workspace/infer-callback-params": "off"
+			}
+		},
+		{
+			// Code that ships to the browser imports the RPC contract, never the
+			// backend or the db (.agent-docs/decisions/contract-split.md).
+			"files": [
+				"examples/*/src/**",
+				"examples/*/app/**",
+				"examples/.shared/ui/**",
+				"examples/.shared/kit/**",
+				"www/src/**",
+				"www/samples/*/src/**",
+				"www/samples/*/app/**"
+			],
+			"rules": {
+				"workspace/no-server-imports": [
+					"error",
+					{ "sources": ["@examples/backend", "@examples/db"] }
+				]
+			}
+		},
+		{
+			// Server-only modules (each app's RPC route and the server variant of
+			// `#rpc-transport`) are `*.server.ts`, which the frameworks keep out
+			// of client bundles.
+			"files": ["**/*.server.ts", "**/*.server.tsx"],
+			"rules": {
+				"workspace/no-server-imports": "off"
+			}
+		},
+		{
+			// The contract ships to the browser: Effect only, no Node, no other
+			// workspace package.
+			"files": ["examples/.shared/contract/**"],
+			"rules": {
+				"workspace/no-server-imports": [
+					"error",
+					{
+						"reason": "the contract ships to the browser, so it depends on `effect` only.",
+						"sources": ["node:*", "@effect/platform-node*", "@examples/*"]
+					}
+				]
 			}
 		},
 		{

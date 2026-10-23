@@ -7,6 +7,7 @@ import { noCustomTestTimeout } from "./no-custom-test-timeout.ts";
 import { noManualMemoization } from "./no-manual-memoization.ts";
 import { noMock } from "./no-mock.ts";
 import { noOverzealousDestructuring } from "./no-overzealous-destructuring.ts";
+import { noServerImports } from "./no-server-imports.ts";
 import { noUseEffect } from "./no-use-effect.ts";
 import { noUseMemberAccess } from "./no-use-member-access.ts";
 
@@ -22,6 +23,7 @@ const plugin = eslintCompatPlugin({
 		"no-manual-memoization": noManualMemoization,
 		"no-mock": noMock,
 		"no-overzealous-destructuring": noOverzealousDestructuring,
+		"no-server-imports": noServerImports,
 		"no-use-effect": noUseEffect,
 		"no-use-member-access": noUseMemberAccess,
 	},
