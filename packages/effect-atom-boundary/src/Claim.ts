@@ -59,6 +59,18 @@ export type SettledResult<A, E> =
 	| AsyncResult.Success<A, E>;
 
 /**
+ * The errors of `E` whose `_tag` isn't in `Tags`.
+ *
+ * @stability unstable
+ * @category utility types
+ * @since 0.1.0
+ */
+export type Unclaimed<E, Tags extends string> = Exclude<
+	E,
+	{ readonly _tag: Tags }
+>;
+
+/**
  * An atom's settled result without the errors whose `_tag` is in `Tags`.
  *
  * @stability unstable
@@ -117,6 +129,13 @@ export interface ErrorBoundaryClaims<
 	) => ClaimedResult<A, E, Tags>;
 	/** Returns whether this boundary or one above it claims `error`. */
 	readonly owns: (error: unknown) => boolean;
+	/**
+	 * Returns the atom with the claimed failures turned into defects, so a
+	 * read throws them to the boundary that claims them, typed without them.
+	 */
+	readonly wrap: <A, E>(
+		atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
+	) => Atom.Atom<AsyncResult.AsyncResult<A, Unclaimed<E, Tags>>>;
 }
 
 /**

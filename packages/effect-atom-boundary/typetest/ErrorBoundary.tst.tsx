@@ -54,6 +54,12 @@ describe("AtomErrorBoundary", () => {
 		/>;
 	});
 
+	it("claims every typed failure of the atom it wraps", () => {
+		expect(AtomErrorBoundary.claim(issue(1))).type.toBe<
+			Atom.Atom<AsyncResult.AsyncResult<Issue, never>>
+		>();
+	});
+
 	it("rejects a misspelled tag", () => {
 		<AtomErrorBoundary
 			atom={issue(1)}
@@ -145,6 +151,26 @@ describe("createErrorBoundary", () => {
 			errors: issue,
 			name: "Issue",
 		});
+	});
+
+	it("wraps an atom into one typed without the claimed errors", () => {
+		expect(useAuthBoundary().wrap(issue(1))).type.toBe<
+			Atom.Atom<
+				AsyncResult.AsyncResult<
+					Issue,
+					Tagged<IssueError, "IssueNotFound" | "RpcClientError">
+				>
+			>
+		>();
+		expect(useAuthBoundary().wrap(user("a"))).type.toBe<
+			Atom.Atom<AsyncResult.AsyncResult<string, UserError>>
+		>();
+	});
+
+	it("rejects an atom that isn't an AsyncResult", () => {
+		expect(useAuthBoundary().wrap).type.not.toBeCallableWith(
+			hole<Atom.Atom<number>>(),
+		);
 	});
 
 	it("narrows a read under it to the unclaimed errors", () => {

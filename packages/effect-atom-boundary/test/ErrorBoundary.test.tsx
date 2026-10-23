@@ -1,6 +1,11 @@
-import { RegistryContext, scheduleTask } from "@effect/atom-react";
+import {
+	RegistryContext,
+	scheduleTask,
+	useAtomSuspense,
+} from "@effect/atom-react";
 import { describe, expect, it, vi } from "@effect/vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import * as Cause from "effect/Cause";
 import * as Option from "effect/Option";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
 import type * as Atom from "effect/reactivity/Atom";
@@ -14,7 +19,6 @@ import {
 	type CatchTags,
 	claim,
 	createErrorBoundary,
-	useAtomResult,
 } from "../src/index.ts";
 import { CompiledNotFound, type IssueNotFound } from "./fixtures/Handlers.tsx";
 import { issue, Issues, serve } from "./fixtures/Issues.ts";
@@ -38,13 +42,35 @@ const [AuthBoundary, useAuthBoundary] = createErrorBoundary({
 	parent: OfflineBoundary,
 });
 
+/**
+ * A read like `raf-effect-atom`'s `useAtomResult`: suspends, returns typed
+ * failures and throws defects.
+ */
+const useRead = <A, E>(
+	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
+): AsyncResult.Success<A, E> | AsyncResult.Failure<A, E> => {
+	const result = useAtomSuspense(atom, {
+		includeFailure: true,
+		suspendOnWaiting: true,
+	});
+	if (
+		AsyncResult.isFailure(result) &&
+		Option.isNone(Cause.findErrorOption(result.cause))
+	) {
+		throw Cause.squash(result.cause);
+	}
+	return result;
+};
+
 function Title(props: { readonly id: number }) {
-	const result = useAtomResult(issue(props.id));
+	const result = useAtomSuspense(AtomErrorBoundary.claim(issue(props.id)), {
+		suspendOnWaiting: true,
+	});
 	return <p>{result.value.title}</p>;
 }
 
 function ClaimedTitle(props: { readonly id: number }) {
-	const result = useAtomResult(issue(props.id), useAuthBoundary());
+	const result = useRead(useAuthBoundary().wrap(issue(props.id)));
 	if (AsyncResult.isSuccess(result)) {
 		return <p>{result.value.title}</p>;
 	}
@@ -253,6 +279,38 @@ describe("createErrorBoundary", () => {
 		expect(server.requests(1)).toBe(2);
 	});
 
+	it("wraps an atom once, so every render reads the same atom", async () => {
+		using _server = serve();
+		using app = mount();
+		function Same() {
+			const claims = useAuthBoundary();
+			const first = claims.wrap(issue(1));
+			const same =
+				claims.wrap(issue(1)) === first && claims.wrap(issue(2)) !== first;
+			return <p>{same ? "Same" : "Different"}</p>;
+		}
+		await app.render(
+			<OfflineBoundary>
+				<AuthBoundary>
+					<Same />
+				</AuthBoundary>
+			</OfflineBoundary>,
+		);
+		expect(screen.getByText("Same")).toBeDefined();
+		const claimed = AtomErrorBoundary.claim(issue(1));
+		expect(AtomErrorBoundary.claim(issue(1))).toBe(claimed);
+	});
+
+	it("points the wrapper at the atom it wraps, not past it", () => {
+		const reactive = Issues.query(
+			"GetIssue",
+			{ id: 1 },
+			{ reactivityKeys: ["issues"], serializationKey: "1" },
+		);
+		expect(reactive.initialValueTarget).toBeDefined();
+		expect(AtomErrorBoundary.claim(reactive).initialValueTarget).toBe(reactive);
+	});
+
 	it("needs its boundary mounted above its hook", async () => {
 		using _errors = silenceCaughtErrors();
 		using app = mount();
@@ -327,7 +385,7 @@ describe("a handler that's a component", () => {
 			name: "NotFound",
 		});
 		function Read() {
-			const result = useAtomResult(issue(1), useNotFoundBoundary());
+			const result = useRead(useNotFoundBoundary().wrap(issue(1)));
 			return <p>{AsyncResult.isSuccess(result) ? result.value.title : null}</p>;
 		}
 		await app.render(
