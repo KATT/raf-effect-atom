@@ -23,7 +23,7 @@ cd raf-effect-atom
 pnpm install
 ```
 
-Node is pinned in `.nvmrc`. Node 26 doesn't bundle corepack, so install pnpm globally (`npm i -g pnpm`); it runs the version in `packageManager`. CI installs that version with `pnpm/action-setup`. `pnpm install` runs `vendor-src check`, which fails when `.repos/` doesn't match the installed versions of the vendored packages.
+Node is pinned in `.nvmrc`; pnpm comes from `packageManager` through corepack (`corepack enable` once per Node install). CI installs that version with `pnpm/action-setup`. `pnpm install` runs `vendor-src check`, which fails when `.repos/` doesn't match the installed versions of the vendored packages.
 
 ## Before you push
 
