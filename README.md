@@ -18,6 +18,8 @@ Effect Atom's registry is the cache. These packages add only what it lacks, as t
 
 Both take `effect`, `@effect/atom-react` and `react` as peer dependencies.
 
+Coding agents: read [llms.txt](https://raf-effect-atom.katt.dev/llms.txt), which starts with the rules on [For coding agents](https://raf-effect-atom.katt.dev/docs/coding-agents).
+
 ## License
 
 [MIT](./LICENSE)

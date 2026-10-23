@@ -66,6 +66,10 @@ function IssueTitle(props: { readonly id: number }) {
 
 `reset` refreshes the atom that failed and renders the children again.
 
+## For coding agents
+
+Handle each failure by its tag, in a boundary's `catchTags` or by `_tag` in the component. Don't render one message for every failure or branch on `error.message`. The full rules, with the reason for each: [For coding agents](https://raf-effect-atom.katt.dev/docs/coding-agents). The docs as markdown: [llms.txt](https://raf-effect-atom.katt.dev/llms.txt).
+
 ## Credits
 
 The idea comes from [result-rpc](https://result-rpc.com/), whose [Shells](https://result-rpc.com/concepts/shells/) are error boundaries that claim failures and remove them from the component's error type.
