@@ -38,6 +38,8 @@ import type { TwoslashCache } from "./twoslash-cache.ts";
 interface RenderedMarkdown {
 	readonly demos: ReadonlyArray<string>;
 	readonly headings: ReadonlyArray<DocHeading>;
+	/** Each section's prose, by heading id; `undefined` is the intro. */
+	readonly sections: ReadonlyArray<TextSection>;
 	readonly segments: ReadonlyArray<DocSegment>;
 	readonly text: string;
 	/** Each `twoslash` block's `// ^?` types, in order. */
@@ -259,6 +261,39 @@ function rehypeExternalLinks() {
 			});
 			return "skip";
 		});
+	};
+}
+
+interface TextSection {
+	readonly id: string | undefined;
+	readonly text: string;
+}
+
+/**
+ * The text under each `h2` / `h3` and before the first, for search. Code
+ * blocks are left out: they'd grow the index more than they help it.
+ */
+function rehypeSections(sections: Array<TextSection>) {
+	return () => (tree: HastRoot) => {
+		const found: Array<{ id: string | undefined; texts: Array<string> }> = [
+			{ id: undefined, texts: [] },
+		];
+		for (const node of tree.children) {
+			if (node.type !== "element" || node.tagName === "pre") {
+				continue;
+			}
+			if (node.tagName === "h2" || node.tagName === "h3") {
+				found.push({ id: String(node.properties.id), texts: [] });
+			} else {
+				found.at(-1)?.texts.push(toString(node));
+			}
+		}
+		sections.push(
+			...found.map((section) => ({
+				id: section.id,
+				text: section.texts.join(" ").replaceAll(/\s+/g, " ").trim(),
+			})),
+		);
 	};
 }
 
@@ -601,6 +636,7 @@ export const renderMarkdown = Effect.fn("renderMarkdown")(function* (
 	options: RenderOptions,
 ) {
 	const headings: Array<DocHeading> = [];
+	const sections: Array<TextSection> = [];
 	const demos: Array<string> = [];
 	const typeQueries: Array<ReadonlyArray<string>> = [];
 	let collapseId = 0;
@@ -619,6 +655,7 @@ export const renderMarkdown = Effect.fn("renderMarkdown")(function* (
 		.use(remarkRehype, { allowDangerousHtml: true })
 		.use(rehypeRaw)
 		.use(rehypeHeadings(headings))
+		.use(rehypeSections(sections))
 		.use(rehypeExternalLinks)
 		.use(rehypeShiki, {
 			defaultColor: false,
@@ -659,6 +696,7 @@ export const renderMarkdown = Effect.fn("renderMarkdown")(function* (
 	return {
 		demos,
 		headings,
+		sections,
 		segments: toSegments(tree),
 		text: toString(tree),
 		typeQueries,

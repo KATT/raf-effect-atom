@@ -6,66 +6,50 @@ import {
 	DialogTitle,
 } from "@examples/ui/components/dialog";
 import { cn } from "@examples/ui/lib/utils";
+import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { useNavigate } from "@tanstack/react-router";
+import { Effect } from "effect";
+import { AsyncResult, Atom } from "effect/reactivity";
 import { FileText, Hash, Search } from "lucide-react";
-import { useState } from "react";
+import { use, useState } from "react";
 
 import { allDocs } from "~/content/docs.ts";
+import {
+	loadSearchIndex,
+	searchDocs,
+	type SearchHit,
+} from "~/search/docs-index.ts";
 
-interface SearchEntry {
-	readonly hash: string | undefined;
-	readonly haystack: string;
-	readonly id: string;
-	readonly page: string;
-	readonly slug: string;
-	readonly text: string;
-}
+const pageHits: ReadonlyArray<SearchHit> = allDocs.map((doc) => ({
+	context: doc.section,
+	hash: undefined,
+	id: doc.slug,
+	slug: doc.slug,
+	title: doc.title,
+}));
 
-const entries: ReadonlyArray<SearchEntry> = allDocs.flatMap((doc) => [
-	{
-		hash: undefined,
-		haystack: `${doc.title} ${doc.description} ${doc.section}`.toLowerCase(),
-		id: doc.slug,
-		page: doc.section,
-		slug: doc.slug,
-		text: doc.title,
-	},
-	...doc.headings.map((heading) => ({
-		hash: heading.id,
-		haystack: `${heading.text} ${doc.title}`.toLowerCase(),
-		id: `${doc.slug}#${heading.id}`,
-		page: doc.title,
-		slug: doc.slug,
-		text: heading.text,
-	})),
-]);
-
-function search(query: string): ReadonlyArray<SearchEntry> {
-	const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-	if (terms.length === 0) {
-		return entries.filter((entry) => entry.hash === undefined).slice(0, 8);
-	}
-	return entries
-		.filter((entry) => terms.every((term) => entry.haystack.includes(term)))
-		.map((entry) => {
-			const text = entry.text.toLowerCase();
-			const score =
-				(text.startsWith(terms[0] ?? "") ? 4 : 0) +
-				(terms.every((term) => text.includes(term)) ? 2 : 0) +
-				(entry.hash === undefined ? 1 : 0);
-			return { entry, score };
-		})
-		.toSorted((a, b) => b.score - a.score)
-		.slice(0, 20)
-		.map((result) => result.entry);
-}
+/** The index is its own chunk, loaded once the search is about to open. */
+const searchIndexAtom = Atom.make(
+	Effect.promise(async () => {
+		const index = await import("virtual:docs-search");
+		return loadSearchIndex(index.default);
+	}),
+).pipe(Atom.keepAlive, Atom.withLabel("search-index"));
 
 export function SearchButton() {
+	const registry = use(RegistryContext);
 	const [open, setOpen] = useState(false);
+	const loadIndex = () => {
+		registry.get(searchIndexAtom);
+	};
+	const openSearch = () => {
+		loadIndex();
+		setOpen(true);
+	};
 	const openOnShortcut = (event: KeyboardEvent) => {
 		if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
 			event.preventDefault();
-			setOpen(true);
+			openSearch();
 		}
 	};
 	return (
@@ -73,9 +57,9 @@ export function SearchButton() {
 			<Button
 				aria-keyshortcuts="Meta+K Control+K"
 				className="w-9 justify-start px-0 text-muted-foreground sm:w-56 sm:px-3"
-				onClick={() => {
-					setOpen(true);
-				}}
+				onClick={openSearch}
+				onFocus={loadIndex}
+				onPointerEnter={loadIndex}
 				ref={(button) => {
 					if (button === null) {
 						return;
@@ -118,10 +102,17 @@ function SearchPanel(props: { readonly onClose: () => void }) {
 	const navigate = useNavigate();
 	const [query, setQuery] = useState("");
 	const [active, setActive] = useState(0);
-	const results = search(query);
+	const searchIndex = useAtomValue(searchIndexAtom);
+	const loading = query.trim() !== "" && !AsyncResult.isSuccess(searchIndex);
+	let results: ReadonlyArray<SearchHit> = [];
+	if (query.trim() === "") {
+		results = pageHits.slice(0, 8);
+	} else if (AsyncResult.isSuccess(searchIndex)) {
+		results = searchDocs(searchIndex.value, query);
+	}
 	const selected = Math.min(active, Math.max(results.length - 1, 0));
 
-	const go = (entry: SearchEntry) => {
+	const go = (entry: SearchHit) => {
 		props.onClose();
 		void navigate({
 			hash: entry.hash,
@@ -173,7 +164,7 @@ function SearchPanel(props: { readonly onClose: () => void }) {
 			>
 				{results.length === 0 ? (
 					<li className="px-3 py-6 text-center text-sm text-muted-foreground">
-						No results for “{query}”
+						{loading ? "Searching…" : `No results for “${query}”`}
 					</li>
 				) : null}
 				{results.map((entry, index) => (
@@ -198,9 +189,9 @@ function SearchPanel(props: { readonly onClose: () => void }) {
 						) : (
 							<Hash className="size-4 shrink-0 text-muted-foreground" />
 						)}
-						<span className="truncate">{entry.text}</span>
+						<span className="truncate">{entry.title}</span>
 						<span className="ml-auto shrink-0 text-xs text-muted-foreground">
-							{entry.page}
+							{entry.context}
 						</span>
 					</li>
 				))}

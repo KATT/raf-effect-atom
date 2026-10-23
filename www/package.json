@@ -24,10 +24,12 @@
 		"effect": "catalog:",
 		"effect-atom-boundary": "workspace:*",
 		"lucide-react": "1.61.0",
+		"minisearch": "7.2.0",
 		"next-themes": "0.4.6",
 		"raf-effect-atom": "workspace:*",
 		"react": "19.3.1",
-		"react-dom": "19.3.1"
+		"react-dom": "19.3.1",
+		"stemmer": "2.0.1"
 	},
 	"devDependencies": {
 		"@babel/core": "8.0.7",

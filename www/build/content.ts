@@ -6,6 +6,7 @@ import { removeTwoslashNotations } from "twoslash/fallback";
 import { parse as parseYaml } from "yaml";
 
 import type { Doc, DocMeta, DocSection, Sample } from "../src/content/types.ts";
+import { buildSearchIndex, type SearchPage } from "../src/search/docs-index.ts";
 import { site } from "../src/site.ts";
 import { stripCollapseMarkers } from "./collapse.ts";
 import { ContentError, messageOf } from "./content-error.ts";
@@ -82,6 +83,9 @@ function withTypes(code: string, types: ReadonlyArray<string>) {
 
 const manifestId = "virtual:docs-manifest";
 const resolvedManifestId = `\0${manifestId}`;
+/** The search index, a separate chunk the search dialog loads when it opens. */
+const searchId = "virtual:docs-search";
+const resolvedSearchId = `\0${searchId}`;
 
 /**
  * `import hero from "sample:<app>/<path>#region"` renders that region of a
@@ -177,18 +181,25 @@ function run<A, E>(effect: Effect.Effect<A, E, NodeServices.NodeServices>) {
 	return Effect.runPromise(Effect.provide(effect, NodeServices.layer));
 }
 
+/** A rendered page, and its prose for the search index. */
+interface Rendered {
+	readonly doc: Doc;
+	readonly sections: SearchPage["sections"];
+}
+
 /**
  * Compiles `content/*.md` at build time. Each page imports as a module of
  * pre-highlighted HTML segments (its own chunk, so the browser loads only the
- * pages it visits), and `virtual:docs-manifest` lists every page for the nav,
- * search and SEO. The client build also gets `llms.txt` and each page's
- * markdown source at `/docs/<slug>.md`.
+ * pages it visits), `virtual:docs-manifest` lists every page for the nav,
+ * search and SEO, and `virtual:docs-search` is the search index. The client
+ * build also gets `llms.txt` and each page's markdown source at
+ * `/docs/<slug>.md`.
  */
 export function docsContent(options: ContentOptions): Plugin {
 	const { samplesDir } = options;
 	const twoslashCache =
 		options.twoslashCache && makeTwoslashCache(options.twoslashCache);
-	const rendered = new Map<string, Promise<Doc>>();
+	const rendered = new Map<string, Promise<Rendered>>();
 	/** Each page's `twoslash` types, by file, for its markdown. */
 	const typeQueries = new Map<string, ReadonlyArray<ReadonlyArray<string>>>();
 
@@ -216,15 +227,18 @@ export function docsContent(options: ContentOptions): Plugin {
 		}
 		typeQueries.set(source.file, result.typeQueries);
 		return {
-			demos: result.demos,
-			description: source.frontmatter.description,
-			headings: result.headings,
-			lastModified: yield* lastModified(source.file),
-			section: source.frontmatter.section,
-			segments: result.segments,
-			slug: source.slug,
-			title: source.frontmatter.title,
-		} satisfies Doc;
+			doc: {
+				demos: result.demos,
+				description: source.frontmatter.description,
+				headings: result.headings,
+				lastModified: yield* lastModified(source.file),
+				section: source.frontmatter.section,
+				segments: result.segments,
+				slug: source.slug,
+				title: source.frontmatter.title,
+			} satisfies Doc,
+			sections: result.sections,
+		} satisfies Rendered;
 	});
 
 	const renderSample = Effect.fn("renderSample")(function* (spec: string) {
@@ -251,7 +265,7 @@ export function docsContent(options: ContentOptions): Plugin {
 		};
 	});
 
-	function render(source: Source): Promise<Doc> {
+	function render(source: Source): Promise<Rendered> {
 		const cached = rendered.get(source.file);
 		if (cached) {
 			return cached;
@@ -261,7 +275,8 @@ export function docsContent(options: ContentOptions): Plugin {
 		return doc;
 	}
 
-	async function manifest(): Promise<ReadonlyArray<DocSection>> {
+	/** Every page, rendered, by section in sidebar order. */
+	async function renderedSections() {
 		const sources = await run(readSources(options));
 		for (const source of sources) {
 			if (!options.sections.includes(source.frontmatter.section)) {
@@ -270,27 +285,49 @@ export function docsContent(options: ContentOptions): Plugin {
 				);
 			}
 		}
-		const docs = await Promise.all(
+		const pages = await Promise.all(
 			sources.map(async (source) => ({
-				doc: await render(source),
+				...(await render(source)),
 				order: source.frontmatter.order,
 			})),
 		);
 		return options.sections.map((title) => ({
-			docs: docs
-				.filter((entry) => entry.doc.section === title)
-				.toSorted((a, b) => a.order - b.order)
-				.map((entry): DocMeta => ({
-					demos: entry.doc.demos,
-					description: entry.doc.description,
-					headings: entry.doc.headings,
-					lastModified: entry.doc.lastModified,
-					section: entry.doc.section,
-					slug: entry.doc.slug,
-					title: entry.doc.title,
-				})),
+			pages: pages
+				.filter((page) => page.doc.section === title)
+				.toSorted((a, b) => a.order - b.order),
 			title,
 		}));
+	}
+
+	async function manifest(): Promise<ReadonlyArray<DocSection>> {
+		return (await renderedSections()).map((section) => ({
+			docs: section.pages.map((entry): DocMeta => ({
+				demos: entry.doc.demos,
+				description: entry.doc.description,
+				headings: entry.doc.headings,
+				lastModified: entry.doc.lastModified,
+				section: entry.doc.section,
+				slug: entry.doc.slug,
+				title: entry.doc.title,
+			})),
+			title: section.title,
+		}));
+	}
+
+	async function searchIndex() {
+		const sections = await renderedSections();
+		return buildSearchIndex(
+			sections.flatMap((section) =>
+				section.pages.map((page): SearchPage => ({
+					description: page.doc.description,
+					headings: page.doc.headings,
+					section: page.doc.section,
+					sections: page.sections,
+					slug: page.doc.slug,
+					title: page.doc.title,
+				})),
+			),
+		);
 	}
 
 	const intro = [`# ${site.name}`, "", `> ${site.description}`, ""];
@@ -487,6 +524,7 @@ export function docsContent(options: ContentOptions): Plugin {
 			const graph = this.environment.moduleGraph;
 			const stale = [...graph.idToModuleMap].flatMap(([id, module]) =>
 				id === resolvedManifestId ||
+				id === resolvedSearchId ||
 				(context.file.startsWith(samplesDir) &&
 					id.startsWith(resolvedSamplePrefix))
 					? [module]
@@ -507,6 +545,9 @@ export function docsContent(options: ContentOptions): Plugin {
 				}
 				return `export default ${JSON.stringify(output.sample)};`;
 			}
+			if (id === resolvedSearchId) {
+				return `export default ${JSON.stringify(await searchIndex())};`;
+			}
 			if (id !== resolvedManifestId) {
 				return undefined;
 			}
@@ -517,6 +558,9 @@ export function docsContent(options: ContentOptions): Plugin {
 		resolveId(id) {
 			if (id.startsWith(samplePrefix)) {
 				return `\0${id}`;
+			}
+			if (id === searchId) {
+				return resolvedSearchId;
 			}
 			return id === manifestId ? resolvedManifestId : undefined;
 		},
@@ -538,8 +582,11 @@ export function docsContent(options: ContentOptions): Plugin {
 			if (this.environment.mode === "dev") {
 				rendered.delete(file);
 			}
-			const doc = await render(source);
-			return { code: `export default ${JSON.stringify(doc)};`, map: null };
+			const page = await render(source);
+			return {
+				code: `export default ${JSON.stringify(page.doc)};`,
+				map: null,
+			};
 		},
 	};
 }

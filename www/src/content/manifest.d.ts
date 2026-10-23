@@ -17,3 +17,9 @@ declare module "sample:*" {
 	const sample: Sample;
 	export default sample;
 }
+
+declare module "virtual:docs-search" {
+	/** The search index's JSON, for `loadSearchIndex`. */
+	const index: string;
+	export default index;
+}

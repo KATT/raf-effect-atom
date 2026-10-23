@@ -77,4 +77,34 @@ describe("renderMarkdown", () => {
 			expect(html.match(/external-link-icon/g)).toHaveLength(2);
 		}).pipe(Effect.provide(NodeServices.layer)),
 	);
+
+	it.effect("collects each section's prose, without code blocks", () =>
+		Effect.gen(function* () {
+			const samplesDir = yield* samples;
+			const markdown = [
+				"Intro with `useAtomResult`.",
+				"",
+				"## Error boundaries",
+				"",
+				"A boundary catches **typed** failures.",
+				"",
+				"```json",
+				'{ "left": "out" }',
+				"```",
+				"",
+				"### During server rendering",
+				"",
+				"- The handler renders.",
+			].join("\n");
+			const rendered = yield* renderMarkdown(markdown, { samplesDir });
+			expect(rendered.sections).toEqual([
+				{ id: undefined, text: "Intro with useAtomResult." },
+				{
+					id: "error-boundaries",
+					text: "A boundary catches typed failures.",
+				},
+				{ id: "during-server-rendering", text: "The handler renders." },
+			]);
+		}).pipe(Effect.provide(NodeServices.layer)),
+	);
 });

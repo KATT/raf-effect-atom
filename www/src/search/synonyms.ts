@@ -1,0 +1,92 @@
+/**
+ * Words and API names that mean the same thing to someone searching these
+ * docs. A query word that matches one member also searches the others, at a
+ * lower weight than the word itself. Word forms come from stemming, so list
+ * the base form. A word can sit in several groups.
+ *
+ * A phrase matches a hit with every one of its words anywhere in it, so keep
+ * phrases to words that are rare together, such as "server rendering".
+ */
+export const synonymGroups: ReadonlyArray<ReadonlyArray<string>> = [
+	["error", "failure", "fail", "exception", "defect", "Cause"],
+	["exception", "throw"],
+	[
+		"boundary",
+		"catch",
+		"handler",
+		"error boundary",
+		"AtomErrorBoundary",
+		"createErrorBoundary",
+		"catchTags",
+	],
+	["tag", "_tag", "tagged", "TaggedError", "catchTags", "Match.valueTags"],
+	["prefetch", "preload", "prewarm"],
+	["fetch", "load", "loader", "request"],
+	["ensure", "fetch", "prefetch", "loader verb"],
+	[
+		"hydrate",
+		"hydration",
+		"dehydrate",
+		"rehydrate",
+		"ssr",
+		"server rendering",
+		"server side rendering",
+		"prerender",
+		"HydrationBoundary",
+	],
+	["stream", "streaming", "defer", "deferred", "promise"],
+	["atom", "query", "state", "store"],
+	["waterfall", "sequential", "useWaterfall", "WaterfallDetection"],
+	["parallel", "concurrent", "concurrency", "Effect.all"],
+	["cookie", "header", "seed"],
+	["seed", "initial value", "initialValues"],
+	[
+		"reset",
+		"retry",
+		"refresh",
+		"refetch",
+		"invalidate",
+		"reload",
+		"revalidate",
+	],
+	[
+		"loading",
+		"pending",
+		"waiting",
+		"suspense",
+		"suspend",
+		"spinner",
+		"fallback",
+		"useAtomSuspense",
+	],
+	["result", "outcome", "AsyncResult", "useAtomResult"],
+	["read", "hook", "useAtomResult", "useAtomValue", "useAtomSuspense"],
+	["install", "setup", "quick start", "npm"],
+	["router", "routing", "route", "TanStack Router", "TanStack Start"],
+	["registry", "cache", "keepAlive", "keep alive", "dedupe", "evict"],
+	[
+		"registry",
+		"provider",
+		"RegistryContext",
+		"makeRegistry",
+		"setupRouterAtoms",
+	],
+	["lease", "mount", "retain"],
+	[
+		"serialize",
+		"serialization",
+		"serializable",
+		"serializationKey",
+		"encode",
+		"Schema",
+	],
+	["rpc", "AtomRpc", "RpcClient", "api", "endpoint", "procedure"],
+	["RpcClientError", "network error", "offline", "transport"],
+	["unauthorized", "auth", "login", "sign in", "permission"],
+	["not found", "404", "missing", "IssueNotFound"],
+	["cancel", "abort", "interrupt", "interruption"],
+	["agent", "coding agent", "llm", "ai", "claude", "cursor", "llms.txt"],
+	["mutation", "mutate", "write", "update", "action"],
+	["code splitting", "lazy", "dynamic import", "chunk"],
+	["type", "typed", "typescript", "inference"],
+];
