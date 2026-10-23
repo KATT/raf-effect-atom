@@ -33,3 +33,4 @@ The registry is the cache: it dedupes, keeps atoms while they're mounted, evicts
 - [Error boundaries](./error-boundaries.md), for `effect-atom-boundary` on its own.
 - [Loader verbs](./loader-verbs.md), for `raf-effect-atom`.
 - [Loader failures](./loader-failures.md), for both together.
+- [For coding agents](./coding-agents.md), the patterns an agent should write and the ones to avoid.

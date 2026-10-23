@@ -33,6 +33,7 @@ const canonicalPaths = new Set(["/", ...pages.map((page) => page.path)]);
 export default defineConfig({
 	plugins: [
 		docsContent({
+			agentRules: "coding-agents",
 			contentDir,
 			demosDir,
 			demosUrl: `${site.github}/blob/main/www/src/demos`,

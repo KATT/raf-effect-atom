@@ -25,6 +25,7 @@
 
 - Write all the logic you can in Effect: libraries, build steps, CI and deploy scripts, tooling. Files, processes, HTTP and env go through Effect's services (`FileSystem`, `Path`, `ChildProcessSpawner`, `HttpClient`, `Config`), provided by `NodeServices.layer` at the edge, not `node:fs` / `node:child_process` / `process.env`. Plain code only where Effect can't run, such as a sync React render path. Read `.repos/effect` (start with `LLMS.md`) for the idioms. See [`.agent-docs/decisions/effect-everywhere.md`](.agent-docs/decisions/effect-everywhere.md).
 - How Effect Atom, Effect RPC and TanStack Router behave is answered by their vendored source in `.repos/`, not by memory or web search.
+- The example apps follow the rules in [`www/content/coding-agents.md`](www/content/coding-agents.md), and so do the docs' samples except where a page shows what a rule prevents: atoms start in loaders, server components or event handlers, and the apps keep `<WaterfallDetection mode="throw">`.
 
 ## Documentation
 

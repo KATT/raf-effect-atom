@@ -25,6 +25,12 @@ export interface ContentDirs {
 }
 
 export interface ContentOptions extends ContentDirs {
+	/**
+	 * Slug of the page whose body `llms.txt` and `/index.md` include after the
+	 * intro, for agents that read nothing else. Its headings become bold
+	 * lines there: llms.txt keeps `##` headings for the page lists.
+	 */
+	readonly agentRules: string;
 	/** Directory with one `<id>.tsx` per demo. */
 	readonly demosDir: string;
 	/** Where `demosDir` is browsable, for the markdown pages' demo links. */
@@ -296,6 +302,17 @@ export function docsContent(options: ContentOptions): Plugin {
 	 * with each `// ^?` replaced by the type it shows on the web.
 	 */
 	function pageMarkdown(source: Source) {
+		return [
+			`# ${source.frontmatter.title}`,
+			"",
+			`> ${source.frontmatter.description}`,
+			"",
+			pageBody(source),
+			"",
+		].join("\n");
+	}
+
+	function pageBody(source: Source) {
 		const url = `${options.siteUrl}/docs/${source.slug}`;
 		const types = typeQueries.get(source.file) ?? [];
 		let blockIndex = 0;
@@ -318,20 +335,20 @@ export function docsContent(options: ContentOptions): Plugin {
 				(block, id) =>
 					`> [!NOTE]\n> The [web version of this page](${url}) has an interactive demo here. Its code: [${id}.tsx](${options.demosUrl}/${id}.tsx).`,
 			);
-		return [
-			`# ${source.frontmatter.title}`,
-			"",
-			`> ${source.frontmatter.description}`,
-			"",
-			body.trim(),
-			"",
-		].join("\n");
+		return body.trim();
 	}
 
-	/** `llms.txt` (https://llmstxt.org): what the library is, and every page. */
-	function llmsTxt(sections: ReadonlyArray<DocSection>) {
+	/**
+	 * `llms.txt` (https://llmstxt.org): what the library is, the rules for
+	 * agents, and every page.
+	 */
+	function llmsTxt(sections: ReadonlyArray<DocSection>, rules: Source) {
 		const lines = [
 			...intro,
+			`**${rules.frontmatter.title}** ([page](${options.siteUrl}/docs/${rules.slug}.md))`,
+			"",
+			pageBody(rules).replaceAll(/^#{1,6} +(.+)$/gm, "**$1**"),
+			"",
 			"Every page is also markdown: add `.md` to its URL, or request it with `Accept: text/markdown`.",
 			"",
 		];
@@ -369,9 +386,13 @@ export function docsContent(options: ContentOptions): Plugin {
 				const source = sources.get(doc.slug);
 				return source ? [source] : [];
 			});
+		const rules = sources.get(options.agentRules);
+		if (rules === undefined) {
+			throw new Error(`agentRules: no page "${options.agentRules}"`);
+		}
 		const files = new Map<string, string>();
-		files.set("/llms.txt", llmsTxt(sections));
-		files.set("/index.md", llmsTxt(sections));
+		files.set("/llms.txt", llmsTxt(sections, rules));
+		files.set("/index.md", llmsTxt(sections, rules));
 		files.set(
 			"/404.md",
 			`# Not found\n\nThere is no page at this URL. [llms.txt](${options.siteUrl}/llms.txt) lists every page.\n`,
