@@ -1,9 +1,11 @@
-import { assert, describe, it } from "@effect/vitest";
+import { LATENCY_COOKIE } from "@examples/contract";
+import { assert, describe, layer } from "@effect/vitest";
+import { Context, Effect, Layer } from "effect";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { chromium } from "playwright-core";
+import { type Browser, chromium } from "playwright-core";
 
 const appDir = fileURLToPath(new URL("..", import.meta.url));
 const nextBin = createRequire(import.meta.url).resolve("next/dist/bin/next");
@@ -48,16 +50,48 @@ const startApp = async (): Promise<
 	}
 };
 
+const acquireDisposable = <A extends AsyncDisposable>(
+	acquire: () => Promise<A>,
+) =>
+	Effect.acquireRelease(Effect.promise(acquire), (resource) =>
+		Effect.promise(() => resource[Symbol.asyncDispose]()),
+	);
+
 /**
- * Opens a page of the app in Chrome, recording the browser's `/rpc` requests
- * and uncaught errors (a hydration mismatch is one). The server's default
- * latency stays on, so `prefetch` streams its results after the shell.
+ * The app's production server and a Chrome, started once for the file: a
+ * cold Chrome start alone can take most of a test's time on CI.
  */
-const visit = async (path: string) => {
-	await using stack = new AsyncDisposableStack();
-	const app = stack.use(await startApp());
-	const browser = stack.use(await chromium.launch({ channel: "chrome" }));
-	const page = await browser.newPage();
+class App extends Context.Service<
+	App,
+	{ readonly browser: Browser; readonly origin: string }
+>()("App") {
+	static readonly layer = Layer.effect(
+		App,
+		Effect.gen(function* () {
+			const server = yield* acquireDisposable(startApp);
+			const browser = yield* acquireDisposable(() =>
+				chromium.launch({ channel: "chrome" }),
+			);
+			return { browser, origin: server.origin };
+		}),
+	);
+}
+
+/**
+ * Opens a page of the app in a fresh browser context, recording the
+ * browser's `/rpc` requests and uncaught errors (a hydration mismatch is
+ * one). Each procedure takes 100 ms, so `prefetch` streams its results after
+ * the shell.
+ */
+const visit = Effect.fn("visit")(function* (path: string) {
+	const app = yield* App;
+	const context = yield* acquireDisposable(() => app.browser.newContext());
+	yield* Effect.promise(() =>
+		context.addCookies([
+			{ name: LATENCY_COOKIE, url: app.origin, value: "100" },
+		]),
+	);
+	const page = yield* Effect.promise(() => context.newPage());
 	const rpcRequests: Array<string> = [];
 	const pageErrors: Array<string> = [];
 	page.on("request", (request) => {
@@ -66,37 +100,48 @@ const visit = async (path: string) => {
 		}
 	});
 	page.on("pageerror", (error) => pageErrors.push(error.message));
-	await page.goto(`${app.origin}${path}`, { waitUntil: "networkidle" });
-	const owned = stack.move();
-	return {
-		page,
-		pageErrors,
-		rpcRequests,
-		[Symbol.asyncDispose]: () => owned.disposeAsync(),
-	};
-};
+	yield* Effect.promise(() =>
+		page.goto(`${app.origin}${path}`, { waitUntil: "networkidle" }),
+	);
+	return { page, pageErrors, rpcRequests };
+});
 
 describe("the server's results in the browser", () => {
-	// `prefetch` streams each result; `ensure` and `fetch` send it settled.
-	for (const verb of ["prefetch", "ensure", "fetch"] as const) {
-		it(`renders IssueBoundary's IssueNotFound on /${verb}/issues/999`, async () => {
-			await using visited = await visit(`/${verb}/issues/999`);
-			const caught = visited.page.locator(
-				'[role="alert"][data-boundary="IssueBoundary"][data-tag="IssueNotFound"]',
+	layer(App.layer)((it) => {
+		// `prefetch` streams each result; `ensure` and `fetch` send it settled.
+		for (const verb of ["prefetch", "ensure", "fetch"] as const) {
+			it.effect(
+				`renders IssueBoundary's IssueNotFound on /${verb}/issues/999`,
+				() =>
+					Effect.gen(function* () {
+						const visited = yield* visit(`/${verb}/issues/999`);
+						const caught = visited.page.locator(
+							'[role="alert"][data-boundary="IssueBoundary"][data-tag="IssueNotFound"]',
+						);
+						yield* Effect.promise(() => caught.waitFor());
+
+						assert.include(
+							yield* Effect.promise(() => caught.textContent()),
+							"Issue #999 doesn't exist.",
+						);
+						assert.deepStrictEqual(visited.rpcRequests, []);
+						assert.deepStrictEqual(visited.pageErrors, []);
+					}),
 			);
-			await caught.waitFor();
+		}
 
-			assert.include(await caught.textContent(), "Issue #999 doesn't exist.");
-			assert.deepStrictEqual(visited.rpcRequests, []);
-			assert.deepStrictEqual(visited.pageErrors, []);
-		});
-	}
+		it.effect(
+			"hydrates /prefetch/issues/3 from the stream without requesting it again",
+			() =>
+				Effect.gen(function* () {
+					const visited = yield* visit("/prefetch/issues/3");
+					yield* Effect.promise(() =>
+						visited.page.getByText("2 comments").waitFor(),
+					);
 
-	it("hydrates /prefetch/issues/3 from the stream without requesting it again", async () => {
-		await using visited = await visit("/prefetch/issues/3");
-		await visited.page.getByText("2 comments").waitFor();
-
-		assert.deepStrictEqual(visited.rpcRequests, []);
-		assert.deepStrictEqual(visited.pageErrors, []);
+					assert.deepStrictEqual(visited.rpcRequests, []);
+					assert.deepStrictEqual(visited.pageErrors, []);
+				}),
+		);
 	});
 });
