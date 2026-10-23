@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.0](https://github.com/KATT/raf-effect-atom/compare/effect-atom-boundary%400.1.2...effect-atom-boundary%400.2.0) (2026-10-23)
+
+### ⚠ BREAKING CHANGES
+
+- **effect-atom-boundary:** a boundary's hook takes the atom or atom family, `useBoundary(atom)` instead of `useBoundary().wrap(atom)`, and `ErrorBoundaryClaims` and `Wrap` are no longer exported.
+
+### Features
+
+- **effect-atom-boundary:** drop the claims object a boundary's hook returned ([952fbe8](https://github.com/KATT/raf-effect-atom/commit/952fbe8013577f1824aa8d7035abdd7db7d5e53e))
+- **effect-atom-boundary:** pass the atom to a boundary's hook ([a06ae8d](https://github.com/KATT/raf-effect-atom/commit/a06ae8d9fcdbe0422c4476bc537d179c075937ef))
+
+### Code Refactoring
+
+- name files in kebab-case, PascalCase only for Effect modules ([d76b06a](https://github.com/KATT/raf-effect-atom/commit/d76b06aef3d04d6be6c0b0e086a756234ab3f253))
+
 ## [0.1.2](https://github.com/KATT/raf-effect-atom/compare/effect-atom-boundary%400.1.1...effect-atom-boundary%400.1.2) (2026-10-23)
 
 ### Features
