@@ -59,6 +59,16 @@ export function SiteHeader() {
 					>
 						Loaders
 					</Link>
+					<Link
+						className={cn(
+							buttonVariants({ size: "sm", variant: "ghost" }),
+							"text-muted-foreground",
+						)}
+						params={{ slug: "examples" }}
+						to="/docs/$slug"
+					>
+						Examples
+					</Link>
 				</nav>
 				<div className="ml-auto flex items-center gap-1">
 					<SearchButton />
