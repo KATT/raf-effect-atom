@@ -106,13 +106,13 @@ Each package has its own version, changelog (`packages/<package>/CHANGELOG.md`) 
 
 [`.github/workflows/release.yaml`](./workflows/release.yaml) runs after **CI passes on a push to `main`**, for the commit CI checked (and by hand from the Actions tab, for all packages or one). Its gate looks at each package on its own:
 
-- **Released**: the package has a commit that changed a file under `packages/<package>/` since its latest tag (any file there: source, tests, README, `package.json`).
+- **Passed to release-it**: the package has a commit that changed a file under `packages/<package>/` since its latest tag (any file there: source, tests, README, `package.json`). release-it then releases it only if one of those commits is a `feat`, `fix`, `perf` or breaking change (step 1 below).
 - **Skipped**: nothing under `packages/<package>/` changed. Commits to `www`, the examples, `tooling` or `.agent-docs` never release anything, and a change to one package doesn't release the other. A commit's scope doesn't matter, only the files it touches.
 - **Skipped**: `main` already moved past the commit CI checked. The CI run for the newer commit starts its own release, so a commit that hasn't passed CI is never published.
 
 The packages that pass the gate are released one after the other, each with [release-it](https://github.com/release-it/release-it) run from the repo root:
 
-1. Computes the next version from the conventional commits since the package's latest tag that touch `packages/<package>`, and updates its `CHANGELOG.md` (the first release writes its whole history). While a package is `0.x` (`preMajor`), a breaking change (`!`) bumps the minor; `feat`, `fix` and `perf` bump the patch. Other types are listed without bumping, and a release with none of them is a patch.
+1. Computes the next version from the conventional commits since the package's latest tag that touch `packages/<package>`, and updates its `CHANGELOG.md` (the first release writes its whole history). While a package is `0.x` (`preMajor`), a breaking change (`!`) bumps the minor; `feat`, `fix` and `perf` bump the patch. Other types (`docs`, `chore`, `ci`, `refactor`, `test`, `build`, `style`) don't bump. A range with only those releases nothing: release-it reports "No new version to release", the job passes, and the commits wait. Their changes ship, listed in the changelog, with the next `feat`, `fix`, `perf` or breaking release. A `docs:` fix to a package's README or `CHANGELOG.md` reaches npm that way too.
 2. Writes the version into `packages/<package>/package.json`.
 3. Builds the package.
 4. Checks `main` hasn't moved since the run checked it out; if it has, it stops and leaves the release to a later run.

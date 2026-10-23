@@ -1,6 +1,7 @@
 # Runs after CI passes on a push to main, for the commit CI checked, and
 # publishes each package with commits touching its directory since its own
-# latest tag. Also runs by hand from the Actions tab, for all packages or one.
+# latest tag, when release-it finds a feat, fix, perf or breaking commit among
+# them. Also runs by hand from the Actions tab, for all packages or one.
 name: Release
 
 on:
