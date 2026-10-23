@@ -45,6 +45,31 @@ describe("Issues", () => {
 		}).pipe(Effect.provide(TestLayer)),
 	);
 
+	it.effect("searches titles ignoring case, newest first, up to a page", () =>
+		Effect.gen(function* () {
+			const issues = yield* Issues;
+			const found = yield* issues.search("STALE COUNT");
+			assert.isAbove(found.length, 0);
+			assert.isAtMost(found.length, 10);
+			assert.isTrue(
+				found.every((issue) =>
+					issue.title.toLowerCase().includes("stale count"),
+				),
+			);
+			assert.isTrue(
+				found.every(
+					(issue, index) =>
+						index === 0 ||
+						DateTime.isLessThanOrEqualTo(
+							issue.createdAt,
+							found[index - 1]!.createdAt,
+						),
+				),
+			);
+			assert.deepStrictEqual(yield* issues.search("  "), []);
+		}).pipe(Effect.provide(TestLayer)),
+	);
+
 	it.effect("filters by status and sorts oldest first", () =>
 		Effect.gen(function* () {
 			const issues = yield* Issues;

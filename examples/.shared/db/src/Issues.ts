@@ -89,6 +89,8 @@ export class Issues extends Context.Service<
 		listComments(
 			input: CommentPageInput,
 		): Effect.Effect<CommentPage, IssueNotFound>;
+		/** Titles containing `query`, ignoring case, newest first: up to a page. */
+		search(query: string): Effect.Effect<ReadonlyArray<Issue>>;
 		setStatus(
 			id: IssueId,
 			status: IssueStatus,
@@ -173,6 +175,21 @@ export class Issues extends Context.Service<
 						nextCursor: end < matching.length ? end : null,
 						total: matching.length,
 					});
+				});
+
+				const search = Effect.fn("Issues.search")(function* (query: string) {
+					yield* latency;
+					const needle = query.trim().toLowerCase();
+					if (needle === "") {
+						return [];
+					}
+					return Array.sortWith(
+						[...store.issues.values()].filter((issue) =>
+							issue.title.toLowerCase().includes(needle),
+						),
+						(issue) => issue.createdAt,
+						Order.flip(DateTime.Order),
+					).slice(0, ISSUES_PER_PAGE);
 				});
 
 				const listComments = Effect.fn("Issues.listComments")(function* (
@@ -263,6 +280,7 @@ export class Issues extends Context.Service<
 					getAssignee,
 					list,
 					listComments,
+					search,
 					setStatus,
 					updateBody,
 					updateTitle,

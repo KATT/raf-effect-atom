@@ -32,6 +32,11 @@ export const IssueRpcs = RpcGroup.make(
 		payload: { ...IssueListInput.fields, cursor: Cursor },
 		success: IssuePage,
 	}),
+	/** Issues whose title contains the query, newest first: up to a page. */
+	Rpc.make("SearchIssues", {
+		payload: { query: Schema.String },
+		success: Schema.Array(Issue),
+	}),
 	Rpc.make("CountIssues", { success: IssueCounts }),
 	Rpc.make("GetIssue", {
 		error: IssueNotFound,

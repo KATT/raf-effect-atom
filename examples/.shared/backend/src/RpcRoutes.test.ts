@@ -136,6 +136,19 @@ describe("RpcRoutes", () => {
 		}).pipe(Effect.provide(SignedIn)),
 	);
 
+	it.effect("searches the issues' titles", () =>
+		Effect.gen(function* () {
+			const client = yield* RpcClient.make(IssueRpcs);
+			const found = yield* client.SearchIssues({ query: "stale count" });
+			assert.isAbove(found.length, 0);
+			assert.isTrue(
+				found.every((issue) =>
+					issue.title.toLowerCase().includes("stale count"),
+				),
+			);
+		}).pipe(Effect.provide(SignedIn)),
+	);
+
 	// Live: the request crosses a real socket before the db sleeps, so a
 	// TestClock adjustment could land before the sleep starts.
 	it.live("waits the latency the cookie asks for", () =>

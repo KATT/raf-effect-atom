@@ -72,6 +72,7 @@ const Handlers = DemoRpcs.toLayer(
 			GetIssueAssignee: (payload) => issues.getAssignee(payload.issueId),
 			ListComments: (payload) => issues.listComments(payload),
 			ListIssues: (payload) => issues.list(payload),
+			SearchIssues: (payload) => issues.search(payload.query),
 			ServerEvents: () => Stream.fromPubSub(controls.events),
 			SetLatency: (payload) =>
 				Ref.set(controls.latency, payload.ms).pipe(

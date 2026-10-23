@@ -15,6 +15,7 @@ export const IssueHandlersNoDeps = IssueRpcs.toLayer(
 			GetIssueAssignee: (payload) => issues.getAssignee(payload.issueId),
 			ListComments: (payload) => issues.listComments(payload),
 			ListIssues: (payload) => issues.list(payload),
+			SearchIssues: (payload) => issues.search(payload.query),
 			SetStatus: (payload) => issues.setStatus(payload.id, payload.status),
 			UpdateBody: (payload) => issues.updateBody(payload.id, payload.body),
 			UpdateTitle: (payload) => issues.updateTitle(payload.id, payload.title),
