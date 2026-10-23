@@ -1,4 +1,3 @@
-import { envPrefix } from "@examples/kit/lib/skew-protection";
 import { reactRouter } from "@react-router/dev/vite";
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
@@ -18,7 +17,6 @@ export default defineConfig((env) => ({
 			},
 		},
 	},
-	envPrefix,
 	// Tests import the app's modules directly, without the React Router build.
 	plugins:
 		env.mode === "test"
