@@ -8,7 +8,6 @@
 
 import { RegistryContext, useAtomSuspense } from "@effect/atom-react";
 import * as Cause from "effect/Cause";
-import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as Predicate from "effect/Predicate";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
@@ -17,14 +16,12 @@ import * as React from "react";
 
 import type { ErrorOf, Handle, Source, SuccessOf } from "./Handle.ts";
 import { hydrated } from "./Hydration.ts";
-import { isDevelopment } from "./internal/development.ts";
 import * as Handles from "./internal/handles.ts";
 import * as Leases from "./internal/leases.ts";
 import * as Pending from "./internal/pending.ts";
 import * as Registry from "./internal/registry.ts";
 import * as Waterfalls from "./internal/waterfalls.ts";
 import type { SettledResult } from "./Loader.ts";
-import { isRequestRegistry } from "./RequestRegistry.ts";
 
 // Bundlers replace `process.env.NODE_ENV` at build time. Declared here, so
 // apps that type-check this source don't need Node's types.
@@ -148,15 +145,7 @@ export const useAtomResult = <S extends Source>(
 	: SettledResult<SuccessOf<S>, ErrorOf<S>> => {
 	const registry = React.useContext(RegistryContext);
 	const atom = Handles.atomOf(source, handle.args);
-	if (
-		Registry.isServer() &&
-		!isRequestRegistry(registry) &&
-		Effect.runSync(isDevelopment)
-	) {
-		throw new Error(
-			"raf-effect-atom: useAtomResult rendered on the server without a request registry, so results would be shared between requests. Provide RequestRegistry.make() through RegistryContext, as the framework integrations do.",
-		);
-	}
+	Registry.requireRequestRegistry(registry, "useAtomResult");
 	const target = sourceOf(atom);
 	const started = hydrated(target);
 	const read = target === atom ? hydrated(atom) : atom;

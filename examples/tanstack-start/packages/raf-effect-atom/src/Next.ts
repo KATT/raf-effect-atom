@@ -102,7 +102,9 @@ const atoms = internal.make();
  *
  * Made once per request through React's `cache`, and disposed through
  * `cacheSignal` when React finishes the render, after the last streamed
- * result has been sent.
+ * result has been sent. The verbs take the same signal: when React aborts
+ * the render, such as for a navigation the browser left, the `ensure` and
+ * `fetch` calls still waiting reject with its reason.
  *
  * **Gotchas**
  *

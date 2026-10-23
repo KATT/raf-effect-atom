@@ -140,6 +140,10 @@ export interface AtomsMiddlewareOptions {
  * `seed` runs on the new registry before `next`, so every loader's atoms
  * start with what it sets.
  *
+ * The verbs take the request's `signal`: when the client goes before the
+ * response, such as a navigation that leaves while its loaders wait, the
+ * `ensure` and `fetch` calls still waiting reject with its reason.
+ *
  * **Gotchas**
  *
  * It's server middleware: export it as the root route's `middleware`, not
@@ -180,7 +184,7 @@ export const atomsMiddleware =
 			registry.dispose();
 			throw error;
 		}
-		const loader = Loader.make(registry);
+		const loader = Loader.make(registry, { signal: args.request.signal });
 		args.context.set(context, {
 			...loader,
 			dehydrate: () => Hydration.dehydrate(registry),
@@ -241,17 +245,6 @@ const disposeAfter = (
 	});
 };
 
-const browserAtoms = new WeakMap<AtomRegistry.AtomRegistry, RequestAtoms>();
-
-const browserAtomsOf = (registry: AtomRegistry.AtomRegistry): RequestAtoms => {
-	let atoms = browserAtoms.get(registry);
-	if (atoms === undefined) {
-		atoms = { ...Loader.make(registry), dehydrate: () => [], registry };
-		browserAtoms.set(registry, atoms);
-	}
-	return atoms;
-};
-
 /**
  * Creates a root client middleware that gives client loaders the browser's
  * registry, under the context `atomsMiddleware` uses on the server.
@@ -270,6 +263,9 @@ const browserAtomsOf = (registry: AtomRegistry.AtomRegistry): RequestAtoms => {
  * The registry is the one the mounted `RegistryProvider` provides. Its
  * `dehydrate` returns nothing, so a loader's data has the same shape in
  * the browser and on the server, and `HydrationBoundary` has nothing to do.
+ * The verbs take the navigation's `signal`: when another navigation
+ * interrupts it, the `ensure` and `fetch` calls still waiting reject with
+ * its reason, and the atoms keep loading.
  *
  * **Gotchas**
  *
@@ -305,6 +301,10 @@ export const clientAtomsMiddleware =
 				"clientAtomsMiddleware found no mounted RegistryProvider: render raf-effect-atom/react-router's RegistryProvider around the app in the root layout.",
 			);
 		}
-		args.context.set(context, browserAtomsOf(registry));
+		args.context.set(context, {
+			...Loader.make(registry, { signal: args.request.signal }),
+			dehydrate: () => [],
+			registry,
+		});
 		return next();
 	};

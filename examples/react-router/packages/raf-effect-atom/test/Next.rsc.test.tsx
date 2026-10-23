@@ -17,6 +17,7 @@ import * as NextInternal from "../src/internal/next.ts";
 import * as Pending from "../src/internal/pending.ts";
 import {
 	counter,
+	gated,
 	greeting,
 	issue,
 	IssueNotFound,
@@ -209,6 +210,37 @@ describe("raf-effect-atom/next in a server component render", () => {
 			AsyncResult.isSuccess(result) && result.value === "Hello, ada",
 		);
 		registry.dispose();
+	});
+
+	it("stops a server component's wait when React aborts the render", async () => {
+		vi.stubGlobal("__webpack_require__", () => clientModule);
+		const gate = gated("next-signal");
+		const waited =
+			Promise.withResolvers<
+				PromiseSettledResult<LoadedHandle<typeof gate.atom>>
+			>();
+		async function GatedPage() {
+			const [settled] = await Promise.allSettled([Next.ensure(gate.atom)]);
+			waited.resolve(settled);
+			return null;
+		}
+		const controller = new AbortController();
+		const payload = renderToReadableStream(
+			<GatedPage />,
+			{},
+			{ onError: () => undefined, signal: controller.signal },
+		);
+		const reading = new Response(payload).text().catch(() => "");
+		await later(5);
+		const reason = new Error("the browser left");
+		controller.abort(reason);
+		const settled = await waited.promise;
+		assert.strictEqual(settled.status, "rejected");
+		assert.strictEqual(
+			settled.status === "rejected" ? settled.reason : undefined,
+			reason,
+		);
+		await reading;
 	});
 
 	it("sends a verb's handle to a client component as a prop", async () => {

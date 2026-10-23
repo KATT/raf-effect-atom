@@ -126,6 +126,21 @@ export const greeting = Atom.make((get) =>
 	}),
 );
 
+/**
+ * A serializable atom that loads until `open` is called, for a loader whose
+ * request or navigation goes while it waits.
+ */
+export const gated = (key: string) => {
+	const opened = Promise.withResolvers<string>();
+	const atom = Atom.make(Effect.promise(() => opened.promise)).pipe(
+		Atom.serializable({
+			key,
+			schema: AsyncResult.Schema({ success: Schema.String }),
+		}),
+	);
+	return { atom, open: opened.resolve };
+};
+
 /** Resolves after `millis`, as a seed that reads request data does. */
 export const later = (millis: number) =>
 	new Promise<void>((resolve) => setTimeout(resolve, millis));

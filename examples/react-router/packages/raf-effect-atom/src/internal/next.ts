@@ -15,18 +15,24 @@ export interface RequestAtoms extends Loader.Loader {
 	readonly getRegistry: () => AtomRegistry.AtomRegistry;
 }
 
+const renderSignal = (): AbortSignal | null => {
+	// SAFETY: React's cacheSignal returns an AbortSignal during a server
+	// component render, which @types/react declares as an empty interface.
+	const signal = React.cacheSignal() as AbortSignal | null;
+	return signal;
+};
+
 export const make = (options?: RequestRegistry.Options): RequestAtoms => {
 	const getRegistry = React.cache(() => {
 		const registry = RequestRegistry.make(options);
-		// SAFETY: React's cacheSignal returns an AbortSignal during a server
-		// component render, which @types/react declares as an empty interface.
-		const signal = React.cacheSignal() as AbortSignal | null;
-		signal?.addEventListener("abort", () => registry.dispose(), {
+		renderSignal()?.addEventListener("abort", () => registry.dispose(), {
 			once: true,
 		});
 		return registry;
 	});
-	const getLoader = React.cache(() => Loader.make(getRegistry()));
+	const getLoader = React.cache(() =>
+		Loader.make(getRegistry(), { signal: renderSignal() ?? undefined }),
+	);
 	return {
 		dehydrate: async () => {
 			const registry = getRegistry();

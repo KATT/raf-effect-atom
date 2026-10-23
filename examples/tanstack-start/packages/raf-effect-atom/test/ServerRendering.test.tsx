@@ -5,7 +5,7 @@ import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as EffectHydration from "effect/reactivity/Hydration";
 import * as React from "react";
-import { renderToString } from "react-dom/server";
+import { renderToReadableStream, renderToString } from "react-dom/server";
 
 import {
 	type Handle,
@@ -19,6 +19,33 @@ import { RegistryProvider } from "../src/Next.ts";
 import { makeRegistry } from "../src/TanStackRouter.tsx";
 import { issue, serve, unloaded } from "./fixtures/issues.ts";
 import { load } from "./fixtures/server.ts";
+import { wire } from "./fixtures/wire.ts";
+
+const disposable = (registry: AtomRegistry.AtomRegistry) => ({
+	registry,
+	[Symbol.dispose]: () => registry.dispose(),
+});
+
+/**
+ * Holds server renders until every request it lets in waits at it, so they
+ * render their pages at the same time.
+ */
+const makeGate = (requests: number) => {
+	const open = Promise.withResolvers<void>();
+	const waiting = new Set<string>();
+	function Gate(props: {
+		readonly children?: React.ReactNode;
+		readonly request: string;
+	}) {
+		waiting.add(props.request);
+		if (waiting.size === requests) {
+			open.resolve();
+		}
+		React.use(open.promise);
+		return props.children;
+	}
+	return Gate;
+};
 
 function Title(props: { readonly issue: Handle<typeof issue> }) {
 	const result = useAtomResult(issue, props.issue);
@@ -97,6 +124,79 @@ describe("HydrationBoundary on the server", () => {
 		using _server = serve();
 		using loaded = await load(Loader.ensure(issue, 1));
 		expect(render(loaded.state, loaded.registry)).toContain("nearest");
+	});
+
+	it("throws in development without a request registry", async () => {
+		using _server = serve();
+		using loaded = await load(Loader.ensure(issue, 1));
+		const shared = AtomRegistry.make();
+		expect(() =>
+			renderToString(
+				<RegistryContext.Provider value={shared}>
+					<HydrationBoundary state={loaded.state} />
+				</RegistryContext.Provider>,
+			),
+		).toThrow(
+			"HydrationBoundary rendered on the server without a request registry",
+		);
+		expect(shared.preloadedSerializable.size).toBe(0);
+		shared.dispose();
+	});
+});
+
+describe("two overlapping requests", () => {
+	/**
+	 * Streams one request's page into its own nearest request registry, as a
+	 * framework's server render does, until every result has arrived.
+	 */
+	const stream = async (
+		Gate: ReturnType<typeof makeGate>,
+		request: string,
+		state: Iterable<EffectHydration.DehydratedAtom>,
+		handle: Handle<typeof issue>,
+	) => {
+		using nearest = disposable(RequestRegistry.make());
+		const html = await renderToReadableStream(
+			<RegistryContext.Provider value={nearest.registry}>
+				<HydrationBoundary state={state}>
+					<React.Suspense fallback={<p>Loading</p>}>
+						<Gate request={request}>
+							<Title issue={handle} />
+						</Gate>
+					</React.Suspense>
+				</HydrationBoundary>
+			</RegistryContext.Provider>,
+		);
+		await html.allReady;
+		return await new Response(html).text();
+	};
+
+	it.each([
+		{
+			path: "the loader data's own array",
+			state: (registry: AtomRegistry.AtomRegistry) =>
+				Hydration.dehydrate(registry),
+		},
+		{
+			path: "state that crossed a wire",
+			state: (registry: AtomRegistry.AtomRegistry) =>
+				wire(Hydration.dehydrate(registry)),
+		},
+	])("stream their own results ($path)", async (each) => {
+		// The first request's prefetch fails, the second's finds the issue.
+		using server = serve({ 1: ["missing", "found"] });
+		using missing = await load(Loader.prefetch(issue, 1));
+		using found = await load(Loader.prefetch(issue, 1));
+		const Gate = makeGate(2);
+		const [missingHtml, foundHtml] = await Promise.all([
+			stream(Gate, "missing", each.state(missing.registry), missing.handles),
+			stream(Gate, "found", each.state(found.registry), found.handles),
+		]);
+		expect(missingHtml).toContain("Failed");
+		expect(missingHtml).not.toContain("Issue 1");
+		expect(foundHtml).toContain("Issue 1");
+		expect(foundHtml).not.toContain("Failed");
+		expect(server.requests(1)).toBe(2);
 	});
 });
 

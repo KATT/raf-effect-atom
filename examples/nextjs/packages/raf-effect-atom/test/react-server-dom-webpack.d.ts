@@ -19,6 +19,10 @@ declare module "react-server-dom-webpack/server" {
 				readonly name: string;
 			}
 		>,
+		options?: {
+			readonly onError?: (() => void) | undefined;
+			readonly signal?: AbortSignal | undefined;
+		},
 	): ReadableStream<Uint8Array>;
 }
 

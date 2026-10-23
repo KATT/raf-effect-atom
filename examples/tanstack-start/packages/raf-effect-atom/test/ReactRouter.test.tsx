@@ -19,6 +19,7 @@ import {
 import {
 	type Handle,
 	HydrationBoundary,
+	type LoadedHandle,
 	Loader,
 	RequestRegistry,
 	useAtomResult,
@@ -32,6 +33,7 @@ import {
 import { settle } from "./fixtures/browser.tsx";
 import {
 	counter,
+	gated,
 	greeting,
 	issue,
 	IssueNotFound,
@@ -191,6 +193,50 @@ describe("atomsMiddleware", () => {
 		assert.throws(() => handled.data.registry.get(counter), /disposed/);
 	});
 
+	it("stops a loader's wait when the client leaves, with the request's abort reason", async () => {
+		const gate = gated("react-router-signal");
+		const waited =
+			Promise.withResolvers<
+				PromiseSettledResult<LoadedHandle<typeof gate.atom>>
+			>();
+		const leaving = createStaticHandler([
+			{
+				id: "root",
+				loader: async (args) => {
+					const atoms = args.context.get(atomsContext);
+					const [settled] = await Promise.allSettled([atoms.ensure(gate.atom)]);
+					waited.resolve(settled);
+					return null;
+				},
+				middleware: [atomsMiddleware(atomsContext)],
+				path: "/",
+			},
+		]);
+		const controller = new AbortController();
+		const request = new Request("http://localhost/", {
+			signal: controller.signal,
+		});
+		const querying = leaving
+			.query(request, {
+				generateMiddlewareResponse: async (query) => {
+					await query(request);
+					return new Response("done");
+				},
+				requestContext: new RouterContextProvider(),
+			})
+			.catch(() => undefined);
+		await later(5);
+		const reason = new Error("the client left");
+		controller.abort(reason);
+		const settled = await waited.promise;
+		assert.strictEqual(settled.status, "rejected");
+		assert.strictEqual(
+			settled.status === "rejected" ? settled.reason : undefined,
+			reason,
+		);
+		await querying;
+	});
+
 	it("gives each request its own registry", async () => {
 		using _server = serve({});
 		const first = await handle("/issues/5");
@@ -299,6 +345,66 @@ describe("clientAtomsMiddleware", () => {
 		assert.deepStrictEqual(data?.atoms, []);
 		assert.isFalse(
 			data === undefined || RequestRegistry.isRequestRegistry(data.registry),
+		);
+	});
+
+	it("stops a loader's wait when another navigation interrupts it", async () => {
+		const gate = gated("react-router-client-signal");
+		const waited = Promise.withResolvers<{
+			readonly settled: PromiseSettledResult<LoadedHandle<typeof gate.atom>>;
+			readonly signal: AbortSignal;
+		}>();
+		let registry: AtomRegistry.AtomRegistry | undefined;
+		const router = createMemoryRouter([
+			{
+				children: [
+					{ element: <p>Home</p>, path: "/" },
+					{
+						loader: async (args) => {
+							const atoms = args.context.get(atomsContext);
+							registry = atoms.registry;
+							const [settled] = await Promise.allSettled([
+								atoms.ensure(gate.atom),
+							]);
+							waited.resolve({ settled, signal: args.request.signal });
+							return null;
+						},
+						path: "gated",
+					},
+				],
+				middleware: [clientAtomsMiddleware(atomsContext)],
+			},
+		]);
+		await act(async () => {
+			render(
+				<RegistryProvider>
+					<RouterProvider router={router} />
+				</RegistryProvider>,
+			);
+		});
+		using _rendered = { [Symbol.dispose]: cleanup };
+		const leaving = router.navigate("/gated");
+		await later(5);
+		await act(() => router.navigate("/"));
+		const outcome = await waited.promise;
+		assert.isTrue(outcome.signal.aborted);
+		assert.strictEqual(outcome.settled.status, "rejected");
+		assert.strictEqual(
+			outcome.settled.status === "rejected"
+				? outcome.settled.reason
+				: undefined,
+			outcome.signal.reason,
+		);
+		await leaving;
+		assert.isDefined(screen.getByText("Home"));
+		// The atom keeps loading in the browser's registry.
+		gate.open("loaded");
+		await settle();
+		const result = registry?.get(gate.atom);
+		assert.isTrue(
+			result !== undefined &&
+				AsyncResult.isSuccess(result) &&
+				result.value === "loaded",
 		);
 	});
 

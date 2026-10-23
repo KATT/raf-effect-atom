@@ -10,6 +10,7 @@ import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import { Loader, RequestRegistry } from "../src/index.ts";
 import {
 	counter,
+	gated,
 	greeting,
 	issue,
 	IssueNotFound,
@@ -344,6 +345,38 @@ describe("make", () => {
 			);
 			assert.isTrue(Exit.isFailure(exit));
 		}).pipe(Effect.provide(browser())),
+	);
+
+	it.live(
+		"stops waiting when its signal aborts, with the signal's reason",
+		() =>
+			Effect.gen(function* () {
+				const registry = yield* AtomRegistry.AtomRegistry;
+				const gate = gated("make-signal");
+				const controller = new AbortController();
+				const loader = Loader.make(registry, { signal: controller.signal });
+				const waiting = loader.ensure(gate.atom);
+				const refreshing = loader.fetch(gate.atom);
+				yield* Effect.sleep("5 millis");
+				const reason = new Error("the navigation left");
+				controller.abort(reason);
+				const ensureRejection = yield* Effect.flip(
+					Effect.tryPromise(() => waiting),
+				);
+				const fetchRejection = yield* Effect.flip(
+					Effect.tryPromise(() => refreshing),
+				);
+				assert.strictEqual(ensureRejection.cause, reason);
+				assert.strictEqual(fetchRejection.cause, reason);
+				// The atom keeps loading, under the verbs' lease.
+				assert.isTrue(AsyncResult.isInitial(registry.get(gate.atom)));
+				gate.open("loaded");
+				yield* Effect.sleep("5 millis");
+				const result = registry.get(gate.atom);
+				assert.isTrue(
+					AsyncResult.isSuccess(result) && result.value === "loaded",
+				);
+			}).pipe(Effect.provide(browser())),
 	);
 
 	it.live("takes a lease TTL", () =>

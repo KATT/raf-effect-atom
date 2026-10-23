@@ -362,6 +362,32 @@ export interface Loader {
 }
 
 /**
+ * Options for `make`.
+ *
+ * @stability unstable
+ * @category models
+ * @since 0.3.0
+ */
+export interface MakeOptions {
+	/** How long a lease lasts in the browser. See {@link LeaseTTL}. */
+	readonly leaseTTL?: Duration.Input | undefined;
+	/**
+	 * The request's or the navigation's abort signal. Aborting it interrupts
+	 * the `ensure` and `fetch` calls still waiting, which reject with its
+	 * reason. The atoms they started keep loading.
+	 */
+	readonly signal?: AbortSignal | undefined;
+}
+
+const runPromise = <A, E>(
+	effect: Effect.Effect<A, E>,
+	signal: AbortSignal | undefined,
+): Promise<A> =>
+	Effect.runPromise(effect, { signal }).catch((error: unknown) => {
+		throw signal?.aborted ? signal.reason : error;
+	});
+
+/**
  * Creates the Promise verbs over one registry.
  *
  * **When to use**
@@ -369,15 +395,22 @@ export interface Loader {
  * Use in a framework integration, in loaders that are async functions, or
  * in an event handler that starts an atom before the state change that
  * renders its reader, for state that can't be in the URL, such as a
- * search-as-you-type query. In Effect code, use
- * the verbs directly with the `AtomRegistry` provided.
+ * search-as-you-type query. In Effect code, use the verbs directly with the
+ * `AtomRegistry` provided.
+ *
+ * **Details**
+ *
+ * With a `signal`, an aborted request or navigation stops waiting: `ensure`
+ * and `fetch` reject with the signal's reason, and the atoms they started
+ * keep loading. The React Router and Next.js integrations pass the
+ * request's.
  *
  * **Example**
  *
  * ```ts
  * import { Loader, RequestRegistry } from "raf-effect-atom"
  *
- * const loader = Loader.make(RequestRegistry.make())
+ * const loader = Loader.make(RequestRegistry.make(), { signal: request.signal })
  * const comments = loader.prefetch(commentPage, 1, 0)
  * const issueHandle = await loader.ensure(issue, 1)
  * ```
@@ -388,15 +421,16 @@ export interface Loader {
  */
 export const make = (
 	registry: AtomRegistry.AtomRegistry,
-	options?: { readonly leaseTTL?: Duration.Input | undefined },
+	options?: MakeOptions,
 ): Loader => {
 	const leaseTTL =
 		options?.leaseTTL === undefined
 			? undefined
 			: Duration.fromInputUnsafe(options.leaseTTL);
-	const provide = <A>(
-		effect: Effect.Effect<A, never, AtomRegistry.AtomRegistry>,
-	): Effect.Effect<A> => {
+	const signal = options?.signal;
+	const provide = <A, E>(
+		effect: Effect.Effect<A, E, AtomRegistry.AtomRegistry>,
+	): Effect.Effect<A, E> => {
 		const provided = Effect.provideService(
 			effect,
 			AtomRegistry.AtomRegistry,
@@ -408,9 +442,9 @@ export const make = (
 	};
 	return {
 		ensure: (source, ...args) =>
-			Effect.runPromise(provide(ensure(source, ...args))),
+			runPromise(provide(ensure(source, ...args)), signal),
 		fetch: (source, ...args) =>
-			Effect.runPromise(provide(fetch(source, ...args))),
+			runPromise(provide(fetch(source, ...args)), signal),
 		prefetch: <S extends Source>(source: S, ...args: ArgsOf<S>) => {
 			const atom = Handles.atomOf(source, args);
 			Seeds.afterSeed(registry, () => {

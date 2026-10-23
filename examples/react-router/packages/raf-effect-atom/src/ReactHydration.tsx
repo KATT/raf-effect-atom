@@ -54,6 +54,12 @@ export interface HydrationBoundaryProps {
  * there, so an `effect-atom-boundary` boundary sees their failures before
  * its children read them and renders its handler on the server.
  *
+ * **Gotchas**
+ *
+ * In development, it throws during server rendering when the registry isn't
+ * a request registry, such as `@effect/atom-react`'s default one, which
+ * every request shares: one request's state would reach the others.
+ *
  * **Example**
  *
  * ```tsx
@@ -75,6 +81,7 @@ export const HydrationBoundary = (
 	const state = props.state;
 	const source = Registry.isServer() ? Sources.sourceOf(state) : undefined;
 	const registry = source ?? context;
+	Registry.requireRequestRegistry(registry, "HydrationBoundary");
 	// Holding a streamed result must happen in render, before the children
 	// read it; it's idempotent per entry.
 	const settled = React.useMemo(
