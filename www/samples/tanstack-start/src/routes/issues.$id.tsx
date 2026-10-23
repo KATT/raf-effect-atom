@@ -1,6 +1,6 @@
 import type { IssueId } from "@examples/contract";
 import { createFileRoute } from "@tanstack/react-router";
-import { Schema } from "effect";
+import { Option, Schema } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import { useAtomResult } from "raf-effect-atom";
 import { Suspense } from "react";
@@ -35,10 +35,11 @@ function IssuePage() {
 	const { id } = Route.useParams();
 	// IssueNotFound and Unauthorized go to their boundaries.
 	const result = useAtomResult(useIssueBoundary().wrap(issue(id)));
-	//    ^?
 	if (AsyncResult.isFailure(result)) {
-		// RpcClientError, the only failure left.
-		return <p>Couldn't reach the server.</p>;
+		// useAtomResult throws defects, so a failure it returns has a typed error.
+		const error = Option.getOrThrow(AsyncResult.error(result));
+		//    ^?
+		return <p>Couldn't reach the server: {error.reason.message}</p>;
 	}
 	return (
 		<article>
@@ -55,8 +56,9 @@ function Assignee(props: { issueId: IssueId }) {
 		useIssueBoundary().wrap(assignee(props.issueId)),
 	);
 	if (AsyncResult.isFailure(result)) {
-		// RpcClientError, as for the issue.
-		return <p>Couldn't load the assignee.</p>;
+		const error = Option.getOrThrow(AsyncResult.error(result));
+		//    ^?
+		return <p>Couldn't load the assignee: {error.reason.message}</p>;
 	}
 	return <p>{result.value.name}</p>;
 }

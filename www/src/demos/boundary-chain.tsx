@@ -4,6 +4,7 @@ import { IssueId, IssueNotFound, Unauthorized } from "@examples/contract";
 import { Match, Option } from "effect";
 import { type CatchTagProps, createErrorBoundary } from "effect-atom-boundary";
 import { AsyncResult } from "effect/reactivity";
+import type { RpcClientError } from "effect/rpc";
 import { useAtomResult } from "raf-effect-atom";
 import { Suspense, useState } from "react";
 
@@ -85,10 +86,10 @@ function IssueTitle(props: { readonly id: IssueId }) {
 	});
 }
 
-function unreachable() {
+function unreachable(error: RpcClientError.RpcClientError) {
 	return (
 		<ErrorNotice caughtBy="IssueTitle" type="RpcClientError">
-			The request didn’t reach the server.
+			The request didn’t reach the server: {error.reason.message}
 		</ErrorNotice>
 	);
 }

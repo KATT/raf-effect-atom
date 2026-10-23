@@ -13,16 +13,17 @@ declare const id: IssueId;
 // #region narrowed
 function IssueTitle(props: { id: IssueId }) {
 	const result = useAtomResult(useAuthBoundary().wrap(issue(props.id)));
-	//    ^?
 	if (AsyncResult.isSuccess(result)) {
 		return <h1>{result.value.title}</h1>;
 	}
 	// useAtomResult throws defects, so a failure it returns has a typed error.
 	const error = Option.getOrThrow(AsyncResult.error(result));
-	// One case per tag left: Unauthorized went to <AuthBoundary>.
+	//    ^?
 	return Match.valueTags(error, {
 		IssueNotFound: (notFound) => <p>There's no issue #{notFound.id}.</p>,
-		RpcClientError: () => <p>Couldn't reach the server.</p>,
+		RpcClientError: (unreachable) => (
+			<p>Couldn't reach the server: {unreachable.reason.message}</p>
+		),
 	});
 }
 // #endregion narrowed

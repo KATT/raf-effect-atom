@@ -1,5 +1,5 @@
 import type { IssueId } from "@examples/contract";
-import { Effect } from "effect";
+import { Effect, Option } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import { Loader, useAtomResult, useWaterfall } from "raf-effect-atom";
 import { Suspense, use, useState } from "react";
@@ -17,8 +17,10 @@ function IssuePage(props: { issueId: IssueId }) {
 	// Starts GetIssue, and suspends until it settles.
 	const result = useAtomResult(useIssueBoundary().wrap(issue(props.issueId)));
 	if (AsyncResult.isFailure(result)) {
-		// RpcClientError: the boundaries took IssueNotFound and Unauthorized.
-		return <p>Couldn't reach the server.</p>;
+		// useAtomResult throws defects, so a failure it returns has a typed error.
+		const error = Option.getOrThrow(AsyncResult.error(result));
+		//    ^?
+		return <p>Couldn't reach the server: {error.reason.message}</p>;
 	}
 	return (
 		<article>
@@ -36,8 +38,9 @@ function Assignee(props: { issueId: IssueId }) {
 		useIssueBoundary().wrap(assignee(props.issueId)),
 	);
 	if (AsyncResult.isFailure(result)) {
-		// RpcClientError, as for the issue.
-		return <p>Couldn't load the assignee.</p>;
+		const error = Option.getOrThrow(AsyncResult.error(result));
+		//    ^?
+		return <p>Couldn't load the assignee: {error.reason.message}</p>;
 	}
 	return <p>{result.value.name}</p>;
 }
