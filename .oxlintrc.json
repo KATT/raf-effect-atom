@@ -574,7 +574,7 @@
 			"files": [
 				"examples/.shared/ui/src/components/**",
 				"examples/.shared/ui/src/hooks/**",
-				"examples/.shared/ui/src/lib/highlighter.tsx"
+				"examples/.shared/ui/src/lib/**"
 			],
 			"rules": {
 				"typescript/no-deprecated": "off",
