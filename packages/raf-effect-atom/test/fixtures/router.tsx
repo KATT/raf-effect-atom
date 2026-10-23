@@ -63,8 +63,6 @@ function IssuePage() {
 
 const rootRoute = createRootRouteWithContext<{
 	readonly atoms: Loader.Loader;
-	/** What only the browser knows, as a credential read from the URL fragment. */
-	readonly entry: number | undefined;
 }>()({
 	component: () => (
 		<React.Suspense fallback={<p>Loading</p>}>
@@ -118,32 +116,32 @@ const welcomeRoute = createRoute({
 });
 
 /**
- * `/entry` runs only in the browser: its loader starts an unkeyed query from
- * the browser's entry.
+ * `/in-browser/$id` renders on the server, and leaves the issue's unkeyed
+ * query to the browser.
  */
-const entryRoute = createRoute({
-	component: function EntryPage() {
-		const data = entryRoute.useLoaderData();
-		return data.issue === undefined ? (
-			<p>No entry</p>
-		) : (
-			<EntryIssue issue={data.issue} />
+const inBrowserRoute = createRoute({
+	component: function InBrowserPage() {
+		const data = inBrowserRoute.useLoaderData();
+		return (
+			<article>
+				<h1>Page</h1>
+				<React.Suspense fallback={<p>Opening</p>}>
+					<UnkeyedTitle issue={data.issue} />
+				</React.Suspense>
+			</article>
 		);
 	},
 	getParentRoute: () => rootRoute,
 	loader: (match) => ({
-		issue:
-			match.context.entry === undefined
-				? undefined
-				: match.context.atoms.prefetch(unkeyedIssue, match.context.entry),
+		issue: match.context.atoms.prefetchInBrowser(
+			unkeyedIssue,
+			Number(match.params.id),
+		),
 	}),
-	path: "/entry",
-	pendingComponent: () => <p>Opening</p>,
-	pendingMinMs: 0,
-	ssr: false,
+	path: "/in-browser/$id",
 });
 
-function EntryIssue(props: { readonly issue: Handle<typeof unkeyedIssue> }) {
+function UnkeyedTitle(props: { readonly issue: Handle<typeof unkeyedIssue> }) {
 	const result = useAtomResult(unkeyedIssue, props.issue);
 	return <p>{AsyncResult.isSuccess(result) ? result.value.title : "Failed"}</p>;
 }
@@ -153,7 +151,7 @@ const routeTree = rootRoute.addChildren([
 	prefetchRoute,
 	greetingRoute,
 	welcomeRoute,
-	entryRoute,
+	inBrowserRoute,
 ]);
 
 /**
@@ -165,10 +163,9 @@ const makeRouter = (
 	registry: AtomRegistry.AtomRegistry,
 	isServer: boolean,
 	hydrated: Array<unknown> = [],
-	entry?: number,
 ) => {
 	const router = createRouter({
-		context: { atoms: Loader.make(registry), entry },
+		context: { atoms: Loader.make(registry) },
 		dehydrate: () => ({ app: "state" }),
 		history: createMemoryHistory({ initialEntries: [url] }),
 		hydrate: (dehydrated) => {
@@ -213,11 +210,7 @@ export const renderOnServer = async (
  * router from them, and renders it. React's own scripts are left out: they
  * move server-rendered HTML, which the browser render doesn't use.
  */
-export const renderInBrowser = async (
-	url: string,
-	html: string,
-	entry?: number,
-) => {
+export const renderInBrowser = async (url: string, html: string) => {
 	const template = document.createElement("template");
 	template.innerHTML = html;
 	for (const sent of template.content.querySelectorAll("script")) {
@@ -230,7 +223,7 @@ export const renderInBrowser = async (
 	}
 	const app = mount();
 	const hydrated: Array<unknown> = [];
-	const router = makeRouter(url, app.registry, false, hydrated, entry);
+	const router = makeRouter(url, app.registry, false, hydrated);
 	await act(async () => {
 		await hydrate(router);
 		window.$_TSR?.h();

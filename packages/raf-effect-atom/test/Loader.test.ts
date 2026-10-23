@@ -222,6 +222,56 @@ describe("handles", () => {
 	);
 });
 
+describe("prefetchInBrowser", () => {
+	it.live("starts the atom in the browser, as prefetch does", () =>
+		Effect.gen(function* () {
+			using server = serve();
+			const handle = yield* Loader.prefetchInBrowser(unkeyedIssue, 1);
+			assert.deepStrictEqual(handle, { args: [1], key: undefined });
+			assert.strictEqual(server.requests(1), 1);
+		}).pipe(Effect.provide(browser())),
+	);
+
+	it.live(
+		"leaves the atom to the browser on a request registry, serializable or not",
+		() =>
+			Effect.gen(function* () {
+				using server = serve();
+				const registry = yield* AtomRegistry.AtomRegistry;
+				const unkeyed = yield* Loader.prefetchInBrowser(unkeyedIssue, 1);
+				const keyed = yield* Loader.prefetchInBrowser(issue, 2);
+				assert.deepStrictEqual(unkeyed, {
+					args: [1],
+					inBrowser: true,
+					key: undefined,
+				});
+				assert.deepStrictEqual(keyed, {
+					args: [2],
+					inBrowser: true,
+					key: "AtomRpc:GetIssue:2",
+				});
+				assert.strictEqual(server.requests(1), 0);
+				assert.strictEqual(server.requests(2), 0);
+				assert.deepStrictEqual(Hydration.dehydrate(registry), []);
+			}).pipe(Effect.provide(RequestRegistry.layer)),
+	);
+
+	it.live("runs as a Promise verb on each side", () =>
+		Effect.gen(function* () {
+			using server = serve();
+			using request = disposable(RequestRegistry.make());
+			const onServer = Loader.make(request).prefetchInBrowser(unkeyedIssue, 1);
+			assert.isTrue(onServer.inBrowser);
+			assert.strictEqual(server.requests(1), 0);
+			const inBrowser = Loader.make(
+				yield* AtomRegistry.AtomRegistry,
+			).prefetchInBrowser(unkeyedIssue, 1);
+			assert.isUndefined(inBrowser.inBrowser);
+			assert.strictEqual(server.requests(1), 1);
+		}).pipe(Effect.provide(browser())),
+	);
+});
+
 describe("request registries", () => {
 	it.live("refuse an atom that isn't serializable in development", () =>
 		Effect.gen(function* () {
