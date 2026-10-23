@@ -44,8 +44,6 @@
 	"ignore": [".repos/**"],
 	"workspaces": {
 		".": {
-			// Scripts the agent skills run with `node`.
-			"entry": [".agents/skills/*/scripts/*.mjs"],
 			"ignoreDependencies": [
 				// `vp lint` / `vp fmt` load these. vite-plus depends on them
 				// too; the root pins the versions those commands run.
