@@ -76,5 +76,10 @@
 			"entry": ["typetest/**/*.tst.tsx"],
 			"includeEntryExports": false,
 		},
+		"packages/raf-effect-atom": {
+			// tstyche type tests. The entry files are the published API.
+			"entry": ["typetest/**/*.tst.{ts,tsx}"],
+			"includeEntryExports": false,
+		},
 	},
 }

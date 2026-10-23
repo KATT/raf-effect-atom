@@ -1,0 +1,81 @@
+import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
+import * as Predicate from "effect/Predicate";
+import * as Hydration from "effect/reactivity/Hydration";
+
+const held = new WeakMap<
+	AtomRegistry.AtomRegistry,
+	WeakSet<Hydration.DehydratedAtomValue>
+>();
+
+const pending = new WeakMap<
+	AtomRegistry.AtomRegistry,
+	Map<string, Promise<void>>
+>();
+
+/** The promise of a streamed result still on its way, if there is one. */
+export const get = (
+	registry: AtomRegistry.AtomRegistry,
+	key: string,
+): Promise<void> | undefined => pending.get(registry)?.get(key);
+
+const hold = (
+	registry: AtomRegistry.AtomRegistry,
+	entry: Hydration.DehydratedAtomValue,
+	result: Promise<unknown>,
+): void => {
+	let entries = held.get(registry);
+	if (entries === undefined) {
+		entries = new WeakSet();
+		held.set(registry, entries);
+	}
+	if (entries.has(entry)) {
+		return;
+	}
+	entries.add(entry);
+	let byKey = pending.get(registry);
+	if (byKey === undefined) {
+		byKey = new Map();
+		pending.set(registry, byKey);
+	}
+	if (byKey.has(entry.key)) {
+		return;
+	}
+	const owner = byKey;
+	const done = () => {
+		owner.delete(entry.key);
+	};
+	owner.set(
+		entry.key,
+		result.then((value) => {
+			done();
+			// A result the server couldn't encode resolves to a symbol.
+			if (!Predicate.isSymbol(value)) {
+				const resolved: Hydration.DehydratedAtomValue = {
+					...entry,
+					resultPromise: undefined,
+					value,
+				};
+				Hydration.hydrate(registry, [resolved]);
+			}
+		}, done),
+	);
+};
+
+/**
+ * Holds back each streamed entry of `state` until its promise resolves, and
+ * returns the settled ones.
+ */
+export const split = (
+	registry: AtomRegistry.AtomRegistry,
+	state: Iterable<Hydration.DehydratedAtom>,
+): Array<Hydration.DehydratedAtomValue> => {
+	const settled: Array<Hydration.DehydratedAtomValue> = [];
+	for (const entry of Hydration.toValues(Array.from(state))) {
+		if (entry.resultPromise === undefined) {
+			settled.push(entry);
+		} else {
+			hold(registry, entry, entry.resultPromise);
+		}
+	}
+	return settled;
+};
