@@ -1,0 +1,86 @@
+{
+	"git": {
+		"commitMessage": "chore(release): effect-atom-boundary@${version}",
+		"commitsPath": "packages/effect-atom-boundary",
+		"pushArgs": ["--follow-tags", "--atomic"],
+		"requireCommits": true,
+		"tagName": "effect-atom-boundary@${version}"
+	},
+	"github": {
+		"release": true,
+		"releaseName": "effect-atom-boundary@${version}"
+	},
+	"hooks": {
+		"after:bump": "pnpm --filter effect-atom-boundary exec npm pkg set version=${version}",
+		"before:git:release": "pnpm --filter \"effect-atom-boundary...\" build && cp LICENSE packages/effect-atom-boundary/LICENSE && git fetch -q origin main && { test \"$(git rev-parse FETCH_HEAD)\" = \"$(git rev-parse HEAD)\" || { echo 'main moved during this release; the newer run releases it.'; exit 1; }; } && pnpm --filter effect-atom-boundary run publish:npm"
+	},
+	"npm": false,
+	"plugins": {
+		"@release-it/conventional-changelog": {
+			"infile": "packages/effect-atom-boundary/CHANGELOG.md",
+			"tagPrefix": "effect-atom-boundary@",
+			"commitsOpts": {
+				"path": "packages/effect-atom-boundary"
+			},
+			"gitRawCommitsOpts": {
+				"path": "packages/effect-atom-boundary"
+			},
+			"preset": {
+				"name": "conventionalcommits",
+				"preMajor": true,
+				"types": [
+					{
+						"effect": "bump",
+						"section": "Features",
+						"type": "feat"
+					},
+					{
+						"effect": "bump",
+						"section": "Bug Fixes",
+						"type": "fix"
+					},
+					{
+						"effect": "bump",
+						"section": "Performance Improvements",
+						"type": "perf"
+					},
+					{
+						"effect": "changelog",
+						"section": "Code Refactoring",
+						"type": "refactor"
+					},
+					{
+						"effect": "changelog",
+						"section": "Documentation",
+						"type": "docs"
+					},
+					{
+						"effect": "changelog",
+						"section": "Tests",
+						"type": "test"
+					},
+					{
+						"effect": "changelog",
+						"section": "Build System",
+						"type": "build"
+					},
+					{
+						"effect": "changelog",
+						"section": "Continuous Integration",
+						"type": "ci"
+					},
+					{
+						"effect": "changelog",
+						"section": "Styles",
+						"type": "style"
+					},
+					{
+						"effect": "changelog",
+						"section": "Miscellaneous Chores",
+						"type": "chore"
+					}
+				]
+			}
+		}
+	}
+}

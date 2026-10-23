@@ -7,9 +7,9 @@
 .DS_Store
 **/.DS_Store
 
-# Generated into the publishable package on prepack / release
+# Copied from the root / packed by the release (release-it/<package>.json).
+# Each package's CHANGELOG.md is committed by its release.
 /packages/*/LICENSE
-/packages/*/CHANGELOG.md
 /packages/*/*.tgz
 
 # Framework build output

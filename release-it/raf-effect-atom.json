@@ -1,27 +1,29 @@
 {
 	"git": {
-		"commitMessage": "chore: release v${version}",
-		"commitsPath": "packages/*",
+		"commitMessage": "chore(release): raf-effect-atom@${version}",
+		"commitsPath": "packages/raf-effect-atom",
 		"pushArgs": ["--follow-tags", "--atomic"],
-		"requireCommits": true
+		"requireCommits": true,
+		"tagName": "raf-effect-atom@${version}"
 	},
 	"github": {
 		"release": true,
-		"releaseName": "v${version}"
+		"releaseName": "raf-effect-atom@${version}"
 	},
 	"hooks": {
-		"after:bump": "pnpm -r --filter \"./packages/*\" exec npm pkg set version=${version}",
-		"before:git:release": "pnpm build && git fetch -q origin main && { test \"$(git rev-parse FETCH_HEAD)\" = \"$(git rev-parse HEAD)\" || { echo 'main moved during this release; the newer run releases it.'; exit 1; }; } && pnpm --filter effect-atom-boundary run publish:npm && pnpm --filter raf-effect-atom run publish:npm"
+		"after:bump": "pnpm --filter raf-effect-atom exec npm pkg set version=${version}",
+		"before:git:release": "pnpm --filter \"raf-effect-atom...\" build && cp LICENSE packages/raf-effect-atom/LICENSE && git fetch -q origin main && { test \"$(git rev-parse FETCH_HEAD)\" = \"$(git rev-parse HEAD)\" || { echo 'main moved during this release; the newer run releases it.'; exit 1; }; } && pnpm --filter raf-effect-atom run publish:npm"
 	},
 	"npm": false,
 	"plugins": {
 		"@release-it/conventional-changelog": {
-			"infile": "CHANGELOG.md",
+			"infile": "packages/raf-effect-atom/CHANGELOG.md",
+			"tagPrefix": "raf-effect-atom@",
 			"commitsOpts": {
-				"path": "packages/*"
+				"path": "packages/raf-effect-atom"
 			},
 			"gitRawCommitsOpts": {
-				"path": "packages/*"
+				"path": "packages/raf-effect-atom"
 			},
 			"preset": {
 				"name": "conventionalcommits",

@@ -10,7 +10,7 @@
 - Before every push, run the checks in [`.github/DEVELOPMENT.md`](.github/DEVELOPMENT.md#before-you-push): tests, typecheck, lint, format, knip, and the `www` build when `www`, its samples or the packages changed. Never push a commit you know is red.
 - If CI on `main` goes red, the next commit fixes it, before anything else.
 - Never force push, rewrite `main`'s history, or amend a pushed commit. Fix forward.
-- Every subject is a [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) (`type(scope)!: description`, types from `.release-it.json`). The `commit-msg` hook and the `Commits` workflow check it, because release-it reads these subjects for the changelog and the version bump.
+- Every subject is a [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) (`type(scope)!: description`, types from `release-it/<package>.json`). The `commit-msg` hook and the `Commits` workflow check it, because release-it reads these subjects for the changelog and the version bump.
 - The commit body holds what a PR description would: what changed, the alternatives you rejected and why, and what you verified. Durable decisions also go in `.agent-docs/decisions/`.
 - Never run release-it or `npm publish`. The Release workflow is started by hand by the maintainer.
 

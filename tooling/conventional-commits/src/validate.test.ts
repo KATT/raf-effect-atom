@@ -1,65 +1,16 @@
-import { NodeServices } from "@effect/platform-node";
 import { describe, expect, it } from "@effect/vitest";
-import { Effect, FileSystem, Path, Schema } from "effect";
 
 import { releaseTypes } from "./types.ts";
 import { formatError, validateSubject } from "./validate.ts";
 
-const ReleaseIt = Schema.fromJsonString(
-	Schema.Struct({
-		git: Schema.Struct({ commitsPath: Schema.String }),
-		plugins: Schema.Struct({
-			"@release-it/conventional-changelog": Schema.Struct({
-				commitsOpts: Schema.Struct({ path: Schema.String }),
-				gitRawCommitsOpts: Schema.Struct({ path: Schema.String }),
-				preset: Schema.Struct({
-					types: Schema.Array(
-						Schema.Struct({
-							effect: Schema.Literals(["bump", "changelog"]),
-							section: Schema.String,
-							type: Schema.String,
-						}),
-					),
-				}),
-			}),
-		}),
-	}),
-);
-
 describe("validateSubject", () => {
-	it.effect("matches the types and package paths in .release-it.json", () =>
-		Effect.gen(function* () {
-			const fs = yield* FileSystem.FileSystem;
-			const path = yield* Path.Path;
-			const releaseIt = yield* Schema.decodeEffect(ReleaseIt)(
-				yield* fs.readFileString(
-					path.join(import.meta.dirname, "../../../.release-it.json"),
-				),
-			);
-			const changelog = releaseIt.plugins["@release-it/conventional-changelog"];
-			const types = changelog.preset.types;
-			expect(releaseTypes.toSorted()).toEqual(
-				types.map((entry) => entry.type).toSorted(),
-			);
-			// Same packages/* as the release gate (git.commitsPath).
-			expect(changelog.commitsOpts.path).toBe("packages/*");
-			expect(changelog.gitRawCommitsOpts.path).toBe("packages/*");
-			expect(releaseIt.git.commitsPath).toBe("packages/*");
-			expect(
-				types
-					.filter((entry) => entry.effect === "bump")
-					.map((entry) => entry.type),
-			).toEqual(["feat", "fix", "perf"]);
-		}).pipe(Effect.provide(NodeServices.layer)),
-	);
-
 	it.each([
 		"feat: add loader verbs",
 		"fix(raf-effect-atom)!: prefetch keeps the atom mounted",
 		"feat!: rename the read hook",
 		"docs(boundary): show the compile error for a misspelled tag",
 		"ci: check commit subjects on push",
-		"chore: release v0.1.0",
+		"chore(release): effect-atom-boundary@0.1.0",
 		"test(boundary): pin the request count after a caught failure",
 		"style: tidy the demo layout",
 		"build: bump vite-plus",

@@ -41,7 +41,7 @@ Also run the docs site's build when `www`, its samples or the packages changed.
 
 ## Commits
 
-Every commit subject is a [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/): `type(scope)!: description`, with a type from `.release-it.json` (`feat`, `fix`, `perf`, `build`, `chore`, `ci`, `docs`, `refactor`, `style`, `test`). Breaking changes mark the type with `!`. The `commit-msg` hook rejects other subjects, and the `Commits` workflow checks every commit a push brings to `main`. release-it reads these subjects for the changelog and the version bump.
+Every commit subject is a [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/): `type(scope)!: description`, with a type from `release-it/<package>.json` (`feat`, `fix`, `perf`, `build`, `chore`, `ci`, `docs`, `refactor`, `style`, `test`). Breaking changes mark the type with `!`. The `commit-msg` hook rejects other subjects, and the `Commits` workflow checks every commit a push brings to `main`. release-it reads these subjects for the changelog and the version bump.
 
 ## Formatting
 
@@ -71,15 +71,16 @@ pnpm knip
 
 ## Releasing / npm publish
 
-Both packages are released together and always share a version. The latest git tag is the version source.
+Each package has its own version, changelog (`packages/<package>/CHANGELOG.md`) and tag (`effect-atom-boundary@x.y.z`). Its latest tag is the version source, and only commits that touch its directory count. Each has a release-it config in [`release-it/`](../release-it).
 
-The maintainer starts [`.github/workflows/release.yaml`](./workflows/release.yaml) by hand from the Actions tab. It runs [release-it](https://github.com/release-it/release-it) from the repo root, and skips when nothing under `packages/*` changed since the latest tag:
+The maintainer starts [`.github/workflows/release.yaml`](./workflows/release.yaml) by hand from the Actions tab, for all packages or one. A gate picks the packages with commits since their own latest tag, then runs [release-it](https://github.com/release-it/release-it) from the repo root for each, one after the other:
 
-1. Computes the next version from the conventional commits since the latest tag that touch `packages/*`, and updates `CHANGELOG.md`. `feat`, `fix`, and `perf` decide the bump; the other types are listed without bumping, and a release with none of the three is a patch.
-2. Writes the version into each `packages/*/package.json`.
-3. Checks `main` hasn't moved since the run checked it out; if it has, it stops and leaves the release to a later run.
-4. Builds, then publishes `effect-atom-boundary` and `raf-effect-atom` (each `pnpm pack` + `npm publish`, using npm trusted publishing over OIDC, no `NPM_TOKEN`). `pnpm pack` rewrites `workspace:*` and `catalog:` to real versions.
-5. Only after publishing: commits `chore: release vX.Y.Z`, tags, pushes, and creates a GitHub Release.
+1. Computes the next version from the conventional commits since the package's latest tag that touch `packages/<package>`, and updates its `CHANGELOG.md` (the first release writes its whole history). `feat`, `fix`, and `perf` decide the bump; the other types are listed without bumping, and a release with none of the three is a patch.
+2. Writes the version into `packages/<package>/package.json`.
+3. Builds the package and copies the root `LICENSE` into it.
+4. Checks `main` hasn't moved since the run checked it out; if it has, it stops and leaves the release to a later run.
+5. Publishes the package (`pnpm pack` + `npm publish`, using npm trusted publishing over OIDC, no `NPM_TOKEN`). `pnpm pack` rewrites `workspace:*` and `catalog:` to real versions.
+6. Only after publishing: commits `chore(release): <package>@x.y.z`, tags it `<package>@x.y.z`, pushes, and creates a GitHub Release.
 
 Do not set `NODE_AUTH_TOKEN` / `NPM_TOKEN` in the release job: a placeholder token disables OIDC.
 
@@ -92,6 +93,7 @@ Do not set `NODE_AUTH_TOKEN` / `NPM_TOKEN` in the release job: a placeholder tok
    npm login
    pnpm build
    for pkg in effect-atom-boundary raf-effect-atom; do
+   	cp LICENSE packages/$pkg/LICENSE
    	(cd packages/$pkg && pnpm pack --out package.tgz && npm publish package.tgz --access public --provenance=false && rm package.tgz)
    done
    ```

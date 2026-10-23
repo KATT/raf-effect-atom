@@ -6,18 +6,28 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      package:
+        description: Package to release (each one has its own version and tag)
+        type: choice
+        default: all
+        options:
+          - all
+          - effect-atom-boundary
+          - raf-effect-atom
 
 concurrency:
   group: ${{ github.workflow }}
 
 jobs:
-  # Skip install/build when nothing publishable changed since the latest tag.
+  # Pick the packages with commits since their own latest tag, so a run with
+  # nothing publishable skips install/build.
   gate:
-    # release-it pushes "chore: release vX.Y.Z"; a push trigger would otherwise
-    # re-run on it and fail with "no commits since the latest tag".
-    if: "${{ !startsWith(github.event.head_commit.message, 'chore: release') }}"
+    # release-it pushes "chore(release): <package>@x.y.z"; a push trigger would
+    # otherwise re-run on it.
+    if: "${{ !startsWith(github.event.head_commit.message, 'chore(release)') }}"
     outputs:
-      should_release: ${{ steps.check.outputs.should_release }}
+      packages: ${{ steps.check.outputs.packages }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -25,30 +35,47 @@ jobs:
           fetch-depth: 0
           ref: main
       - id: check
-        # Glob must match git.commitsPath in .release-it.json. Unquoted so the
-        # shell expands it (same as release-it). Before the first tag, every
-        # commit counts.
+        # Tag pattern and path must match git.tagName and git.commitsPath in
+        # release-it/<package>.json. Before a package's first tag, every
+        # commit under it counts.
+        env:
+          SELECTED: ${{ inputs.package || 'all' }}
         run: |
-          if latest=$(git describe --tags --abbrev=0 2>/dev/null); then
-            count=$(git rev-list "${latest}..HEAD" --count -- packages/*)
-          else
-            latest="the first commit"
-            count=$(git rev-list HEAD --count -- packages/*)
-          fi
-          if [ "$count" -eq 0 ]; then
-            echo "No commits touching packages/* since ${latest}; skipping."
-            echo "should_release=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
-          fi
+          release=()
+          for config in release-it/*.json; do
+            pkg=$(basename "$config" .json)
+            if [ "$SELECTED" != all ] && [ "$SELECTED" != "$pkg" ]; then
+              continue
+            fi
+            if latest=$(git describe --tags --abbrev=0 --match "${pkg}@*" 2>/dev/null); then
+              count=$(git rev-list "${latest}..HEAD" --count -- "packages/${pkg}")
+            else
+              latest="the first commit"
+              count=$(git rev-list HEAD --count -- "packages/${pkg}")
+            fi
+            if [ "$count" -eq 0 ]; then
+              echo "${pkg}: no commits touching packages/${pkg} since ${latest}; skipping."
+            else
+              echo "${pkg}: ${count} commits since ${latest}."
+              release+=("$pkg")
+            fi
+          done
+          echo "packages=$(jq -cn '$ARGS.positional' --args "${release[@]}")" >> "$GITHUB_OUTPUT"
 
   release:
     needs: gate
-    if: needs.gate.outputs.should_release == 'true'
+    if: needs.gate.outputs.packages != '[]'
     permissions:
       contents: write
       id-token: write
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # One at a time: each release pushes to main, and the next one checks
+      # out that commit.
+      max-parallel: 1
+      matrix:
+        package: ${{ fromJSON(needs.gate.outputs.packages) }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -72,9 +99,10 @@ jobs:
           # Trusted Publishing uses OIDC; a placeholder NODE_AUTH_TOKEN from
           # setup-node would make npm skip the OIDC exchange.
           NODE_AUTH_TOKEN: ""
+          PACKAGE: ${{ matrix.package }}
         run: |
           set +e
-          pnpm exec release-it --ci --verbose > /tmp/release-it.log 2>&1
+          pnpm exec release-it --ci --verbose --config "release-it/${PACKAGE}.json" > /tmp/release-it.log 2>&1
           code=$?
           set -e
           cat /tmp/release-it.log
@@ -82,7 +110,7 @@ jobs:
             exit 0
           fi
           if grep -Fq "There are no commits since the latest tag" /tmp/release-it.log; then
-            echo "No releasable package commits since the latest tag; skipping."
+            echo "No releasable ${PACKAGE} commits since its latest tag; skipping."
             exit 0
           fi
           if grep -Fq "main moved during this release" /tmp/release-it.log; then
