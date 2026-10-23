@@ -1,4 +1,4 @@
-import { hole } from "effect";
+import { type Effect, hole } from "effect";
 import type * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
 import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
@@ -9,13 +9,15 @@ import {
 	Hydration,
 	HydrationBoundary,
 	type LoadedHandle,
-	type Loader,
+	Loader,
 	useAtomResult,
 } from "../src/index.ts";
-import { counter, issue } from "../test/fixtures/issues.ts";
+import { counter, issue, titled } from "../test/fixtures/issues.ts";
 
 type IssueError = Atom.Failure<ReturnType<typeof issue>>;
 type Issue = Atom.Success<ReturnType<typeof issue>>;
+
+const prefetchTitled = (id: number) => Loader.prefetch(titled, id);
 
 describe("useAtomResult", () => {
 	it("reads a handle through its source, typed failures included", () => {
@@ -34,6 +36,17 @@ describe("useAtomResult", () => {
 		const claimed =
 			hole<(id: number) => Atom.Atom<AsyncResult.AsyncResult<Issue, never>>>();
 		expect(useAtomResult(claimed, hole<Handle<typeof issue>>())).type.toBe<
+			AsyncResult.Success<Issue, never>
+		>();
+	});
+
+	it("reads a derived atom's handle through it or a wrapper of it", () => {
+		const handle = hole<Effect.Success<ReturnType<typeof prefetchTitled>>>();
+		expect(handle).type.toBe<Handle<typeof titled>>();
+		expect(useAtomResult).type.toBeCallableWith(titled, handle);
+		const claimed =
+			hole<(id: number) => Atom.Atom<AsyncResult.AsyncResult<Issue, never>>>();
+		expect(useAtomResult(claimed, handle)).type.toBe<
 			AsyncResult.Success<Issue, never>
 		>();
 	});
