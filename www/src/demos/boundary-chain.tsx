@@ -1,6 +1,7 @@
 import { Button } from "@examples/ui/components/button";
 import { Skeleton } from "@examples/ui/components/skeleton";
 import { IssueId, IssueNotFound, Unauthorized } from "@examples/contract";
+import { Match, Option } from "effect";
 import { type CatchTagProps, createErrorBoundary } from "effect-atom-boundary";
 import { AsyncResult } from "effect/reactivity";
 import { useAtomResult } from "raf-effect-atom";
@@ -70,12 +71,22 @@ function useIssue(id: IssueId) {
 
 function IssueTitle(props: { readonly id: IssueId }) {
 	const result = useIssue(props.id);
-	return AsyncResult.isSuccess(result) ? (
-		<div className="grid gap-1">
-			<p className="font-mono text-xs text-muted-foreground">#{props.id}</p>
-			<h3 className="text-lg font-semibold">{result.value.title}</h3>
-		</div>
-	) : (
+	if (AsyncResult.isSuccess(result)) {
+		return (
+			<div className="grid gap-1">
+				<p className="font-mono text-xs text-muted-foreground">#{props.id}</p>
+				<h3 className="text-lg font-semibold">{result.value.title}</h3>
+			</div>
+		);
+	}
+	// useAtomResult throws defects, so a failure it returns has a typed error.
+	return Match.valueTags(Option.getOrThrow(AsyncResult.error(result)), {
+		RpcClientError: unreachable,
+	});
+}
+
+function unreachable() {
+	return (
 		<ErrorNotice caughtBy="IssueTitle" type="RpcClientError">
 			The request didn’t reach the server.
 		</ErrorNotice>
