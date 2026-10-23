@@ -75,4 +75,4 @@ curl -H 'Accept: text/markdown' http://localhost:3004/docs/error-boundaries
 
 ## Deploying
 
-The Vercel project's root directory is `www`. The build ends with `build/bin/vercel-output.ts`, which writes [Build Output](https://vercel.com/docs/build-output-api/v3) to `.vercel/output`: the static files, cache headers and the `Accept: text/markdown` routes.
+The Vercel project's root directory is `www`. The build ends with `build/bin/vercel-output.ts`, which writes [Build Output](https://vercel.com/docs/build-output-api/v3) to `.vercel/output`: the static files, cache headers and the `Accept: text/markdown` routes. `vercel.json` sets the install and build commands, and skips the deployment when nothing `www` depends on changed (`tooling/vercel-ignore`). Vercel needs Node 24 (the root `package.json`'s `engines`) and pnpm from `packageManager` (set `ENABLE_EXPERIMENTAL_COREPACK=1`).
