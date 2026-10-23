@@ -35,7 +35,9 @@ function IssuePage() {
 	const { id } = Route.useParams();
 	// IssueNotFound and Unauthorized go to their boundaries.
 	const result = useAtomResult(useIssueBoundary().wrap(issue(id)));
+	//    ^?
 	if (AsyncResult.isFailure(result)) {
+		// RpcClientError, the only failure left.
 		return <p>Couldn't reach the server.</p>;
 	}
 	return (
@@ -52,7 +54,11 @@ function Assignee(props: { issueId: IssueId }) {
 	const result = useAtomResult(
 		useIssueBoundary().wrap(assignee(props.issueId)),
 	);
-	return AsyncResult.isSuccess(result) ? <p>{result.value.name}</p> : null;
+	if (AsyncResult.isFailure(result)) {
+		// RpcClientError, as for the issue.
+		return <p>Couldn't load the assignee.</p>;
+	}
+	return <p>{result.value.name}</p>;
 }
 // #endregion component
 // #endregion hero
