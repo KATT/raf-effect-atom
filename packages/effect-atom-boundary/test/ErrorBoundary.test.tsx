@@ -10,11 +10,13 @@ import { ErrorBoundary } from "react-error-boundary";
 
 import {
 	AtomErrorBoundary,
+	type CatchTagProps,
 	type CatchTags,
 	claim,
 	createErrorBoundary,
 	useAtomResult,
 } from "../src/index.ts";
+import { CompiledNotFound, type IssueNotFound } from "./fixtures/Handlers.tsx";
 import { issue, Issues, serve } from "./fixtures/Issues.ts";
 
 const [OfflineBoundary, useOfflineBoundary] = createErrorBoundary({
@@ -271,6 +273,89 @@ describe("createErrorBoundary", () => {
 		expect(
 			screen.getByText(/<AuthBoundary> needs <OfflineBoundary>, its parent/),
 		).toBeDefined();
+	});
+});
+
+function HookNotFound(props: CatchTagProps<IssueNotFound>) {
+	const [clicks, setClicks] = React.useState(0);
+	return (
+		<button
+			onClick={() => {
+				setClicks(clicks + 1);
+			}}
+			type="button"
+		>
+			{`Hook: no issue ${props.error.id}, ${clicks} clicks`}
+		</button>
+	);
+}
+
+describe("a handler that's a component", () => {
+	const handlers = [
+		{ Handler: HookNotFound, kind: "calls a hook", text: "Hook: no issue 1" },
+		{
+			Handler: CompiledNotFound,
+			kind: "React Compiler compiled",
+			text: "Compiled: no issue 1",
+		},
+	];
+
+	it.each(handlers)("renders in AtomErrorBoundary ($kind)", async (each) => {
+		using _server = serve({ 1: ["missing"] });
+		using _errors = silenceCaughtErrors();
+		using app = mount();
+		await app.render(
+			<AtomErrorBoundary
+				atom={issue(1)}
+				catchTags={{ IssueNotFound: each.Handler }}
+			>
+				<React.Suspense fallback={<p>Loading</p>}>
+					<Title id={1} />
+				</React.Suspense>
+			</AtomErrorBoundary>,
+		);
+		expect(screen.getByText(new RegExp(`^${each.text}`))).toBeDefined();
+	});
+
+	it.each(handlers)("renders in createErrorBoundary ($kind)", async (each) => {
+		using _server = serve({ 1: ["missing"] });
+		using _errors = silenceCaughtErrors();
+		using app = mount();
+		const [NotFoundBoundary, useNotFoundBoundary] = createErrorBoundary({
+			catchTags: { IssueNotFound: each.Handler },
+			errors: Issues,
+			name: "NotFound",
+		});
+		function Read() {
+			const result = useAtomResult(issue(1), useNotFoundBoundary());
+			return <p>{AsyncResult.isSuccess(result) ? result.value.title : null}</p>;
+		}
+		await app.render(
+			<NotFoundBoundary>
+				<React.Suspense fallback={<p>Loading</p>}>
+					<Read />
+				</React.Suspense>
+			</NotFoundBoundary>,
+		);
+		expect(screen.getByText(new RegExp(`^${each.text}`))).toBeDefined();
+	});
+
+	it("keeps a handler's state between renders", async () => {
+		using _server = serve({ 1: ["missing"] });
+		using _errors = silenceCaughtErrors();
+		using app = mount();
+		const tree = () => (
+			<AtomErrorBoundary
+				atom={issue(1)}
+				catchTags={{ IssueNotFound: HookNotFound }}
+			>
+				<Title id={1} />
+			</AtomErrorBoundary>
+		);
+		await app.render(tree());
+		await click("Hook: no issue 1, 0 clicks");
+		await app.render(tree());
+		expect(screen.getByText("Hook: no issue 1, 1 clicks")).toBeDefined();
 	});
 });
 

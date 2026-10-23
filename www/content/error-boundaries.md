@@ -21,6 +21,8 @@ tanstack-start/src/docs/error-boundaries.tsx#boundary
 
 A failure whose tag has a handler renders the handler in place of the children. `reset` refreshes the atom that failed and renders the children again; while the atom refreshes, the read suspends instead of throwing the old failure again.
 
+A handler renders as a component, so it can call hooks. A handler written inline is a new component each time the component around the boundary renders, so it mounts again and loses its state: give a handler with state a name outside the render.
+
 ## Handlers are typed by their tag
 
 Each handler's `error` is the member of the atom's error type with that tag:

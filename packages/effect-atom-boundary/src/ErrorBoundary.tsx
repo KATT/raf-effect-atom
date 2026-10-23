@@ -42,7 +42,8 @@ export interface CatchTagProps<E> {
 
 /**
  * One optional handler per `_tag` of `E` (or per tag in `Tags`), each typed by
- * the error with that tag.
+ * the error with that tag. A handler renders as a component, so it can call
+ * hooks.
  *
  * @stability unstable
  * @category models
@@ -137,24 +138,28 @@ class Catcher extends React.Component<CatcherProps, CatcherState> {
 		const error = caught.error;
 		const own = this.props.own;
 		const read = FailedReads.get(error);
-		const handler =
+		const Handler =
 			own !== undefined && read !== undefined && read.atom !== own.atom
 				? undefined
 				: handlerFor(this.props.handlers, error);
-		if (handler === undefined) {
+		if (Handler === undefined) {
 			throw error;
 		}
 		// SAFETY: `catches` found the handler by the error's `_tag`, and
 		// `CatchTags` types each handler by the error with that tag.
 		const claimed = error as never;
-		return handler({
-			error: claimed,
-			reset: () => {
-				const failed = read ?? own;
-				failed?.registry.refresh(failed.atom);
-				this.setState({ caught: undefined });
-			},
-		});
+		// A handler is a component: calling it here would run its hooks, and
+		// React Compiler's memo cache, in this class component's render.
+		return (
+			<Handler
+				error={claimed}
+				reset={() => {
+					const failed = read ?? own;
+					failed?.registry.refresh(failed.atom);
+					this.setState({ caught: undefined });
+				}}
+			/>
+		);
 	}
 }
 
@@ -192,7 +197,8 @@ export interface AtomErrorBoundaryProps<A, E> {
  * **Gotchas**
  *
  * A failure without a handler, or one thrown by a read of another atom, goes
- * to the error boundaries above.
+ * to the error boundaries above. A handler renders as a component: one written
+ * inline mounts again, losing its state, each time the parent renders.
  *
  * **Example** (Catching a missing issue)
  *
