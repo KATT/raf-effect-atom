@@ -15,6 +15,12 @@
 				"**/.changeset/**",
 				"**/pnpm-lock.yaml"
 			]
+		},
+		"router": {
+			"packages": ["@tanstack/react-router"],
+			"url": "https://github.com/TanStack/router.git",
+			"version": "1.170.45",
+			"ref": "@tanstack/react-router@1.170.45"
 		}
 	}
 }

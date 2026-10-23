@@ -42,5 +42,6 @@ Source for this project's key dependencies is vendored under `.repos/`, pinned t
 ### Vendored packages
 
 - `effect@4.0.5` → `.repos/effect`
+- `@tanstack/react-router@1.170.45` → `.repos/router`
 
 <!-- vendor-src:end -->
