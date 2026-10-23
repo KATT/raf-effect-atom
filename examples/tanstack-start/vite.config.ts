@@ -35,6 +35,8 @@ export default defineConfig((env) => ({
 	resolve: {
 		tsconfigPaths: true,
 	},
+	// CodeSandbox previews the dev server at `https://<id>-<port>.csb.app`.
+	server: { allowedHosts: [".csb.app"] },
 	// Bundle every dependency into the server build. Vite keeps the ones it
 	// can resolve from here (`react`) external and inlines the ones it can't
 	// (Base UI's CommonJS `use-sync-external-store`), leaving a

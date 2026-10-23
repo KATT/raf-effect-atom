@@ -32,6 +32,8 @@ export default defineConfig((env) => ({
 	resolve: {
 		tsconfigPaths: true,
 	},
+	// CodeSandbox previews the dev server at `https://<id>-<port>.csb.app`.
+	server: { allowedHosts: [".csb.app"] },
 	test: {
 		// Per package: `pnpm test` runs packages in parallel, and each Vitest
 		// deletes a shared cache when the lockfile changes.
