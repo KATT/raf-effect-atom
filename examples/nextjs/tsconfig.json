@@ -28,7 +28,8 @@
 		"src",
 		".next/types/**/*.ts",
 		".next/dev/types/**/*.ts",
-		"next.config.ts"
+		"next.config.ts",
+		"vite.config.ts"
 	],
 	"exclude": ["node_modules"]
 }
