@@ -13,8 +13,9 @@ import type { LoaderVerb } from "@examples/kit/lib/loader-verb";
 import { Card } from "@examples/ui/components/card";
 import { cn } from "@examples/ui/lib/utils";
 import { AsyncResult } from "effect/reactivity";
-import { useAtomResult } from "raf-effect-atom";
-import { Suspense, useState } from "react";
+import { RegistryContext } from "@effect/atom-react";
+import { Loader, useAtomResult } from "raf-effect-atom";
+import { Suspense, use, useState } from "react";
 
 import { useAuthBoundary } from "~/boundaries.tsx";
 import { LoadFailed } from "~/components/load-failed.tsx";
@@ -51,10 +52,12 @@ function IssuePage(props: {
 		useAuthBoundary().wrap(issuePage(props.input, props.cursor)),
 	);
 	const [more, setMore] = useState(false);
+	const registry = use(RegistryContext);
 	if (!AsyncResult.isSuccess(result)) {
 		return <LoadFailed result={result} />;
 	}
 	const page = result.value;
+	const next = page.nextCursor;
 	const shown = props.cursor + page.issues.length;
 	return (
 		<>
@@ -77,7 +80,7 @@ function IssuePage(props: {
 					</AppLink>
 				))}
 			</div>
-			{page.nextCursor === null ? null : more ? (
+			{next === null ? null : more ? (
 				<Suspense
 					fallback={
 						<IssueRowSkeletons
@@ -85,23 +88,21 @@ function IssuePage(props: {
 						/>
 					}
 				>
-					<IssuePage
-						cursor={page.nextCursor}
-						input={props.input}
-						verb={props.verb}
-					/>
+					<IssuePage cursor={next} input={props.input} verb={props.verb} />
 				</Suspense>
 			) : (
 				<div className="grid gap-3 p-4">
 					<IssueListSummary shown={shown} total={page.total} />
 					<LoadMore
 						onLoad={() => {
+							// Starts the next page here, not in its reader's render.
+							Loader.make(registry).prefetch(issuePage(props.input, next));
 							setMore(true);
 						}}
 					/>
 				</div>
 			)}
-			{page.nextCursor === null && shown > 0 ? (
+			{next === null && shown > 0 ? (
 				<div className="p-4">
 					<IssueListSummary shown={shown} total={page.total} />
 				</div>

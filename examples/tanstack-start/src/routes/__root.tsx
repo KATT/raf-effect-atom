@@ -18,7 +18,7 @@ import {
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
-import type { Loader } from "raf-effect-atom";
+import { type Loader, WaterfallDetection } from "raf-effect-atom";
 import { type ReactNode, useState } from "react";
 
 import { AuthBoundary } from "~/boundaries.tsx";
@@ -98,7 +98,10 @@ function RootDocument(props: { readonly children: ReactNode }) {
 						className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8"
 						key={prefetch}
 					>
-						<AuthBoundary>{props.children}</AuthBoundary>
+						{/* In development, a component reading an atom no loader started throws. */}
+						<WaterfallDetection mode="throw">
+							<AuthBoundary>{props.children}</AuthBoundary>
+						</WaterfallDetection>
 					</main>
 					<SiteFooter />
 					<Toaster closeButton position="bottom-right" richColors />

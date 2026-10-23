@@ -11,6 +11,7 @@ import { logoUrl } from "@examples/kit/lib/logo";
 import { Toaster } from "@examples/ui/components/sonner";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { WaterfallDetection } from "raf-effect-atom";
 import { RegistryProvider } from "raf-effect-atom/next";
 import type { ReactNode } from "react";
 
@@ -62,12 +63,15 @@ export default async function RootLayout(props: {
 				<ThemeProvider>
 					{/* The browser's registry, which every page's `HydrateAtoms` fills. */}
 					<RegistryProvider>
-						<SettingsProvider prefetch={settings.prefetch}>
-							<Header settings={settings} />
-							<main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
-								<AuthBoundary>{props.children}</AuthBoundary>
-							</main>
-						</SettingsProvider>
+						{/* In development, a component reading an atom no server component started throws. */}
+						<WaterfallDetection mode="throw">
+							<SettingsProvider prefetch={settings.prefetch}>
+								<Header settings={settings} />
+								<main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+									<AuthBoundary>{props.children}</AuthBoundary>
+								</main>
+							</SettingsProvider>
+						</WaterfallDetection>
 					</RegistryProvider>
 					<SiteFooter />
 					<Toaster closeButton position="bottom-right" richColors />

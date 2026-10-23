@@ -7,6 +7,7 @@ import { exampleAppMeta, exampleApps } from "@examples/kit/lib/example-apps";
 import { loaderVerbOf } from "@examples/kit/lib/loader-verb";
 import { logoUrl } from "@examples/kit/lib/logo";
 import { Toaster } from "@examples/ui/components/sonner";
+import { WaterfallDetection } from "raf-effect-atom";
 import {
 	atomsMiddleware,
 	RegistryProvider,
@@ -69,7 +70,12 @@ export function Layout(props: { readonly children: ReactNode }) {
 			</head>
 			<body className="flex min-h-screen flex-col antialiased">
 				<ThemeProvider>
-					<RegistryProvider>{props.children}</RegistryProvider>
+					<RegistryProvider>
+						{/* In development, a component reading an atom no loader started throws. */}
+						<WaterfallDetection mode="throw">
+							{props.children}
+						</WaterfallDetection>
+					</RegistryProvider>
 				</ThemeProvider>
 				<ScrollRestoration />
 				<Scripts />

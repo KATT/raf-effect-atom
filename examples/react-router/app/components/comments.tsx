@@ -12,12 +12,12 @@ import {
 } from "@examples/kit/components/comments";
 import { LoadMore } from "@examples/kit/components/load-more";
 import { warnMockDbWrite } from "@examples/kit/lib/mock-db-toast";
-import { useAtomSet } from "@effect/atom-react";
+import { RegistryContext, useAtomSet } from "@effect/atom-react";
 import { useForm } from "@tanstack/react-form";
 import { Cause, DateTime, Exit, Option, Predicate } from "effect";
 import { AsyncResult } from "effect/reactivity";
-import { useAtomResult } from "raf-effect-atom";
-import { Suspense, useState } from "react";
+import { Loader, useAtomResult } from "raf-effect-atom";
+import { Suspense, use, useState } from "react";
 
 import { useIssueBoundary } from "~/boundaries.tsx";
 import { LoadFailed } from "~/components/load-failed.tsx";
@@ -46,10 +46,12 @@ function CommentPage(props: {
 		useIssueBoundary().wrap(commentPage(props.issueId, props.cursor)),
 	);
 	const [more, setMore] = useState(false);
+	const registry = use(RegistryContext);
 	if (!AsyncResult.isSuccess(result)) {
 		return <LoadFailed result={result} />;
 	}
 	const page = result.value;
+	const next = page.nextCursor;
 	return (
 		<>
 			{props.cursor === 0 ? (
@@ -65,13 +67,15 @@ function CommentPage(props: {
 					pending={false}
 				/>
 			))}
-			{page.nextCursor === null ? null : more ? (
+			{next === null ? null : more ? (
 				<Suspense fallback={<CommentSkeletons count={3} />}>
-					<CommentPage cursor={page.nextCursor} issueId={props.issueId} />
+					<CommentPage cursor={next} issueId={props.issueId} />
 				</Suspense>
 			) : (
 				<LoadMore
 					onLoad={() => {
+						// Starts the next page here, not in its reader's render.
+						Loader.make(registry).prefetch(commentPage(props.issueId, next));
 						setMore(true);
 					}}
 				/>
