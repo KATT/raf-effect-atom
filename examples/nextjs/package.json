@@ -15,6 +15,7 @@
 		"check:bundle": "bundle-check .next/static --forbid @examples/db --forbid @examples/backend",
 		"dev": "next dev --port 3006",
 		"start": "next start --port 3006",
+		"test:browser": "vp test",
 		"typecheck": "tsc"
 	},
 	"dependencies": {
@@ -34,12 +35,15 @@
 		"sonner": "2.0.8"
 	},
 	"devDependencies": {
+		"@effect/vitest": "catalog:",
 		"@tailwindcss/postcss": "4.3.3",
 		"@tooling/bundle-check": "workspace:*",
 		"@types/node": "24.19.2",
 		"@types/react": "19.3.0",
 		"@types/react-dom": "19.3.0",
 		"babel-plugin-react-compiler": "1.0.0",
-		"typescript": "7.0.2"
+		"playwright-core": "1.64.1",
+		"typescript": "7.0.2",
+		"vite-plus": "1.4.0"
 	}
 }

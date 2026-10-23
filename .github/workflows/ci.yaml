@@ -57,6 +57,17 @@ jobs:
       - run: pnpm -r --filter "./examples/*" build
       - run: pnpm -r --filter "./examples/*" check:bundle
 
+  # An example's `test:browser` drives the runner's Google Chrome against its
+  # production build, so it runs after the build rather than in `pnpm test`.
+  browser_test:
+    name: Browser Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/prepare
+      - run: pnpm -r --filter "./examples/*" build
+      - run: pnpm -r --filter "./examples/*" test:browser
+
   type_check:
     name: Type Check
     runs-on: ubuntu-latest

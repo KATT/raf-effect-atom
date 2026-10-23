@@ -37,7 +37,7 @@ pnpm format:check
 pnpm knip
 ```
 
-Also run the docs site's build (`pnpm build:www`) when `www`, its samples or the packages changed.
+Also run the docs site's build (`pnpm build:www`) when `www`, its samples or the packages changed. When an example app or the packages changed, build the examples (`pnpm -r --filter "./examples/*" build`), then run their `check:bundle` and `test:browser` scripts the same way. `test:browser` drives Google Chrome against each app's production build.
 
 ## Commits
 
