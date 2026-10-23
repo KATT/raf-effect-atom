@@ -1,0 +1,24 @@
+# Commits land on main as they are, with no PR title to squash them into, and
+# release-it reads each subject for the changelog and version bump. So every
+# commit a push brings must be a conventional commit.
+name: Commits
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  conventional:
+    name: Conventional commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/prepare
+      - name: Check the pushed commits' subjects
+        env:
+          COMMITS_AFTER: ${{ github.event.after }}
+          COMMITS_BEFORE: ${{ github.event.before }}
+        run: pnpm --filter @tooling/conventional-commits check

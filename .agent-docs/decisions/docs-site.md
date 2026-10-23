@@ -1,0 +1,8 @@
+# Docs site with worker-backed live demos (human asked; details agent, settled at the `www` step)
+
+- **`www/` is the documentation site** (human), built on raf-effect-atom itself: its pages are atoms started from route loaders. TanStack Start, fully prerendered: every page is static HTML, served from Vercel's CDN with no functions. Look, SEO and credits as in raf-query.
+- **Markdown compiles at build time** in a Vite plugin, with Twoslash on every `ts` / `tsx` fence ([docs-twoslash-default.md](./docs-twoslash-default.md)) and `sample` fences of real files ([docs-sample-fences.md](./docs-sample-fences.md)). `llms.txt`, `/docs/<slug>.md`, and markdown for `Accept: text/markdown` (Vercel Build Output, not Routing Middleware).
+- **Rich live demos for both libraries** (human): `demo` fences name `www/src/demos/<id>.tsx`. Each demo talks to a real `RpcServer` running in its own Web Worker in the page (`RpcServer.layerProtocolWorkerRunner` / `RpcClient.layerProtocolWorker`), over the shared contract, with real serialization, so typed errors cross a real wire and Schema decodes them. Each demo has its own worker, registry and state.
+- **Demo kit**, ported from raf-query: adjustable latency and typed failure injection (`failNext(count, make)`) as server-side RPC middleware driven by a separate control RPC; a Queries panel fed by client-side RPC middleware; devtools.
+- **Typed-error demos**: rendered errors are labelled with the catching boundary and the error type (`unknown` in red), and each feature also has a Twoslash block showing the compile error (`// @errors: NNNN`) for a missing or misspelled tag. The injected failures are the contract's real tagged errors.
+- Build order (human): the site comes after the examples.

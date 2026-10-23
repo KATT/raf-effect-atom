@@ -1,0 +1,65 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+	// Every issue type fails the run. `nsExports` and `nsTypes` are off by
+	// default; `cycles` is a warning by default. `pnpm knip` does not pass
+	// `--strict`: that flag is production mode, which skips tests and
+	// devDependencies, so it would miss unused code this run reports.
+	"rules": {
+		"files": "error",
+		"dependencies": "error",
+		"devDependencies": "error",
+		"optionalPeerDependencies": "error",
+		"unlisted": "error",
+		"binaries": "error",
+		"unresolved": "error",
+		"exports": "error",
+		"nsExports": "error",
+		"types": "error",
+		"nsTypes": "error",
+		"duplicates": "error",
+		"enumMembers": "error",
+		"namespaceMembers": "error",
+		"catalog": "error",
+		"catalogReferences": "error",
+		"cycles": "error",
+	},
+	// An export used only in its own file does not need the `export` keyword.
+	"ignoreExportsUsedInFile": false,
+	// Private workspaces have no consumers outside this repo, so an export on
+	// an entry file that nothing imports is unused. Packages that publish a
+	// surface turn this off below.
+	"includeEntryExports": true,
+	"treatConfigHintsAsErrors": true,
+	"treatTagHintsAsErrors": true,
+	// Report a binary Knip does not already treat as a shell built-in. The
+	// list below is the built-ins this repo's scripts actually call.
+	"ignoreGlobalBinaries": false,
+	"ignoreBinaries": ["echo", "exit", "git", "node"],
+	// `import()` still counts. A deferred import does not make a cycle safe.
+	"cycles": {
+		"dynamicImports": true,
+	},
+	// Vendored dependency checkouts. Not part of this repo's graph.
+	"ignore": [".repos/**"],
+	"workspaces": {
+		".": {
+			"ignoreDependencies": [
+				// `vp lint` / `vp fmt` load these. vite-plus depends on them
+				// too; the root pins the versions those commands run.
+				"oxfmt",
+				"oxlint",
+				"oxlint-tsgolint",
+			],
+		},
+		"tooling/oxlint-plugins": {
+			// Loaded by path from the root `.oxlintrc.json`.
+			"entry": [
+				"anti-slop/index.ts",
+				"anti-slop/effect/index.ts",
+				"nkzw/index.ts",
+				"workspace.ts",
+			],
+			"includeEntryExports": false,
+		},
+	},
+}

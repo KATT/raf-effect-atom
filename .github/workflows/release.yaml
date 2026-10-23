@@ -1,0 +1,92 @@
+# Run by hand from the Actions tab: publishing stays the maintainer's call
+# until the packages exist on npm and trusted publishing is set up (see
+# .github/DEVELOPMENT.md). To release on every push to main, add `push:
+# branches: [main]` here; the gate and the stale-main check already handle it.
+name: Release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+
+jobs:
+  # Skip install/build when nothing publishable changed since the latest tag.
+  gate:
+    # release-it pushes "chore: release vX.Y.Z"; a push trigger would otherwise
+    # re-run on it and fail with "no commits since the latest tag".
+    if: "${{ !startsWith(github.event.head_commit.message, 'chore: release') }}"
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - id: check
+        # Glob must match git.commitsPath in .release-it.json. Unquoted so the
+        # shell expands it (same as release-it). Before the first tag, every
+        # commit counts.
+        run: |
+          if latest=$(git describe --tags --abbrev=0 2>/dev/null); then
+            count=$(git rev-list "${latest}..HEAD" --count -- packages/*)
+          else
+            latest="the first commit"
+            count=$(git rev-list HEAD --count -- packages/*)
+          fi
+          if [ "$count" -eq 0 ]; then
+            echo "No commits touching packages/* since ${latest}; skipping."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    needs: gate
+    if: needs.gate.outputs.should_release == 'true'
+    permissions:
+      contents: write
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.ACCESS_TOKEN }}
+      - uses: ./.github/actions/prepare
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@latest
+      - run: pnpm build
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          # Trusted Publishing uses OIDC; a placeholder NODE_AUTH_TOKEN from
+          # setup-node would make npm skip the OIDC exchange.
+          NODE_AUTH_TOKEN: ""
+        run: |
+          set +e
+          pnpm exec release-it --ci --verbose > /tmp/release-it.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/release-it.log
+          if [ "$code" -eq 0 ]; then
+            exit 0
+          fi
+          if grep -Fq "There are no commits since the latest tag" /tmp/release-it.log; then
+            echo "No releasable package commits since the latest tag; skipping."
+            exit 0
+          fi
+          if grep -Fq "main moved during this release" /tmp/release-it.log; then
+            echo "main moved before publishing; the run for the newer commit releases it."
+            exit 0
+          fi
+          exit "$code"

@@ -1,0 +1,6 @@
+# Lint rules: raf-query's, unchanged (human)
+
+- Human: keep the same lint rules and project setup as raf-query. `.oxlintrc.json` is raf-query's: type-aware oxlint with `correctness` + `suspicious`, React Compiler rules, perfectionist, no-only-tests, the vendored `anti-slop` / `anti-slop-effect` / `nkzw` plugins and the `workspace` rules, all in `tooling/oxlint-plugins` (copied as-is).
+- **Enabled everywhere**: `workspace/no-overzealous-destructuring` (destructure only a field read three or more times), `workspace/no-use-member-access` (see [use-on-own-line.md](./use-on-own-line.md)), `anti-slop/require-safety-comment-for-type-assertion` (every non-const assertion has a `SAFETY:` comment right before it).
+- **Dropped on purpose, as in raf-query**: `workspace/no-use-state`, `eslint/max-params`, `workspace/no-optional`, `typescript/consistent-type-assertions`, `anti-slop/no-chained-type-assertions`.
+- **Overrides adapted to this repo's layout**: everything here is Effect code, so the `anti-slop-effect` rules cover `packages/*/src`, `tooling/*/src`, `examples/*/src` and `examples/.shared/*/src`. The Effect apps' exemptions (`rules-of-hooks` matching `Service.use`, `infer-callback-params` against `Effect.fn`) cover `examples/*/src` and `www/samples/*/src`. raf-query's overrides for its experiments, Vue, Svelte and React Router paths are gone.

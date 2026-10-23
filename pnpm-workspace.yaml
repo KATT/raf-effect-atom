@@ -1,0 +1,30 @@
+packages:
+  - "packages/*"
+  - "examples/*"
+  - "examples/.shared/*"
+  - "www"
+  - "www/samples/*"
+  - "tooling/*"
+
+# `pnpm <script>` installs first when node_modules is out of date with the lockfile.
+verifyDepsBeforeRun: install
+
+catalog:
+  "@effect/platform-node": 4.0.5
+  "@effect/vitest": 4.0.5
+  effect: 4.0.5
+
+overrides:
+  # One Effect in the workspace. vendor-src pins effect and
+  # @effect/platform-node 4.0.1, whose caret range on
+  # @effect/platform-node-shared resolves a release that needs a newer effect.
+  effect: "catalog:"
+  "@effect/platform-node": "catalog:"
+  "@effect/platform-node-shared": 4.0.5
+  # Keep plugins such as @effect/vitest on the Vitest copy bundled by vite-plus.
+  vite@*: npm:@voidzero-dev/vite-plus-core@1.0.0
+  vitest@*: 5.0.1
+
+peerDependencyRules:
+  allowedVersions:
+    vite: 1.0.0
