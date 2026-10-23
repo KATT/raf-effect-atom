@@ -7,7 +7,14 @@ import {
 	useAtomResult,
 	useWaterfall,
 } from "raf-effect-atom";
-import { startTransition, Suspense, use, useRef, useState } from "react";
+import {
+	startTransition,
+	Suspense,
+	use,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { RegistryContext, useAtomSuspense } from "@effect/atom-react";
 
 import { useAuthBoundary } from "~/boundaries.tsx";
@@ -93,11 +100,7 @@ function IssueSearch() {
 		readonly search?: Handle<typeof searchIssues>;
 	}>({ text: "" });
 	const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
-	// One ref callback for the component's life: React runs its cleanup on
-	// unmount, not on each render as it would for an inline one.
-	const [clearOnUnmount] = useState(
-		() => () => () => clearTimeout(timeout.current),
-	);
+	useEffect(() => () => clearTimeout(timeout.current), []);
 	return (
 		<search>
 			<input
@@ -118,7 +121,6 @@ function IssueSearch() {
 						});
 					}, 300);
 				}}
-				ref={clearOnUnmount}
 				type="search"
 				value={query.text}
 			/>

@@ -702,6 +702,15 @@
 			}
 		},
 		{
+			// The search-as-you-type sample clears its debounce timer on unmount:
+			// readers copy it into apps that may not run React Compiler, where a
+			// plain effect is the cleanup that works.
+			"files": ["www/samples/tanstack-start/src/docs/request-waterfalls.tsx"],
+			"rules": {
+				"workspace/no-use-effect": "off"
+			}
+		},
+		{
 			// Vendored shadcn/ui registry components — not first-party code.
 			"files": [
 				"examples/.shared/ui/src/components/**",
