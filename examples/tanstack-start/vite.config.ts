@@ -21,15 +21,7 @@ export default defineConfig((env) => ({
 					nitro(),
 					react(),
 					babel({
-						// The libraries resolve to their source here but are published
-						// uncompiled, and React Compiler hoists closures out of their
-						// factories (`createErrorBoundary`'s handlers), so compile only what
-						// an app would: its own code, not what it installs.
-						exclude: [
-							/[/\\]node_modules[/\\]/,
-							/[/\\]packages[/\\][^/\\]+[/\\]src[/\\]/,
-							/^\0rolldown\/runtime\.js$/,
-						],
+						exclude: [/[/\\]node_modules[/\\]/, /^\0rolldown\/runtime\.js$/],
 						presets: [reactCompilerPreset()],
 					}),
 				],
