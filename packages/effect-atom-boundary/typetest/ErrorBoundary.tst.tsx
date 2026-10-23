@@ -196,10 +196,8 @@ describe("createErrorBoundary", () => {
 	});
 
 	it("claims the tags of its handlers, and its parent's", () => {
-		expect(useOfflineBoundary).type.toBeAssignableTo<
-			UseErrorBoundary<"Offline">
-		>();
-		expect(useAuthBoundary).type.toBeAssignableTo<
+		expect(useOfflineBoundary).type.toBe<UseErrorBoundary<"Offline">>();
+		expect(useAuthBoundary).type.toBe<
 			UseErrorBoundary<"Offline" | "Unauthorized">
 		>();
 		expect(AuthBoundary).type.toBeCallableWith({ children: null });

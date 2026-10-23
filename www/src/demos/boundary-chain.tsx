@@ -71,7 +71,7 @@ const [IssueBoundary, useIssueBoundary] = createErrorBoundary({
  * so no failure is left and the result is a success.
  */
 function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
-	const result = useAtomResult(useIssueBoundary().wrap(issue), props.issue);
+	const result = useAtomResult(useIssueBoundary(issue), props.issue);
 	return (
 		<div className="grid gap-1">
 			<p className="font-mono text-xs text-muted-foreground">

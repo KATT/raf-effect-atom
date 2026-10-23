@@ -9,7 +9,7 @@ order: 1
 
 ## In a boundary
 
-Let the route render and the read throw the failure to the boundary that claims it. The issue route reads its handle through `useIssueBoundary().wrap(issue)`, so `IssueNotFound` goes to `<IssueBoundary>`, `Unauthorized` to `<AuthBoundary>` and `RpcClientError` to `<AppBoundary>`:
+Let the route render and the read throw the failure to the boundary that claims it. The issue route reads its handle through `useIssueBoundary(issue)`, so `IssueNotFound` goes to `<IssueBoundary>`, `Unauthorized` to `<AuthBoundary>` and `RpcClientError` to `<AppBoundary>`:
 
 ```sample
 tanstack-start/src/boundaries.tsx#issue

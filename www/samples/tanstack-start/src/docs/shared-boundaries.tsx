@@ -11,7 +11,7 @@ declare const issueHandle: Handle<typeof issue>;
 
 // #region narrowed
 function IssueTitle(props: { issue: Handle<typeof issue> }) {
-	const result = useAtomResult(useAppBoundary().wrap(issue), props.issue);
+	const result = useAtomResult(useAppBoundary(issue), props.issue);
 	if (AsyncResult.isSuccess(result)) {
 		return <h1>{result.value.title}</h1>;
 	}

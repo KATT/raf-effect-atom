@@ -10,10 +10,7 @@ import { assignee, issue } from "~/issues.ts";
 // Reads take the handle a loader returned. An id would start the request
 // in render, so it isn't one.
 function Assignee(props: { assignee: Handle<typeof assignee> }) {
-	const result = useAtomResult(
-		useIssueBoundary().wrap(assignee),
-		props.assignee,
-	);
+	const result = useAtomResult(useIssueBoundary(assignee), props.assignee);
 	return <p>{result.value.name}</p>;
 }
 
@@ -27,7 +24,7 @@ function IssuePage(props: { issueId: IssueId }) {
 // The app boundary claims RpcClientError: IssueNotFound and Unauthorized
 // are left.
 function IssueTitle(props: { issue: Handle<typeof issue> }) {
-	const result = useAtomResult(useAppBoundary().wrap(issue), props.issue);
+	const result = useAtomResult(useAppBoundary(issue), props.issue);
 	if (AsyncResult.isSuccess(result)) {
 		return <h1>{result.value.title}</h1>;
 	}

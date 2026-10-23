@@ -8,9 +8,6 @@ import { assignee } from "~/issues.ts";
 export function AssigneeCard(props: {
 	readonly assignee: Handle<typeof assignee>;
 }) {
-	const result = useAtomResult(
-		useIssueBoundary().wrap(assignee),
-		props.assignee,
-	);
+	const result = useAtomResult(useIssueBoundary(assignee), props.assignee);
 	return <AssigneeCardView user={result.value} />;
 }

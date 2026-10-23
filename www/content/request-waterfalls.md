@@ -141,7 +141,7 @@ When an input exists only in render, such as an id a component reads from anothe
 tanstack-start/src/docs/request-waterfalls.tsx#use-waterfall
 ```
 
-It starts the atom only if nothing has, so re-renders don't request it again, and it waits for a result the server is still streaming. Pass it the source a loader would, not a boundary's `wrap` of it: the wrapped atoms have no serialization key, so the server couldn't send them.
+It starts the atom only if nothing has, so re-renders don't request it again, and it waits for a result the server is still streaming. Pass it the source a loader would, not what a boundary's hook returns for it: the wrapped atoms have no serialization key, so the server couldn't send them.
 
 The name is the warning: each call is a round trip after the render that found the input. Search a codebase for `useWaterfall` and you have a list of its waterfalls. It isn't for typed input, where it would start a request for every value the input passes through: put that [in the URL](#search-as-you-type).
 
@@ -165,7 +165,7 @@ The report names the atom and how to fix it:
 raf-effect-atom: rendering read AtomRpc:GetIssueAssignee:1 before anything else had started it, so its request waits for this render: a request waterfall. Start it before render and pass its handle down, from the route's loader or the server component (atoms.prefetch(source, ...args) or atoms.ensure). If the state that picks it, such as a page, a filter or an open dialog, isn't in the URL, put it there so the loader can. As escape hatches for state that can't be in the URL: start it in the event handler that changes the state (Loader.make(registry).prefetch), or, if its input only exists in render, read it with useAtomResult(source, useWaterfall(source, ...args)). https://raf-effect-atom.katt.dev/docs/request-waterfalls
 ```
 
-Atoms a loader, a server component, an event handler or `useWaterfall` started aren't reported, and neither is a derived atom, such as a boundary's `wrap`, over one of those. The example apps use `"throw"`, so a component that forgets its loader breaks the page in development instead of shipping a waterfall.
+Atoms a loader, a server component, an event handler or `useWaterfall` started aren't reported, and neither is a derived atom over one of those, such as the one a boundary's hook returns. The example apps use `"throw"`, so a component that forgets its loader breaks the page in development instead of shipping a waterfall.
 
 Production builds don't check. The check sits behind `process.env.NODE_ENV !== "production"`, which bundlers replace at build time, so it's left out of the bundle.
 

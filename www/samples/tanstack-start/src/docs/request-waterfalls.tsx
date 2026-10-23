@@ -124,7 +124,7 @@ function NotificationSetting(props: {
 // #region use-waterfall
 // The user's id is in the issue, so only a render that has the issue knows it.
 function IssueAssignee(props: { issue: Handle<typeof issue> }) {
-	const result = useAtomResult(useIssueBoundary().wrap(issue), props.issue);
+	const result = useAtomResult(useIssueBoundary(issue), props.issue);
 	return (
 		<Suspense fallback={<p>Loading the user…</p>}>
 			<UserName id={result.value.assigneeId} />
@@ -137,7 +137,7 @@ function UserName(props: { id: UserId }) {
 	// RpcClientError.
 	const result = useAtomResult(
 		//    ^?
-		useIssueBoundary().wrap(user),
+		useIssueBoundary(user),
 		useWaterfall(user, props.id),
 	);
 	return <p>{result.value.name}</p>;

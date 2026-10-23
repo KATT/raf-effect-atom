@@ -21,7 +21,7 @@ Each works without the other. Together, a failure that happened on the server is
 tanstack-start/src/routes/issues.$id.tsx#hero
 ```
 
-The loader starts both atoms before anything renders: it waits for the issue and lets the assignee stream in. The component reads the issue through `useIssueBoundary()`, so `IssueNotFound` renders the issue boundary's message, `Unauthorized` the app's sign-in boundary, and a request that doesn't reach the server the app boundary's. No failure is left, so the component renders the issue.
+The loader starts both atoms before anything renders: it waits for the issue and lets the assignee stream in. The component reads the issue through `useIssueBoundary(issue)`, so `IssueNotFound` renders the issue boundary's message, `Unauthorized` the app's sign-in boundary, and a request that doesn't reach the server the app boundary's. No failure is left, so the component renders the issue.
 
 ## Built for coding agents
 

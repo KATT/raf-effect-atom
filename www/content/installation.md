@@ -19,4 +19,4 @@ pnpm add effect-atom-boundary effect @effect/atom-react react
 pnpm add raf-effect-atom effect-atom-boundary effect @effect/atom-react react
 ```
 
-The packages don't depend on each other: `raf-effect-atom`'s `useAtomResult` reads an atom a boundary's claims wrap like any other. The framework integrations are subpath exports of `raf-effect-atom`, such as `raf-effect-atom/tanstack-router`, so there's nothing else to install.
+The packages don't depend on each other: `raf-effect-atom`'s `useAtomResult` reads an atom a boundary's hook returns like any other. The framework integrations are subpath exports of `raf-effect-atom`, such as `raf-effect-atom/tanstack-router`, so there's nothing else to install.
