@@ -18,6 +18,9 @@ export default defineConfig({
 		},
 		environment: "happy-dom",
 		exclude: ["dist", "node_modules"],
+		// Per package: `pnpm test` runs packages in parallel, and each Vitest
+		// deletes a shared cache when the lockfile changes.
+		fsModuleCachePath: "node_modules/.vitest-cache",
 		include: ["test/**/*.test.{ts,tsx}"],
 		projects: [
 			{

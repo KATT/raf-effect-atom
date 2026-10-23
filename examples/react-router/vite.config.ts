@@ -33,6 +33,9 @@ export default defineConfig((env) => ({
 		tsconfigPaths: true,
 	},
 	test: {
+		// Per package: `pnpm test` runs packages in parallel, and each Vitest
+		// deletes a shared cache when the lockfile changes.
+		fsModuleCachePath: "node_modules/.vitest-cache",
 		include: ["app/**/*.test.ts"],
 	},
 }));
