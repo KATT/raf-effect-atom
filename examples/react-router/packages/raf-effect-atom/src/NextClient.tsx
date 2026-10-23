@@ -29,11 +29,10 @@ import {
  * import { dehydrate, ensure, HydrateAtoms } from "raf-effect-atom/next"
  *
  * export default async function IssuePage(props: { params: Promise<{ id: string }> }) {
- *   const id = Number((await props.params).id)
- *   await ensure(issue(id))
+ *   const handle = await ensure(issue, Number((await props.params).id))
  *   return (
  *     <HydrateAtoms state={dehydrate()}>
- *       <Issue id={id} />
+ *       <Issue issue={handle} />
  *     </HydrateAtoms>
  *   )
  * }

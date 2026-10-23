@@ -17,7 +17,7 @@ import { warnMockDbWrite } from "@examples/kit/lib/mock-db-toast";
 import { RegistryContext, useAtomSet } from "@effect/atom-react";
 import { useForm } from "@tanstack/react-form";
 import { Cause, DateTime, Exit, Option, Predicate } from "effect";
-import { Loader, useAtomResult } from "raf-effect-atom";
+import { type Handle, Loader, useAtomResult } from "raf-effect-atom";
 import { Suspense, use, useState } from "react";
 
 import { useIssueBoundary } from "~/boundaries.tsx";
@@ -27,31 +27,33 @@ import { addComment, commentPage, refreshIssues } from "~/issues.ts";
 const you = new User({ id: UserId.make("you"), name: "You", title: "" });
 
 /** The comments, newest first, one page per atom, under the new comment's form. */
-export function Comments(props: { readonly issueId: IssueId }) {
+export function Comments(props: {
+	readonly issueId: IssueId;
+	readonly page: Handle<typeof commentPage>;
+}) {
 	return (
 		<section className="grid gap-3">
 			<NewComment issueId={props.issueId} />
 			<ul className="grid gap-3">
-				<CommentPage cursor={0} issueId={props.issueId} />
+				<CommentPage page={props.page} />
 			</ul>
 		</section>
 	);
 }
 
-function CommentPage(props: {
-	readonly cursor: number;
-	readonly issueId: IssueId;
-}) {
+function CommentPage(props: { readonly page: Handle<typeof commentPage> }) {
 	const result = useAtomResult(
-		useIssueBoundary().wrap(commentPage(props.issueId, props.cursor)),
+		useIssueBoundary().wrap(commentPage),
+		props.page,
 	);
-	const [more, setMore] = useState(false);
+	const [more, setMore] = useState<Handle<typeof commentPage>>();
 	const registry = use(RegistryContext);
+	const [issueId, cursor] = props.page.args;
 	const page = result.value;
 	const next = page.nextCursor;
 	return (
 		<>
-			{props.cursor === 0 ? (
+			{cursor === 0 ? (
 				<h2 className="font-semibold">
 					{page.total === 1 ? "1 comment" : `${page.total} comments`}
 				</h2>
@@ -59,21 +61,20 @@ function CommentPage(props: {
 			{page.comments.map((comment) => (
 				<CommentItem
 					comment={comment}
-					fadeIn={props.cursor > 0}
+					fadeIn={cursor > 0}
 					key={comment.id}
 					pending={false}
 				/>
 			))}
 			{next === null ? null : more ? (
 				<Suspense fallback={<CommentSkeletons count={3} />}>
-					<CommentPage cursor={next} issueId={props.issueId} />
+					<CommentPage page={more} />
 				</Suspense>
 			) : (
 				<LoadMore
 					onLoad={() => {
 						// Starts the next page here, not in its reader's render.
-						Loader.make(registry).prefetch(commentPage(props.issueId, next));
-						setMore(true);
+						setMore(Loader.make(registry).prefetch(commentPage, issueId, next));
 					}}
 				/>
 			)}

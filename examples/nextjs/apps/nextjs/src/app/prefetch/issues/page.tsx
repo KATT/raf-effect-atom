@@ -10,13 +10,15 @@ export default async function Page(props: {
 }) {
 	const input = await listSearchParams(props.searchParams);
 	await forwardCookie();
-	// Starts both atoms and renders at once: the page shows skeletons until
-	// their results stream in.
-	prefetch(issueCounts);
-	prefetch(issuePage(input, 0));
+	// Starts both atoms and renders their handles at once: the page shows
+	// skeletons until their results stream in.
+	const handles = {
+		counts: prefetch(issueCounts),
+		page: prefetch(issuePage, input, 0),
+	};
 	return (
 		<HydrateAtoms state={dehydrate()}>
-			<IssuesPage input={input} verb="prefetch" />
+			<IssuesPage handles={handles} input={input} verb="prefetch" />
 		</HydrateAtoms>
 	);
 }

@@ -5,7 +5,7 @@ import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Schema from "effect/Schema";
 import * as React from "react";
 
-import { Loader, useAtomResult } from "../src/index.ts";
+import { type Handle, Loader, useAtomResult } from "../src/index.ts";
 import { HydrateAtoms, RegistryProvider } from "../src/Next.ts";
 import { settle } from "./fixtures/browser.tsx";
 import { issue, IssueNotFound, serve } from "./fixtures/issues.ts";
@@ -13,8 +13,8 @@ import { load } from "./fixtures/server.ts";
 
 const isIssueNotFound = Schema.is(IssueNotFound);
 
-function Title(props: { readonly id: number }) {
-	const result = useAtomResult(issue(props.id));
+function Title(props: { readonly issue: Handle<typeof issue> }) {
+	const result = useAtomResult(issue, props.issue);
 	if (AsyncResult.isSuccess(result)) {
 		return <p>{result.value.title}</p>;
 	}
@@ -29,7 +29,7 @@ function Title(props: { readonly id: number }) {
 }
 
 const renderPage = async (
-	id: number,
+	handle: Handle<typeof issue>,
 	state: Parameters<typeof HydrateAtoms>[0]["state"],
 ) => {
 	await act(async () => {
@@ -37,7 +37,7 @@ const renderPage = async (
 			<RegistryProvider>
 				<HydrateAtoms state={state}>
 					<React.Suspense fallback={<p>Loading</p>}>
-						<Title id={id} />
+						<Title issue={handle} />
 					</React.Suspense>
 				</HydrateAtoms>
 			</RegistryProvider>,
@@ -50,16 +50,16 @@ const renderPage = async (
 describe("raf-effect-atom/next in the browser", () => {
 	it("hydrates a server-side IssueNotFound as an IssueNotFound", async () => {
 		using server = serve({ 1: ["missing"] });
-		using rendered = await load(Loader.ensure(issue(1)));
-		using _page = await renderPage(1, rendered.state);
+		using rendered = await load(Loader.ensure(issue, 1));
+		using _page = await renderPage(rendered.handles, rendered.state);
 		assert.isDefined(screen.getByText("IssueNotFound 1"));
 		assert.strictEqual(server.requests(1), 1);
 	});
 
 	it("waits for a streamed result instead of requesting it again", async () => {
 		using server = serve({});
-		using rendered = await load(Loader.prefetch(issue(2)));
-		using _page = await renderPage(2, rendered.state);
+		using rendered = await load(Loader.prefetch(issue, 2));
+		using _page = await renderPage(rendered.handles, rendered.state);
 		assert.isDefined(screen.getByText("Issue 2"));
 		assert.strictEqual(server.requests(2), 1);
 	});

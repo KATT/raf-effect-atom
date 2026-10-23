@@ -5,7 +5,7 @@ import {
 	createRouter,
 	Outlet,
 	RouterProvider,
-	useParams,
+	useLoaderData,
 } from "@tanstack/react-router";
 import { hydrate } from "@tanstack/react-router/ssr/client";
 import {
@@ -20,7 +20,12 @@ import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import * as Schema from "effect/Schema";
 import * as React from "react";
 
-import { Loader, RequestRegistry, useAtomResult } from "../../src/index.ts";
+import {
+	type Handle,
+	Loader,
+	RequestRegistry,
+	useAtomResult,
+} from "../../src/index.ts";
 import { setupRouterAtoms } from "../../src/TanStackRouter.tsx";
 import { mount, settle } from "./browser.tsx";
 import { issue, IssueNotFound } from "./issues.ts";
@@ -28,8 +33,11 @@ import { issue, IssueNotFound } from "./issues.ts";
 const isIssueNotFound = Schema.is(IssueNotFound);
 
 function IssuePage() {
-	const params = useParams({ strict: false });
-	const result = useAtomResult(issue(Number(params.id)));
+	// SAFETY: both routes below return `{ issue }`, the issue's handle.
+	const data = useLoaderData({ strict: false }) as {
+		readonly issue: Handle<typeof issue>;
+	};
+	const result = useAtomResult(issue, data.issue);
 	if (AsyncResult.isSuccess(result)) {
 		return <p>{result.value.title}</p>;
 	}
@@ -60,9 +68,9 @@ const rootRoute = createRootRouteWithContext<{
 const ensureRoute = createRoute({
 	component: IssuePage,
 	getParentRoute: () => rootRoute,
-	loader: async (match) => {
-		await match.context.atoms.ensure(issue(Number(match.params.id)));
-	},
+	loader: async (match) => ({
+		issue: await match.context.atoms.ensure(issue, Number(match.params.id)),
+	}),
 	path: "/issues/$id",
 });
 
@@ -70,9 +78,9 @@ const ensureRoute = createRoute({
 const prefetchRoute = createRoute({
 	component: IssuePage,
 	getParentRoute: () => rootRoute,
-	loader: (match) => {
-		match.context.atoms.prefetch(issue(Number(match.params.id)));
-	},
+	loader: (match) => ({
+		issue: match.context.atoms.prefetch(issue, Number(match.params.id)),
+	}),
 	path: "/streamed/$id",
 });
 
@@ -119,7 +127,7 @@ export const renderOnServer = async (url: string) => {
 		responseHeaders: new Headers(),
 		router,
 	});
-	return { html: await response.response.text(), registry, router };
+	return { html: await response.response.text(), registry };
 };
 
 /**

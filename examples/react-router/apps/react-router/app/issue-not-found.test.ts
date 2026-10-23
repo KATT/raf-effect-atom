@@ -11,11 +11,11 @@ describe("server rendering", () => {
 		"sends a server-side IssueNotFound to the browser as an IssueNotFound",
 		() =>
 			Effect.gen(function* () {
-				const missing = issue(IssueId.make(999));
+				const id = IssueId.make(999);
 				// As the root middleware sets it up for a page request, without latency.
 				const server = RequestRegistry.make();
 				server.set(requestCookie, "db-latency=0");
-				yield* Effect.promise(() => Loader.make(server).ensure(missing));
+				yield* Effect.promise(() => Loader.make(server).ensure(issue, id));
 				// The loader data carries the dehydrated state as data:
 				// class instances lose their prototypes on the way.
 				const sent = structuredClone(Hydration.dehydrate(server));
@@ -23,7 +23,7 @@ describe("server rendering", () => {
 
 				const browser = AtomRegistry.make();
 				Hydration.hydrate(browser, sent);
-				const result = browser.get(Hydration.hydrated(missing));
+				const result = browser.get(Hydration.hydrated(issue(id)));
 				assert.isTrue(AsyncResult.isFailure(result));
 				const error = AsyncResult.isFailure(result)
 					? Cause.findErrorOption(result.cause)

@@ -24,14 +24,14 @@
  * // app/routes/issue.tsx
  * export async function loader(args: Route.LoaderArgs) {
  *   const atoms = args.context.get(atomsContext)
- *   await atoms.ensure(issue(Number(args.params.id)))
- *   return { atoms: atoms.dehydrate() }
+ *   const handle = await atoms.ensure(issue, Number(args.params.id))
+ *   return { atoms: atoms.dehydrate(), issue: handle }
  * }
  *
  * export default function IssueRoute(props: Route.ComponentProps) {
  *   return (
  *     <HydrationBoundary state={props.loaderData.atoms}>
- *       <Issue id={Number(props.params.id)} />
+ *       <Issue issue={props.loaderData.issue} />
  *     </HydrationBoundary>
  *   )
  * }

@@ -7,6 +7,7 @@ import { createErrorBoundary } from "effect-atom-boundary";
 import * as React from "react";
 
 import {
+	type Handle,
 	HydrationBoundary,
 	Loader,
 	useAtomResult,
@@ -15,37 +16,42 @@ import {
 	type WaterfallMode,
 } from "../src/index.ts";
 import { mount, settle, silenceCaughtErrors } from "./fixtures/browser.tsx";
-import { issue, Issues, serve } from "./fixtures/issues.ts";
+import { issue, Issues, serve, unloaded } from "./fixtures/issues.ts";
 import { load } from "./fixtures/server.ts";
 
 const spyOnWarnings = () =>
 	vi.spyOn(console, "warn").mockImplementation(() => {});
 
-type IssueAtom = ReturnType<typeof issue>;
+type IssueHandle = Handle<typeof issue>;
 
-function Title(props: { readonly atom: IssueAtom }) {
-	const result = useAtomResult(props.atom);
+function Title(props: { readonly issue: IssueHandle }) {
+	const result = useAtomResult(issue, props.issue);
 	return (
 		<p>{AsyncResult.isSuccess(result) ? result.value.title : "Not found"}</p>
 	);
 }
 
 function WaterfallTitle(props: { readonly id: number }) {
-	const result = useAtomResult(useWaterfall(issue(props.id)));
+	const result = useAtomResult(issue, useWaterfall(issue, props.id));
 	return (
 		<p>{AsyncResult.isSuccess(result) ? result.value.title : "Not found"}</p>
 	);
 }
 
-const titleOf = Atom.family((id: number) =>
+const shouted = Atom.family((id: number) =>
 	Atom.map(issue(id), (result) =>
-		AsyncResult.map(result, (found) => found.title),
+		AsyncResult.map(result, (found) => ({
+			...found,
+			title: found.title.toUpperCase(),
+		})),
 	),
 );
 
-function DerivedTitle(props: { readonly id: number }) {
-	const result = useAtomResult(titleOf(props.id));
-	return <p>{AsyncResult.isSuccess(result) ? result.value : "Not found"}</p>;
+function DerivedTitle(props: { readonly issue: IssueHandle }) {
+	const result = useAtomResult(shouted, props.issue);
+	return (
+		<p>{AsyncResult.isSuccess(result) ? result.value.title : "Not found"}</p>
+	);
 }
 
 const [NotFoundBoundary, useNotFoundBoundary] = createErrorBoundary({
@@ -54,8 +60,8 @@ const [NotFoundBoundary, useNotFoundBoundary] = createErrorBoundary({
 	name: "NotFound",
 });
 
-function WrappedTitle(props: { readonly id: number }) {
-	const result = useAtomResult(useNotFoundBoundary().wrap(issue(props.id)));
+function WrappedTitle(props: { readonly issue: IssueHandle }) {
+	const result = useAtomResult(useNotFoundBoundary().wrap(issue), props.issue);
 	return (
 		<p>{AsyncResult.isSuccess(result) ? result.value.title : "Not found"}</p>
 	);
@@ -87,7 +93,7 @@ describe("useAtomResult's waterfall check", () => {
 		using app = mount();
 		await app.render(
 			<Page>
-				<Title atom={issue(1)} />
+				<Title issue={unloaded(1)} />
 			</Page>,
 			true,
 		);
@@ -104,10 +110,10 @@ describe("useAtomResult's waterfall check", () => {
 		using server = serve();
 		const warnings = spyOnWarnings();
 		using app = mount();
-		Loader.make(app.registry).prefetch(issue(1));
+		const handle = Loader.make(app.registry).prefetch(issue, 1);
 		await app.render(
 			<Page>
-				<Title atom={issue(1)} />
+				<Title issue={handle} />
 			</Page>,
 		);
 		await settle();
@@ -120,13 +126,14 @@ describe("useAtomResult's waterfall check", () => {
 		using _server = serve();
 		const warnings = spyOnWarnings();
 		using rendered = await load(
-			Effect.andThen(Loader.prefetch(issue(2)), Loader.ensure(issue(1))),
+			Effect.all([Loader.ensure(issue, 1), Loader.prefetch(issue, 2)]),
 		);
+		const [first, second] = rendered.handles;
 		using app = mount();
 		await app.render(
 			<Page state={rendered.state}>
-				<Title atom={issue(1)} />
-				<Title atom={issue(2)} />
+				<Title issue={first} />
+				<Title issue={second} />
 			</Page>,
 		);
 		await settle(100);
@@ -139,14 +146,14 @@ describe("useAtomResult's waterfall check", () => {
 		using _server = serve();
 		const warnings = spyOnWarnings();
 		using app = mount();
-		Loader.make(app.registry).prefetch(issue(1));
+		const handle = Loader.make(app.registry).prefetch(issue, 1);
 		await app.render(
 			<Page>
-				<DerivedTitle id={1} />
+				<DerivedTitle issue={handle} />
 			</Page>,
 		);
 		await settle();
-		expect(screen.getByText("Issue 1")).toBeDefined();
+		expect(screen.getByText("ISSUE 1")).toBeDefined();
 		expect(warnings).not.toHaveBeenCalled();
 	});
 
@@ -154,12 +161,12 @@ describe("useAtomResult's waterfall check", () => {
 		using _server = serve();
 		const warnings = spyOnWarnings();
 		using app = mount();
-		Loader.make(app.registry).prefetch(issue(1));
+		const handle = Loader.make(app.registry).prefetch(issue, 1);
 		await app.render(
 			<Page>
 				<NotFoundBoundary>
-					<WrappedTitle id={1} />
-					<WrappedTitle id={2} />
+					<WrappedTitle issue={handle} />
+					<WrappedTitle issue={unloaded(2)} />
 				</NotFoundBoundary>
 			</Page>,
 		);
@@ -176,7 +183,7 @@ describe("useAtomResult's waterfall check", () => {
 		using app = mount();
 		await app.render(
 			<Page>
-				<DerivedTitle id={2} />
+				<DerivedTitle issue={unloaded(2)} />
 			</Page>,
 		);
 		await settle();
@@ -192,7 +199,7 @@ describe("useAtomResult's waterfall check", () => {
 		using app = mount();
 		await app.render(
 			<Page mode="throw">
-				<Title atom={issue(1)} />
+				<Title issue={unloaded(1)} />
 			</Page>,
 		);
 		expect(
@@ -206,7 +213,7 @@ describe("useAtomResult's waterfall check", () => {
 		using app = mount();
 		await app.render(
 			<Page mode="off">
-				<Title atom={issue(1)} />
+				<Title issue={unloaded(1)} />
 			</Page>,
 		);
 		await settle();
@@ -232,7 +239,7 @@ describe("useWaterfall", () => {
 
 	it("waits for a streamed result instead of starting it again", async () => {
 		using server = serve();
-		using rendered = await load(Loader.prefetch(issue(2)));
+		using rendered = await load(Loader.prefetch(issue, 2));
 		using app = mount();
 		await app.render(
 			<Page mode="throw" state={rendered.state}>

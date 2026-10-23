@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { describe, expect, it } from "tstyche";
 
-import { Loader } from "../src/index.ts";
+import { type LoadedHandle, Loader } from "../src/index.ts";
 import { setupRouterAtoms } from "../src/TanStackRouter.tsx";
 import { issue } from "../test/fixtures/issues.ts";
 
@@ -31,12 +31,14 @@ describe("setupRouterAtoms", () => {
 		expect(setupRouterAtoms).type.not.toBeCallableWith({ router });
 	});
 
-	it("gives loaders the verbs, typed by the atom", () => {
+	it("gives loaders the verbs, returning handles", () => {
 		createRoute({
 			getParentRoute: () => rootRoute,
 			loader: async (match) => {
-				const result = await match.context.atoms.ensure(issue(1));
-				expect(result).type.toBeAssignableTo<Issue>();
+				const handle = await match.context.atoms.ensure(issue, 1);
+				expect(handle).type.toBe<LoadedHandle<typeof issue>>();
+				expect(Loader.result(handle)).type.toBeAssignableTo<Issue>();
+				return { issue: handle };
 			},
 			path: "/",
 		});

@@ -1,19 +1,19 @@
-import type { Issue, IssueId } from "@examples/contract";
+import type { Issue } from "@examples/contract";
 import { formatDay } from "@examples/kit/lib/dates";
 import { warnMockDbWrite } from "@examples/kit/lib/mock-db-toast";
 import { cn } from "@examples/ui/lib/utils";
 import { useAtomSet } from "@effect/atom-react";
 import { useForm } from "@tanstack/react-form";
 import { Cause, Exit, Option, Predicate } from "effect";
-import { useAtomResult } from "raf-effect-atom";
+import { type Handle, useAtomResult } from "raf-effect-atom";
 
 import { useIssueBoundary } from "~/boundaries.tsx";
 import { StatusSelect } from "~/components/status-select.tsx";
 import { issue, refreshIssues, updateBody, updateTitle } from "~/issues.ts";
 
 /** The issue's title, status, date and description, each editable in place. */
-export function IssueDetail(props: { readonly id: IssueId }) {
-	const result = useAtomResult(useIssueBoundary().wrap(issue(props.id)));
+export function IssueDetail(props: { readonly issue: Handle<typeof issue> }) {
+	const result = useAtomResult(useIssueBoundary().wrap(issue), props.issue);
 	const current = result.value;
 	return (
 		<div className="grid gap-6">

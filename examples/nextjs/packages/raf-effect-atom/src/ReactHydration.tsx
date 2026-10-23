@@ -60,7 +60,7 @@ export interface HydrationBoundaryProps {
  * import { HydrationBoundary } from "raf-effect-atom"
  *
  * <HydrationBoundary state={loaderData.atoms}>
- *   <IssuePage id={id} />
+ *   <IssuePage issue={loaderData.issue} />
  * </HydrationBoundary>
  * ```
  *

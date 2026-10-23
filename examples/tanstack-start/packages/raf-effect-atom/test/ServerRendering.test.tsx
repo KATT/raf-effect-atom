@@ -8,6 +8,7 @@ import * as React from "react";
 import { renderToString } from "react-dom/server";
 
 import {
+	type Handle,
 	Hydration,
 	HydrationBoundary,
 	Loader,
@@ -16,18 +17,21 @@ import {
 } from "../src/index.ts";
 import { RegistryProvider } from "../src/Next.ts";
 import { makeRegistry } from "../src/TanStackRouter.tsx";
-import { issue, serve } from "./fixtures/issues.ts";
+import { issue, serve, unloaded } from "./fixtures/issues.ts";
 import { load } from "./fixtures/server.ts";
 
-function Title(props: { readonly id: number }) {
-	const result = useAtomResult(issue(props.id));
+function Title(props: { readonly issue: Handle<typeof issue> }) {
+	const result = useAtomResult(issue, props.issue);
 	return <p>{AsyncResult.isSuccess(result) ? result.value.title : "Failed"}</p>;
 }
 
-const page = (registry: AtomRegistry.AtomRegistry) => (
+const page = (
+	registry: AtomRegistry.AtomRegistry,
+	handle: Handle<typeof issue>,
+) => (
 	<RegistryContext.Provider value={registry}>
 		<React.Suspense fallback={<p>Loading</p>}>
-			<Title id={1} />
+			<Title issue={handle} />
 		</React.Suspense>
 	</RegistryContext.Provider>
 );
@@ -35,8 +39,10 @@ const page = (registry: AtomRegistry.AtomRegistry) => (
 describe("useAtomResult on the server", () => {
 	it("renders a loader's result from the request registry", async () => {
 		using server = serve();
-		using rendered = await load(Loader.ensure(issue(1)));
-		expect(renderToString(page(rendered.registry))).toContain("Issue 1");
+		using rendered = await load(Loader.ensure(issue, 1));
+		expect(renderToString(page(rendered.registry, rendered.handles))).toContain(
+			"Issue 1",
+		);
 		expect(server.requests(1)).toBe(1);
 	});
 
@@ -45,7 +51,7 @@ describe("useAtomResult on the server", () => {
 		const registry = AtomRegistry.make();
 		const outsideSuspense = (
 			<RegistryContext.Provider value={registry}>
-				<Title id={1} />
+				<Title issue={unloaded(1)} />
 			</RegistryContext.Provider>
 		);
 		expect(() => renderToString(outsideSuspense)).toThrow(
@@ -82,14 +88,14 @@ describe("HydrationBoundary on the server", () => {
 
 	it("reads the registry the loader data's state came from", async () => {
 		using _server = serve();
-		using loaded = await load(Loader.ensure(issue(1)));
+		using loaded = await load(Loader.ensure(issue, 1));
 		const state = Hydration.dehydrate(loaded.registry);
 		expect(render(state, loaded.registry)).toContain("source");
 	});
 
 	it("hydrates the nearest registry with state that crossed a wire", async () => {
 		using _server = serve();
-		using loaded = await load(Loader.ensure(issue(1)));
+		using loaded = await load(Loader.ensure(issue, 1));
 		expect(render(loaded.state, loaded.registry)).toContain("nearest");
 	});
 });
@@ -108,7 +114,7 @@ describe("raf-effect-atom/next's RegistryProvider on the server", () => {
 		const tree = (
 			<RegistryProvider>
 				<React.Suspense fallback={<p>Loading</p>}>
-					<Title id={1} />
+					<Title issue={unloaded(1)} />
 				</React.Suspense>
 			</RegistryProvider>
 		);

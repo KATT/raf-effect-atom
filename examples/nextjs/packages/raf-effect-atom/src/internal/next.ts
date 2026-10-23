@@ -1,9 +1,8 @@
-import type * as AsyncResult from "effect/reactivity/AsyncResult";
-import type * as Atom from "effect/reactivity/Atom";
 import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as EffectHydration from "effect/reactivity/Hydration";
 import * as React from "react";
 
+import type { ArgsOf, Handle, LoadedHandle, Source } from "../Handle.ts";
 import * as Hydration from "../Hydration.ts";
 import * as Loader from "../Loader.ts";
 import * as RequestRegistry from "../RequestRegistry.ts";
@@ -22,17 +21,20 @@ export const getRegistry: () => AtomRegistry.AtomRegistry = React.cache(() => {
 
 const getLoader = React.cache(() => Loader.make(getRegistry()));
 
-export const prefetch = <A, E>(
-	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-): void => getLoader().prefetch(atom);
+export const prefetch = <S extends Source>(
+	source: S,
+	...args: ArgsOf<S>
+): Handle<S> => getLoader().prefetch(source, ...args);
 
-export const ensure = <A, E>(
-	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-): Promise<Loader.SettledResult<A, E>> => getLoader().ensure(atom);
+export const ensure = <S extends Source>(
+	source: S,
+	...args: ArgsOf<S>
+): Promise<LoadedHandle<S>> => getLoader().ensure(source, ...args);
 
-export const fetch = <A, E>(
-	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-): Promise<Loader.SettledResult<A, E>> => getLoader().fetch(atom);
+export const fetch = <S extends Source>(
+	source: S,
+	...args: ArgsOf<S>
+): Promise<LoadedHandle<S>> => getLoader().fetch(source, ...args);
 
 export const dehydrate = (): Array<EffectHydration.DehydratedAtom> =>
 	Hydration.dehydrate(getRegistry());

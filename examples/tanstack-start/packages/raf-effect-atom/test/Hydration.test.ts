@@ -62,7 +62,7 @@ describe("dehydrate and hydrate", () => {
 	it.live("keep a server-side IssueNotFound an IssueNotFound", () =>
 		Effect.gen(function* () {
 			using server = serve({ 1: ["missing"] });
-			using rendered = yield* render(Effect.asVoid(Loader.ensure(issue(1))));
+			using rendered = yield* render(Effect.asVoid(Loader.ensure(issue, 1)));
 			const browser = AtomRegistry.make();
 			Hydration.hydrate(browser, rendered.state);
 			const error = errorOf(browser.get(Hydration.hydrated(issue(1))));
@@ -76,7 +76,7 @@ describe("dehydrate and hydrate", () => {
 	it.live("keep a hydrated success without requesting it again", () =>
 		Effect.gen(function* () {
 			using server = serve();
-			using rendered = yield* render(Effect.asVoid(Loader.ensure(issue(1))));
+			using rendered = yield* render(Effect.asVoid(Loader.ensure(issue, 1)));
 			const browser = AtomRegistry.make();
 			Hydration.hydrate(browser, rendered.state);
 			const result = browser.get(Hydration.hydrated(issue(1)));
@@ -93,7 +93,7 @@ describe("dehydrate and hydrate", () => {
 	it.live("request it again when read without hydrated, as Atom does", () =>
 		Effect.gen(function* () {
 			using server = serve();
-			using rendered = yield* render(Effect.asVoid(Loader.ensure(issue(1))));
+			using rendered = yield* render(Effect.asVoid(Loader.ensure(issue, 1)));
 			const browser = AtomRegistry.make();
 			EffectHydration.hydrate(browser, rendered.state);
 			browser.get(issue(1));
@@ -105,7 +105,7 @@ describe("dehydrate and hydrate", () => {
 	it.live("hold a streamed result until it arrives, then hydrate it", () =>
 		Effect.gen(function* () {
 			using server = serve();
-			using rendered = yield* render(Loader.prefetch(issue(2)));
+			using rendered = yield* render(Loader.prefetch(issue, 2));
 			const entry = EffectHydration.toValues(rendered.state)[0];
 			assert.isDefined(entry?.resultPromise);
 			const browser = AtomRegistry.make();

@@ -6,6 +6,8 @@ import * as Rpc from "effect/rpc/Rpc";
 import * as RpcGroup from "effect/rpc/RpcGroup";
 import * as RpcTest from "effect/rpc/RpcTest";
 
+import type { Handle } from "../../src/index.ts";
+
 export class IssueNotFound extends Schema.TaggedError<IssueNotFound>()(
 	"IssueNotFound",
 	{ id: Schema.Int },
@@ -71,6 +73,15 @@ export const issue = (id: number) =>
 		{ id },
 		{ reactivityKeys: ["issues"], serializationKey: String(id) },
 	);
+
+/**
+ * A handle to `issue(id)` whose result the browser doesn't have, as one the
+ * server sends without its state, or after the registry dropped the result.
+ */
+export const unloaded = (id: number): Handle<typeof issue> => ({
+	args: [id],
+	key: `AtomRpc:GetIssue:${id}`,
+});
 
 /**
  * `Issues` again. Its queries have `issue`'s keys but are other atoms, as a

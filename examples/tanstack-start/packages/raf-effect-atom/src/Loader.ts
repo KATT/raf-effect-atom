@@ -2,9 +2,11 @@
  * Starts atoms from route loaders, before anything renders, so nothing
  * waterfalls.
  *
- * Each verb starts an `AsyncResult` atom in the registry and takes a lease
- * on it, so the registry's idle TTL can't evict it before the route renders
- * and `useAtomResult` takes it over:
+ * Each verb takes a source, an atom family or an `AsyncResult` atom, with its
+ * arguments. It starts the atom in the registry, takes a lease on it, so the
+ * registry's idle TTL can't evict it before the route renders and
+ * `useAtomResult` takes it over, and returns its handle for the component
+ * that reads it:
  *
  * | Verb       | Starts the atom                 | Waits                         | Has a value already   |
  * | ---------- | ------------------------------- | ----------------------------- | --------------------- |
@@ -12,9 +14,10 @@
  * | `ensure`   | if it isn't in the registry     | only while it's `Initial`     | returns it at once    |
  * | `fetch`    | if it isn't, or refreshes it    | until the new result settles  | refreshes, then waits |
  *
- * Typed failures don't reject: `ensure` and `fetch` return the settled
- * `AsyncResult`, so a loader can redirect on a tag and otherwise let a
- * boundary render the failure. Only defects and interruptions reject.
+ * Typed failures don't reject: `ensure` and `fetch` settle on them, and
+ * `result` returns the settled `AsyncResult`, so a loader can redirect on a
+ * tag and otherwise let a boundary render the failure. Only defects and
+ * interruptions reject.
  *
  * The verbs are Effects that need the `AtomRegistry`; `make` gives the same
  * verbs as Promises over one registry, for loaders that are async functions.
@@ -32,8 +35,17 @@ import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 
+import type {
+	ArgsOf,
+	ErrorOf,
+	Handle,
+	LoadedHandle,
+	Source,
+	SuccessOf,
+} from "./Handle.ts";
 import { hydrated } from "./Hydration.ts";
 import { isDevelopment } from "./internal/development.ts";
+import * as Handles from "./internal/handles.ts";
 import * as Leases from "./internal/leases.ts";
 import { isRequestRegistry } from "./RequestRegistry.ts";
 
@@ -132,7 +144,7 @@ const rejectDefects = <A, E>(
 };
 
 /**
- * Starts an atom without waiting for it.
+ * Starts a source's atom without waiting for it, and returns its handle.
  *
  * **When to use**
  *
@@ -142,7 +154,8 @@ const rejectDefects = <A, E>(
  * **Details**
  *
  * Starts the atom if it isn't in the registry, and leaves it alone if it is.
- * Takes a lease either way.
+ * Takes a lease either way. The component that reads the handle suspends
+ * until the result settles.
  *
  * **Example**
  *
@@ -150,24 +163,36 @@ const rejectDefects = <A, E>(
  * import { Effect } from "effect"
  * import { Loader } from "raf-effect-atom"
  *
- * const program = Loader.prefetch(comments(1))
+ * const program = Loader.prefetch(commentPage, issueId, 0)
  * ```
  *
  * @stability unstable
  * @category verbs
  * @since 0.1.0
  */
-export const prefetch: <A, E>(
-	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-) => Effect.Effect<void, never, AtomRegistry.AtomRegistry> = Effect.fnUntraced(
-	function* <A, E>(atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>) {
+export const prefetch = <S extends Source>(
+	source: S,
+	...args: ArgsOf<S>
+): Effect.Effect<Handle<S>, never, AtomRegistry.AtomRegistry> =>
+	Effect.gen(function* () {
+		const atom = Handles.atomOf(source, args);
 		yield* start(atom);
-	},
-);
+		return Handles.make<S>(args, atom);
+	});
+
+const loaded = <S extends Source>(
+	args: ArgsOf<S>,
+	atom: Atom.Atom<unknown>,
+	result: SettledResult<unknown, unknown>,
+): LoadedHandle<S> => {
+	const handle = Handles.loaded<S>(args, atom);
+	results.set(handle, result);
+	return handle;
+};
 
 /**
- * Starts an atom and returns its settled result, waiting only while it has
- * none.
+ * Starts a source's atom, waits only while it has no result, and returns a
+ * handle whose reader renders without suspending.
  *
  * **When to use**
  *
@@ -176,10 +201,11 @@ export const prefetch: <A, E>(
  *
  * **Details**
  *
- * An atom with a result returns it at once, without refetching. On a request
+ * An atom with a result returns at once, without refetching. On a request
  * registry, it also waits out a refresh in flight, so the server never
- * renders a result that's about to change. A typed failure is returned as
- * the result; a defect or an interruption fails the Effect.
+ * renders a result that's about to change. A typed failure settles it like
+ * a success: `result` returns it. A defect or an interruption fails the
+ * Effect.
  *
  * **Example**
  *
@@ -189,7 +215,8 @@ export const prefetch: <A, E>(
  * import { Loader } from "raf-effect-atom"
  *
  * const program = Effect.gen(function* () {
- *   const result = yield* Loader.ensure(issue(1))
+ *   const handle = yield* Loader.ensure(issue, 1)
+ *   const result = Loader.result(handle)
  *   return AsyncResult.isSuccess(result) ? result.value.title : "missing"
  * })
  * ```
@@ -198,23 +225,25 @@ export const prefetch: <A, E>(
  * @category verbs
  * @since 0.1.0
  */
-export const ensure: <A, E>(
-	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-) => Effect.Effect<SettledResult<A, E>, never, AtomRegistry.AtomRegistry> =
-	Effect.fnUntraced(function* <A, E>(
-		atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-	) {
+export const ensure = <S extends Source>(
+	source: S,
+	...args: ArgsOf<S>
+): Effect.Effect<LoadedHandle<S>, never, AtomRegistry.AtomRegistry> =>
+	Effect.gen(function* () {
+		const atom = Handles.atomOf(source, args);
 		const started = yield* start(atom);
-		return yield* settled(
+		const result = yield* settled(
 			started.registry,
 			started.target,
 			started.request ? isSettled : AsyncResult.isNotInitial,
 		);
+		return loaded<S>(args, atom, result);
 	});
 
 /**
- * Starts an atom, or refreshes it if it has a result, and returns the new
- * settled result.
+ * Starts a source's atom, or refreshes it if it has a result, waits for the
+ * new result to settle, and returns a handle whose reader renders without
+ * suspending.
  *
  * **When to use**
  *
@@ -223,19 +252,20 @@ export const ensure: <A, E>(
  *
  * **Details**
  *
- * Waits until the result settles and isn't refreshing. A typed failure is
- * returned as the result; a defect or an interruption fails the Effect.
+ * Waits until the result settles and isn't refreshing. A typed failure
+ * settles it like a success: `result` returns it. A defect or an
+ * interruption fails the Effect.
  *
  * @stability unstable
  * @category verbs
  * @since 0.1.0
  */
-export const fetch: <A, E>(
-	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-) => Effect.Effect<SettledResult<A, E>, never, AtomRegistry.AtomRegistry> =
-	Effect.fnUntraced(function* <A, E>(
-		atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-	) {
+export const fetch = <S extends Source>(
+	source: S,
+	...args: ArgsOf<S>
+): Effect.Effect<LoadedHandle<S>, never, AtomRegistry.AtomRegistry> =>
+	Effect.gen(function* () {
+		const atom = Handles.atomOf(source, args);
 		const started = yield* start(atom);
 		const { registry, target } = started;
 		if (started.existed && isSettled(registry.get(target))) {
@@ -245,8 +275,55 @@ export const fetch: <A, E>(
 			const node = registry.getNodes().get(Leases.keyOf(target));
 			registry.refresh(node?.atom ?? target);
 		}
-		return yield* settled(registry, target, isSettled);
+		const result = yield* settled(registry, target, isSettled);
+		return loaded<S>(args, atom, result);
 	});
+
+// Keyed by the handle object, which a serializer copies: only the code that
+// ran the verb holds this one.
+const results = new WeakMap<object, SettledResult<unknown, unknown>>();
+
+/**
+ * Returns the settled result `ensure` or `fetch` waited for.
+ *
+ * **When to use**
+ *
+ * Use in the loader that ran the verb, to branch on the result: redirect on
+ * a tag, or build another atom's arguments from it. Components read the
+ * handle with `useAtomResult`, which follows the registry.
+ *
+ * **Gotchas**
+ *
+ * Only the handle object the verb returned has it: a handle that crossed
+ * the network, as loader data or a server component's prop, is a copy, and
+ * this throws for it.
+ *
+ * **Example**
+ *
+ * ```ts
+ * import { AsyncResult } from "effect/reactivity"
+ * import { Loader } from "raf-effect-atom"
+ *
+ * const handle = await atoms.ensure(issue, id)
+ * const error = AsyncResult.error(Loader.result(handle))
+ * ```
+ *
+ * @stability unstable
+ * @category getters
+ * @since 0.1.0
+ */
+export const result = <S extends Source>(
+	handle: LoadedHandle<S>,
+): SettledResult<SuccessOf<S>, ErrorOf<S>> => {
+	const settledResult = results.get(handle);
+	if (settledResult === undefined) {
+		throw new Error(
+			"raf-effect-atom: Loader.result got a handle that no ensure or fetch returned here. Only the code that ran the verb has its result: a handle that crossed the network is a copy. Read it with useAtomResult instead.",
+		);
+	}
+	// SAFETY: the verb that made `handle` stored its source's settled result.
+	return settledResult as SettledResult<SuccessOf<S>, ErrorOf<S>>;
+};
 
 /**
  * The loader verbs as Promises over one registry, as the framework
@@ -258,17 +335,20 @@ export const fetch: <A, E>(
  */
 export interface Loader {
 	/** {@link ensure}, as a Promise that rejects only on a defect. */
-	readonly ensure: <A, E>(
-		atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-	) => Promise<SettledResult<A, E>>;
+	readonly ensure: <S extends Source>(
+		source: S,
+		...args: ArgsOf<S>
+	) => Promise<LoadedHandle<S>>;
 	/** {@link fetch}, as a Promise that rejects only on a defect. */
-	readonly fetch: <A, E>(
-		atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-	) => Promise<SettledResult<A, E>>;
+	readonly fetch: <S extends Source>(
+		source: S,
+		...args: ArgsOf<S>
+	) => Promise<LoadedHandle<S>>;
 	/** {@link prefetch}, run at once. */
-	readonly prefetch: <A, E>(
-		atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-	) => void;
+	readonly prefetch: <S extends Source>(
+		source: S,
+		...args: ArgsOf<S>
+	) => Handle<S>;
 }
 
 /**
@@ -288,8 +368,8 @@ export interface Loader {
  * import { Loader, RequestRegistry } from "raf-effect-atom"
  *
  * const loader = Loader.make(RequestRegistry.make())
- * loader.prefetch(comments(1))
- * const result = await loader.ensure(issue(1))
+ * const comments = loader.prefetch(commentPage, 1, 0)
+ * const issueHandle = await loader.ensure(issue, 1)
  * ```
  *
  * @stability unstable
@@ -317,10 +397,11 @@ export const make = (
 			: Effect.provideService(provided, LeaseTTL, leaseTTL);
 	};
 	return {
-		ensure: (atom) => Effect.runPromise(provide(ensure(atom))),
-		fetch: (atom) => Effect.runPromise(provide(fetch(atom))),
-		prefetch: (atom) => {
-			Effect.runSync(provide(prefetch(atom)));
-		},
+		ensure: (source, ...args) =>
+			Effect.runPromise(provide(ensure(source, ...args))),
+		fetch: (source, ...args) =>
+			Effect.runPromise(provide(fetch(source, ...args))),
+		prefetch: (source, ...args) =>
+			Effect.runSync(provide(prefetch(source, ...args))),
 	};
 };

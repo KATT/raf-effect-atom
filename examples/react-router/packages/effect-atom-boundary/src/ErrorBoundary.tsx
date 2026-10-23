@@ -310,13 +310,19 @@ export interface AtomErrorBoundaryComponent {
 	 *
 	 * **Details**
 	 *
-	 * Memoized per atom. Reading it with `useAtomSuspense` needs
-	 * `suspendOnWaiting: true`, so a read waits for the refresh `reset`
+	 * Memoized per atom. Given an atom family, it returns the family of
+	 * claimed atoms, memoized per family. Reading it with `useAtomSuspense`
+	 * needs `suspendOnWaiting: true`, so a read waits for the refresh `reset`
 	 * starts instead of throwing the old failure again.
 	 */
-	readonly claim: <A, E>(
-		atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-	) => Atom.Atom<AsyncResult.AsyncResult<A, never>>;
+	readonly claim: {
+		<A, E>(
+			atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
+		): Atom.Atom<AsyncResult.AsyncResult<A, never>>;
+		<Args extends ReadonlyArray<unknown>, A, E>(
+			family: (...args: Args) => Atom.Atom<AsyncResult.AsyncResult<A, E>>,
+		): (...args: Args) => Atom.Atom<AsyncResult.AsyncResult<A, never>>;
+	};
 }
 
 /**
@@ -447,8 +453,8 @@ const isMounted = (at: Mounted | undefined, boundary: Internal): boolean => {
  *   catchTags: { Unauthorized: ({ reset }) => <SignIn onSignedIn={reset} /> }
  * })
  *
- * function IssueTitle(props: { readonly id: number }) {
- *   const result = useAtomResult(useAuthBoundary().wrap(issue(props.id)))
+ * function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
+ *   const result = useAtomResult(useAuthBoundary().wrap(issue), props.issue)
  *   // AsyncResult<Issue, IssueNotFound | RpcClientError>
  * }
  * ```

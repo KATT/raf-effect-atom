@@ -7,14 +7,23 @@ import { issueIdParams } from "~/params.ts";
 export const Route = createFileRoute("/prefetch/issues/$issueId")({
 	params: issueIdParams,
 	loader: (args) => {
-		// Starts every atom the page reads and returns at once.
-		args.context.atoms.prefetch(issue(args.params.issueId));
-		args.context.atoms.prefetch(assignee(args.params.issueId));
-		args.context.atoms.prefetch(commentPage(args.params.issueId, 0));
+		const atoms = args.context.atoms;
+		const id = args.params.issueId;
+		// Starts every atom the page reads and returns their handles at once.
+		return {
+			assignee: atoms.prefetch(assignee, id),
+			comments: atoms.prefetch(commentPage, id, 0),
+			issue: atoms.prefetch(issue, id),
+		};
 	},
 	component: Page,
 });
 
 function Page() {
-	return <IssuePage issueId={Route.useParams().issueId} />;
+	return (
+		<IssuePage
+			handles={Route.useLoaderData()}
+			issueId={Route.useParams().issueId}
+		/>
+	);
 }

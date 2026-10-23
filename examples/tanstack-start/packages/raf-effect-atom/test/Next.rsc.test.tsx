@@ -11,6 +11,7 @@ import {
 	renderToReadableStream,
 } from "react-server-dom-webpack/server";
 
+import type { LoadedHandle } from "../src/Handle.ts";
 import * as Hydration from "../src/Hydration.ts";
 import * as Next from "../src/internal/next.ts";
 import * as Pending from "../src/internal/pending.ts";
@@ -37,11 +38,27 @@ const HydrateAtoms = registerClientReference(
 	reference.name,
 );
 
+const titleReference = {
+	chunks: [],
+	id: "app/issue-title",
+	name: "IssueTitle",
+};
+
+/** A client component of the app that reads an issue's handle. */
+const IssueTitle = registerClientReference(
+	(_props: { readonly issue: LoadedHandle<typeof issue> }): React.ReactNode => {
+		throw new Error("a client component rendered on the server");
+	},
+	titleReference.id,
+	titleReference.name,
+);
+
 const clientModule = { [reference.name]: () => null };
 
 const render = (page: React.ReactNode) =>
 	renderToReadableStream(page, {
 		[`${reference.id}#${reference.name}`]: reference,
+		[`${titleReference.id}#${titleReference.name}`]: titleReference,
 	});
 
 /** Decodes a server component payload as the browser does, as it arrives. */
@@ -78,7 +95,7 @@ describe("raf-effect-atom/next in a server component render", () => {
 		using server = serve({ 1: ["missing"] });
 		vi.stubGlobal("__webpack_require__", () => clientModule);
 		async function IssuePage() {
-			await Next.ensure(issue(1));
+			await Next.ensure(issue, 1);
 			return <HydrateAtoms state={Next.dehydrate()} />;
 		}
 		const rendered = await renderPayload(<IssuePage />);
@@ -98,7 +115,7 @@ describe("raf-effect-atom/next in a server component render", () => {
 		using server = serve({});
 		vi.stubGlobal("__webpack_require__", () => clientModule);
 		function IssuePage() {
-			Next.prefetch(issue(2));
+			Next.prefetch(issue, 2);
 			return <HydrateAtoms state={Next.dehydrate()} />;
 		}
 		const rendered = await renderPayload(<IssuePage />);
@@ -118,7 +135,7 @@ describe("raf-effect-atom/next in a server component render", () => {
 		using server = serve({});
 		vi.stubGlobal("__webpack_require__", () => clientModule);
 		function IssuePage() {
-			Next.prefetch(issue(4));
+			Next.prefetch(issue, 4);
 			return <HydrateAtoms state={Next.dehydrate()} />;
 		}
 		const registry = AtomRegistry.make();
@@ -144,7 +161,7 @@ describe("raf-effect-atom/next in a server component render", () => {
 		}
 		function IssuePage() {
 			seen.push(Next.getRegistry());
-			Next.prefetch(issue(3));
+			Next.prefetch(issue, 3);
 			return (
 				<HydrateAtoms state={Next.dehydrate()}>
 					<Comments />
@@ -159,5 +176,31 @@ describe("raf-effect-atom/next in a server component render", () => {
 		for (const registry of seen) {
 			assert.throws(() => registry.get(counter), /disposed/);
 		}
+	});
+
+	it("sends a verb's handle to a client component as a prop", async () => {
+		using _server = serve({});
+		vi.stubGlobal("__webpack_require__", () => ({
+			[titleReference.name]: () => null,
+		}));
+		async function IssuePage() {
+			return <IssueTitle issue={await Next.ensure(issue, 1)} />;
+		}
+		const element: React.ReactElement<{
+			readonly issue: LoadedHandle<typeof issue>;
+		}> = await createFromReadableStream(render(<IssuePage />), {
+			serverConsumerManifest: {
+				moduleLoading: null,
+				moduleMap: {
+					[titleReference.id]: { [titleReference.name]: titleReference },
+				},
+				serverModuleMap: null,
+			},
+		});
+		assert.deepStrictEqual(element.props.issue, {
+			args: [1],
+			key: "AtomRpc:GetIssue:1",
+			loaded: true,
+		});
 	});
 });

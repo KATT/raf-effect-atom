@@ -72,12 +72,14 @@ export interface Variance<Tags extends string> {
  *
  * **When to use**
  *
- * Use `wrap` on the atoms a component reads under the boundary, to throw the
- * claimed failures to their boundaries and narrow the result to the rest.
+ * Use `wrap` on the atoms, or the atom families, a component reads under the
+ * boundary, to throw the claimed failures to their boundaries and narrow the
+ * result to the rest.
  *
  * **Details**
  *
- * `wrap` returns a derived atom, memoized per atom. A claimed failure is
+ * `wrap` returns a derived atom, memoized per atom, or for an atom family
+ * the family of them, memoized per family. A claimed failure is
  * `Cause.die(error)` in its value, so a read that throws defects, such as
  * `useAtomSuspense` or `raf-effect-atom`'s `useAtomResult`, throws the error
  * itself; any other result passes through. The derived atom points at the
@@ -101,9 +103,35 @@ export interface ErrorBoundaryClaims<
 	readonly owns: (error: unknown) => boolean;
 	/**
 	 * Returns the atom with the claimed failures turned into defects, so a
-	 * read throws them to the boundary that claims them, typed without them.
+	 * read throws them to the boundary that claims them, typed without them;
+	 * or, for an atom family, the family of those atoms.
 	 */
-	readonly wrap: <A, E>(
+	readonly wrap: Wrap<Tags>;
+}
+
+/**
+ * Turns the failures with a claimed tag into defects, in an atom or in each
+ * atom of a family, and types the result without them.
+ *
+ * **Details**
+ *
+ * Memoized per atom and per family. A family is any function from arguments
+ * to an `AsyncResult` atom, such as an `AtomRpc` query: its wrapper makes
+ * the wrapped atom of `family(...args)`, so a reader that takes a family
+ * and its arguments, such as `raf-effect-atom`'s `useAtomResult` with a
+ * handle, reads it with the claimed failures thrown.
+ *
+ * @stability unstable
+ * @category models
+ * @since 0.1.0
+ */
+export interface Wrap<Tags extends string> {
+	<A, E>(
 		atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
+	): Atom.Atom<AsyncResult.AsyncResult<A, Unclaimed<E, Tags>>>;
+	<Args extends ReadonlyArray<unknown>, A, E>(
+		family: (...args: Args) => Atom.Atom<AsyncResult.AsyncResult<A, E>>,
+	): (
+		...args: Args
 	) => Atom.Atom<AsyncResult.AsyncResult<A, Unclaimed<E, Tags>>>;
 }

@@ -12,17 +12,21 @@ export async function loader(args: Route.LoaderArgs) {
 	const atoms = args.context.get(atomsContext);
 	// Waits for results the registry doesn't hold yet. Each request's
 	// registry starts empty, so on React Router that's every result.
-	await Promise.all([
+	const [counts, page] = await Promise.all([
 		atoms.ensure(issueCounts),
-		atoms.ensure(issuePage(input, 0)),
+		atoms.ensure(issuePage, input, 0),
 	]);
-	return { atoms: atoms.dehydrate(), input };
+	return { atoms: atoms.dehydrate(), handles: { counts, page }, input };
 }
 
 export default function Page(props: Route.ComponentProps) {
 	return (
 		<HydrationBoundary state={props.loaderData.atoms}>
-			<IssuesPage input={props.loaderData.input} verb="ensure" />
+			<IssuesPage
+				handles={props.loaderData.handles}
+				input={props.loaderData.input}
+				verb="ensure"
+			/>
 		</HydrationBoundary>
 	);
 }

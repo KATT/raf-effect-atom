@@ -6,6 +6,11 @@
 /**
  * @since 0.1.0
  */
+export * from "./Handle.ts";
+
+/**
+ * @since 0.1.0
+ */
 export * as Hydration from "./Hydration.ts";
 
 /**

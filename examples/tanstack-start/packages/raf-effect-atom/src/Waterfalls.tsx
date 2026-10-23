@@ -10,12 +10,12 @@
 import { RegistryContext } from "@effect/atom-react";
 import * as Effect from "effect/Effect";
 import * as Predicate from "effect/Predicate";
-import type * as AsyncResult from "effect/reactivity/AsyncResult";
-import type * as Atom from "effect/reactivity/Atom";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import * as React from "react";
 
+import type { ArgsOf, Handle, Source } from "./Handle.ts";
 import { hydrated } from "./Hydration.ts";
+import * as Handles from "./internal/handles.ts";
 import * as Leases from "./internal/leases.ts";
 import * as Pending from "./internal/pending.ts";
 import * as Waterfalls from "./internal/waterfalls.ts";
@@ -85,8 +85,8 @@ export const WaterfallDetection = (props: {
 	);
 
 /**
- * Starts an atom during render and returns it, for an input only a render
- * knows, such as a debounced search query.
+ * Starts a source's atom during render and returns its handle, for an input
+ * only a render knows, such as a debounced search query.
  *
  * **When to use**
  *
@@ -105,12 +105,14 @@ export const WaterfallDetection = (props: {
  * - A result the server is still streaming is awaited by `useAtomResult`,
  *   not started again.
  * - `useAtomResult` doesn't report an atom started this way.
+ * - The handle is a prefetched one: its reader suspends until the result
+ *   settles, as for a handle from a loader's `prefetch`.
  *
  * **Gotchas**
  *
- * Pass it the atom a loader would start, inside an error boundary's `wrap`:
- * `useAtomResult(boundary.wrap(useWaterfall(user(id))))`. The wrapper isn't
- * serializable, so the server couldn't send it to the browser.
+ * Pass it the source a loader would start, not an error boundary's
+ * `wrap(source)`: the wrapper's atoms aren't serializable, so the server
+ * couldn't send them to the browser. Read the handle through the wrapper.
  *
  * **Example**
  *
@@ -118,7 +120,7 @@ export const WaterfallDetection = (props: {
  * import { useAtomResult, useWaterfall } from "raf-effect-atom"
  *
  * function Author(props: { readonly userId: UserId }) {
- *   const result = useAtomResult(useWaterfall(user(props.userId)))
+ *   const result = useAtomResult(user, useWaterfall(user, props.userId))
  *   // ...
  * }
  * ```
@@ -129,24 +131,24 @@ export const WaterfallDetection = (props: {
  * @category hooks
  * @since 0.1.0
  */
-export const useWaterfall = <
-	Self extends Atom.Atom<AsyncResult.AsyncResult<unknown, unknown>>,
->(
-	atom: Self,
-): Self => {
+export const useWaterfall = <S extends Source>(
+	source: S,
+	...args: ArgsOf<S>
+): Handle<S> => {
 	const registry = React.useContext(RegistryContext);
+	const atom = Handles.atomOf(source, args);
 	const target = hydrated(atom);
 	const key = Leases.keyOf(target);
 	const streamed =
 		Predicate.isString(key) && Pending.get(registry, key) !== undefined;
 	if (!streamed && !Waterfalls.isStarted(registry, target)) {
-		Effect.runSync(
+		return Effect.runSync(
 			Effect.provideService(
-				prefetch(atom),
+				prefetch(source, ...args),
 				AtomRegistry.AtomRegistry,
 				registry,
 			),
 		);
 	}
-	return atom;
+	return Handles.make<S>(args, atom);
 };

@@ -10,17 +10,23 @@ import type { Route } from "./+types/issues";
 export function loader(args: Route.LoaderArgs) {
 	const input = parseListInput(args.request);
 	const atoms = args.context.get(atomsContext);
-	// Starts both atoms and returns at once: the page shows skeletons until
-	// their results stream in.
-	atoms.prefetch(issueCounts);
-	atoms.prefetch(issuePage(input, 0));
-	return { atoms: atoms.dehydrate(), input };
+	// Starts both atoms and returns their handles at once: the page shows
+	// skeletons until their results stream in.
+	const handles = {
+		counts: atoms.prefetch(issueCounts),
+		page: atoms.prefetch(issuePage, input, 0),
+	};
+	return { atoms: atoms.dehydrate(), handles, input };
 }
 
 export default function Page(props: Route.ComponentProps) {
 	return (
 		<HydrationBoundary state={props.loaderData.atoms}>
-			<IssuesPage input={props.loaderData.input} verb="prefetch" />
+			<IssuesPage
+				handles={props.loaderData.handles}
+				input={props.loaderData.input}
+				verb="prefetch"
+			/>
 		</HydrationBoundary>
 	);
 }
