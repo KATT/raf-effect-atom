@@ -1,13 +1,22 @@
 # The RPC contract is a client-safe package; handlers and db are a separate backend (human asked)
 
-Human: split the example backend for safety. A client-safe **contract** package holds the RPC group, its Schemas and the tagged errors, with no server dependencies. A standalone **backend** holds the handlers and the db. Frontends import only the contract. This replaces the brief's single `examples/.shared/api` package that held both.
+Human: split the example backend for safety. A client-safe **contract** package holds the RPC group, its Schemas and the tagged errors, with no server dependencies. A standalone **backend** holds the handlers and the db. Frontends import only the contract. This replaces the brief's single `examples/.shared/api` package that held both. Human, later: each app serves the backend in-process under an HTTP route; there's no separate backend deployment.
+
+The layout copies Effect's own `ai-docs/src/51_http-server/fixtures` (`api/` for the contract, `server/` for the implementations) and its RPC test fixtures; [effect-idioms.md](./effect-idioms.md) has the patterns.
 
 ## Packages
 
-- **`examples/.shared/contract`** (`@examples/contract`): the `RpcGroup`, payload and success Schemas, `Schema.TaggedError` classes (one error set per procedure), and the `AtomRpc` client service with its protocol coming from the app (`#rpc-transport`). Depends on `effect` only. Browsers, server rendering, docs samples and the worker demos all import it.
-- **`examples/.shared/db`** (`@examples/db`): the in-memory issue tracker data and its Effect service. Server-only.
-- **`examples/.shared/backend`** (`@examples/backend`): the handlers (`IssuesRpc.toLayer(...)`) over `@examples/db`, `RpcServer.layerHttp` plus `HttpRouter.toWebHandler` as a web handler, and a `start` script that serves it on its own with `@effect/platform-node`, so the backend runs and is tested without any frontend.
-- The apps serve the backend's web handler from one server-only module each (TanStack Start: the `/rpc` server route; Next.js: the `app/rpc/route.ts` route handler; React Router: a resource route in a `.server.ts` module), and server rendering calls it in-process through the server variant of `#rpc-transport`, as raf-query's `examples/tanstack-start-effect` does. Those modules are the only frontend files allowed to import `@examples/backend`; every other frontend file imports the contract.
+- **`examples/.shared/contract`** (`@examples/contract`): depends on `effect` only. Browsers, server rendering, docs samples and the worker demos all import it.
+  - `Issue.ts`: the `Schema.Class` models (`Issue`, `User`, `Comment`, `IssuePage`, `CommentPage`, `IssueCounts`), branded ids (`IssueId`, `UserId`, `CommentId`), `IssueStatus`, `Cursor`, and `IssueListInput` (the URL search params).
+  - `IssueErrors.ts`: one `Schema.TaggedError` per failure (`IssueNotFound`, `EmptyTitle`, `EmptyBody`, `EmptyComment`).
+  - `Authorization.ts`: the `Authorization` middleware declaration (error `Unauthorized`, provides `CurrentUser`) and the session cookie names.
+  - `Latency.ts`: the server-only `Latency` middleware declaration (no client part, like Effect's `TimingMiddleware` fixture), the `db-latency` cookie name and its Schema decoder.
+  - `IssueRpcs.ts`: the `RpcGroup`, with both middlewares on every procedure.
+- **`examples/.shared/db`** (`@examples/db`): the `Issues` service (`Issues.layer` keeps the process-wide tables across dev-server reloads; `Issues.layerTest` seeds fresh ones), the `DbLatency` reference, and the seed. Server-only.
+- **`examples/.shared/backend`** (`@examples/backend`): `AuthorizationLayer` and `LatencyLayer` (the middleware implementations), `IssueHandlersNoDeps` (`IssueRpcs.toLayer`, thin arrows over `Issues`), `RpcRoutes` (`RpcServer.layerHttp` at `/rpc`), `webHandler` (`HttpRouter.toWebHandler(RpcRoutes)`), and `pnpm --filter @examples/backend start`, which serves `RpcRoutes` on its own with `@effect/platform-node` (`PORT`, default 3001). Its tests run a real `RpcClient` over HTTP and JSON against `NodeHttpServer.layerTest`.
+- **The `AtomRpc` client is per app**, not in the contract: its protocol differs per app (`#rpc-transport`: fetch in the browser, the in-process `webHandler.handler` on the server). Name it `IssuesClient`, after Effect's `UsersClient`.
+- Each app serves `webHandler.handler` from one server-only `*.server.ts` module that its RPC route imports (TanStack Start: the `/rpc` server route; Next.js: `app/rpc/route.ts`, which also imports `server-only`; React Router: a resource route), and server rendering calls it in-process through the server variant of `#rpc-transport`, as raf-query's `examples/tanstack-start-effect` does. `*.server.ts` modules are the only frontend files allowed to import `@examples/backend`; every other frontend file imports the contract.
+- `@examples/backend` doesn't import `server-only` itself: that package throws outside the `react-server` condition, which would break the backend's tests and its `start` script.
 
 ## Why a types-only client import isn't possible (checked in `.repos/effect`, 4.0.6)
 
@@ -23,16 +32,16 @@ So the browser bundle must contain the contract, which is why the contract has t
 
 Two checks, so a leak fails before it ships.
 
-**Lint (`.oxlintrc.json`, oxlint's built-in `no-restricted-imports`)**, added with the packages:
+**Lint: `workspace/no-server-imports`** (`tooling/oxlint-plugins/no-server-imports.ts`, configured in `.oxlintrc.json`). Its own rule rather than oxlint's `no-restricted-imports`, because an override replaces a rule's options wholesale and the root already sets `no-restricted-imports` for test helpers.
 
-- Frontend code (`examples/*/{src,app}/**`, `www/src/**`, `www/samples/*/{src,app}/**`, `examples/.shared/{contract,ui,kit}/**`) may not import `@examples/backend`, `@examples/db`, or any path inside them. The message points here.
-- An override re-allows `@examples/backend` in exactly the server-only modules listed above (the three RPC routes and the `#rpc-transport` server variants), by path.
-- The contract (`examples/.shared/contract/**`) may also not import `node:*`, `@effect/platform-node*`, or other workspace packages, so "client-safe" stays true as it grows. Its `package.json` lists only `effect` (knip reports anything else as unlisted).
-- Each restriction gets a test in `tooling/oxlint-plugins` style: a fixture file that violates it and the expected diagnostic, so loosening the config is caught.
+- Frontend code (`examples/*/{src,app}/**`, `www/src/**`, `www/samples/*/{src,app}/**`, `examples/.shared/{ui,kit}/**`) may not import `@examples/backend`, `@examples/db`, or any path inside them. Type-only imports are allowed: they're erased.
+- `**/*.server.{ts,tsx}` turns the rule off: those are the server-only modules above, which the frameworks keep out of client bundles.
+- The contract may not import `node:*`, `@effect/platform-node*`, or any `@examples/*` package, so "client-safe" stays true as it grows. Its `package.json` lists only `effect` (knip reports anything else as unlisted).
+- `no-server-imports.test.ts` covers both configurations: subpaths, re-exports, dynamic and side-effect imports fail; type-only imports pass.
 
 **CI bundle check (`tooling/bundle-check`, Effect, run by a `bundle_check` job in `ci.yaml`)**, added with the first example app:
 
 - Builds each app (`pnpm --filter <app> build`) and scans only its client output: `.output/public/**` for the TanStack Start apps and `www`, `.next/static/**` for Next.js, `build/client/**` for React Router.
-- Fails when a client chunk contains a server-only marker. `@examples/backend` and `@examples/db` each define a marker string that their code uses at runtime (the backend tags its handler layer's span prefix with it; the db names its service with it), so the marker can't be tree-shaken while the code it belongs to stays. The db's seed records are a second marker.
+- Fails when a client chunk contains a server-only marker: the db service's key `@examples/db/Issues` (its class is what every backend import pulls in, so the marker can't be tree-shaken while the code stays), and the seed's text (`Ada Lovelace`).
 - Has its own test: a fixture client bundle that imports the backend must fail the check, and one that imports only the contract must pass.
-- Framework guards on top, where they exist: `@examples/backend` imports `server-only` (Next.js fails a client import at build time), and the React Router resource route lives in a `.server.ts` module (React Router's Vite plugin refuses it in client code).
+- Framework guards on top, where they exist: Next.js's `server-only` in `app/rpc/route.ts`, and React Router's and TanStack Start's refusal of `.server.ts` modules in client code.

@@ -51,6 +51,11 @@
 				"oxlint-tsgolint",
 			],
 		},
+		"examples/.shared/backend": {
+			// Its entry is for the example apps' server-only RPC routes, which
+			// don't exist yet. Remove this once the first app imports it.
+			"includeEntryExports": false,
+		},
 		"tooling/oxlint-plugins": {
 			// Loaded by path from the root `.oxlintrc.json`.
 			"entry": [

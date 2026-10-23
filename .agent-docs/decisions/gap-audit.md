@@ -10,7 +10,7 @@ Decision: the examples, samples and demos build their query and mutation atoms w
 
 Why `AtomRpc`:
 
-- `query(tag, payload, options)` is already an `Atom.family` keyed by `{ tag, payload, headers, reactivityKeys, timeToLive, serializationKey }`, and families compare keys with `Equal` (structural for plain objects). A loader and a component that call `Issues.query("GetIssue", { id })` get the same atom with no key bookkeeping.
+- `query(tag, payload, options)` is already an `Atom.family` keyed by `{ tag, payload, headers, reactivityKeys, timeToLive, serializationKey }`, and families compare keys with `Equal` (structural for plain objects). A loader and a component that call `IssuesClient.query("GetIssue", { id })` get the same atom with no key bookkeeping.
 - With `serializationKey`, the atom is `Atom.serializable` under `AtomRpc:<tag>:<key>` with `AsyncResult.Schema({ success: rpc.successSchema, error: Union(rpc.errorSchema, middleware errors, RpcClientError) })`. `AsyncResult.Schema` encodes a failure as `Schema.Cause(error, Defect)`, so a server-side `IssueNotFound` hydrates as an `IssueNotFound` instance. That is the "typed failures survive server rendering" requirement, without raf-query's `keepErrors` adapter.
 - The atom's type carries the procedure's error union (`_Error | RpcClientError | middleware errors`), which is what boundaries infer `catchTags` from.
 - `reactivityKeys` on queries and mutations is invalidation, `timeToLive` is per-query cache lifetime, `mutation(tag)` is an `AtomResultFn`, and stream RPCs become `Atom.pull` atoms.
@@ -44,7 +44,7 @@ What `AtomRpc` lacks, and how this repo covers it:
 | important-defaults             | Docs        | Atom's defaults (idle TTL 400 ms in React, no retries, no focus refetch unless asked) plus this library's server rules (per-request registry, no revalidation on the server).    |
 | infinite-queries               | Atom        | `Atom.pull`, stream RPCs in `AtomRpc.query`. Browser-only (not serializable).                                                                                                    |
 | installation                   | Docs        | Peers: `effect`, `@effect/atom-react`, `react`.                                                                                                                                  |
-| mutations                      | Atom        | `Issues.mutation("RenameIssue")` with `reactivityKeys`; `Atom.optimistic` / `optimisticFn`; forms are TanStack Form in the examples.                                             |
+| mutations                      | Atom        | `IssuesClient.mutation("RenameIssue")` with `reactivityKeys`; `Atom.optimistic` / `optimisticFn`; forms are TanStack Form in the examples.                                       |
 | overview                       | Docs        | Pitch: Atom is the cache; these packages add loaders, streaming and typed boundaries.                                                                                            |
 | polling                        | Atom        | `Atom.withRefresh(atom, duration)`.                                                                                                                                              |
 | query-cancellation             | Atom        | Unmounted atoms are interrupted after their idle TTL; the RPC client sends `Interrupt`; `Atom.Interrupt` for `fn` atoms.                                                         |
@@ -88,7 +88,7 @@ export class Unauthorized extends Schema.TaggedError<Unauthorized>()(
 
 const Issue = Schema.Struct({ id: Schema.Int, title: Schema.String });
 
-export class IssuesRpc extends RpcGroup.make(
+export class IssueRpcs extends RpcGroup.make(
 	Rpc.make("GetIssue", {
 		payload: { id: Schema.Int },
 		success: Issue,
@@ -101,19 +101,22 @@ export class IssuesRpc extends RpcGroup.make(
 	}),
 ) {}
 
-export class Issues extends AtomRpc.Service<Issues>()("Issues", {
-	group: IssuesRpc,
-	protocol: RpcClient.layerProtocolHttp({ url: "/rpc" }).pipe(
-		Layer.provide([FetchHttpClient.layer, RpcSerialization.layerJson]),
-	),
-}) {}
+export class IssuesClient extends AtomRpc.Service<IssuesClient>()(
+	"IssuesClient",
+	{
+		group: IssueRpcs,
+		protocol: RpcClient.layerProtocolHttp({ url: "/rpc" }).pipe(
+			Layer.provide([FetchHttpClient.layer, RpcSerialization.layerJson]),
+		),
+	},
+) {}
 ```
 
 Caching, identity, invalidation keys, hydration key, and the error type the boundaries infer:
 
 ```ts
 export const issue = (id: number) =>
-	Issues.query(
+	IssuesClient.query(
 		"GetIssue",
 		{ id },
 		{
@@ -130,7 +133,7 @@ type IssueErrorTag = Atom.Failure<ReturnType<typeof issue>>["_tag"];
 Mutations, polling, focus refetching, stale-while-revalidate, families, URL state:
 
 ```ts
-export const rename = Issues.mutation("RenameIssue");
+export const rename = IssuesClient.mutation("RenameIssue");
 const run = useAtomSet(rename);
 run({ payload: { id: 1, title: "New" }, reactivityKeys: { issue: [1] } });
 
@@ -193,7 +196,7 @@ Shared, chained boundaries (#222 / #227's shape). `errors` is only for the type:
 ```tsx
 const [AuthBoundary, useAuthBoundary] = createErrorBoundary({
 	name: "Auth",
-	errors: Issues,
+	errors: IssuesClient,
 	catchTags: { Unauthorized: ({ reset }) => <SignIn onSignedIn={reset} /> },
 });
 
