@@ -8,10 +8,11 @@ import {
 	createRootRouteWithContext,
 	createRoute,
 	Outlet,
+	useLoaderData,
 	useRouterState,
 } from "@tanstack/react-router";
 import { AsyncResult, Atom } from "effect/reactivity";
-import { useAtomResult, useWaterfall } from "raf-effect-atom";
+import { type Handle, useAtomResult, useWaterfall } from "raf-effect-atom";
 import { type ReactNode, Suspense, useState } from "react";
 
 import { IssuesClient } from "~/demo-kit/client.ts";
@@ -45,8 +46,9 @@ const procedures = {
 } satisfies Record<Part, string>;
 
 const startedIn = {
-	loader: "loader: prefetch(issue), prefetch(assignee), prefetch(comments)",
-	render: "no loader: each component calls useWaterfall(atom)",
+	loader:
+		"loader: prefetch(issue, id), prefetch(assignee, id), prefetch(comments, id)",
+	render: "no loader: each component calls useWaterfall(source, id)",
 } satisfies Record<Strategy, string>;
 
 /**
@@ -89,6 +91,15 @@ const atomsFor = {
 	render: makeAtoms("render"),
 } satisfies Record<Strategy, PageAtoms>;
 
+const loaderAtoms = atomsFor.loader;
+
+/** The handles the loader strategy's route loader returns. */
+interface LoaderHandles {
+	readonly assignee: Handle<typeof loaderAtoms.assignee>;
+	readonly comments: Handle<typeof loaderAtoms.comments>;
+	readonly issue: Handle<typeof loaderAtoms.issue>;
+}
+
 /** The id in `/issues/<id>`. */
 function idOf(pathname: string) {
 	return IssueId.make(Number(pathname.split("/").at(-1)));
@@ -104,11 +115,8 @@ function Line(props: { readonly className: string; readonly label: string }) {
 	);
 }
 
-function IssueTitle(props: {
-	readonly atoms: PageAtoms;
-	readonly id: IssueId;
-}) {
-	const result = useAtomResult(props.atoms.issue(props.id));
+function IssueTitle(props: { readonly issue: LoaderHandles["issue"] }) {
+	const result = useAtomResult(loaderAtoms.issue, props.issue);
 	if (AsyncResult.isFailure(result)) {
 		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
@@ -117,11 +125,8 @@ function IssueTitle(props: {
 	);
 }
 
-function AssigneeLine(props: {
-	readonly atoms: PageAtoms;
-	readonly id: IssueId;
-}) {
-	const result = useAtomResult(props.atoms.assignee(props.id));
+function AssigneeLine(props: { readonly assignee: LoaderHandles["assignee"] }) {
+	const result = useAtomResult(loaderAtoms.assignee, props.assignee);
 	if (AsyncResult.isFailure(result)) {
 		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
@@ -132,11 +137,8 @@ function AssigneeLine(props: {
 	);
 }
 
-function CommentCount(props: {
-	readonly atoms: PageAtoms;
-	readonly id: IssueId;
-}) {
-	const result = useAtomResult(props.atoms.comments(props.id));
+function CommentCount(props: { readonly comments: LoaderHandles["comments"] }) {
+	const result = useAtomResult(loaderAtoms.comments, props.comments);
 	if (AsyncResult.isFailure(result)) {
 		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
@@ -148,18 +150,17 @@ function CommentCount(props: {
 }
 
 /** The loader started all three, so each part fills in as its result lands. */
-function LoaderPage(props: { readonly id: IssueId }) {
-	const atoms = atomsFor.loader;
+function LoaderPage(props: { readonly handles: LoaderHandles }) {
 	return (
 		<article className="grid gap-1.5">
 			<Suspense fallback={<Line className="h-5 w-3/4" label="issue" />}>
-				<IssueTitle atoms={atoms} id={props.id} />
+				<IssueTitle issue={props.handles.issue} />
 			</Suspense>
 			<Suspense fallback={<Line className="h-3 w-1/2" label="assignee" />}>
-				<AssigneeLine atoms={atoms} id={props.id} />
+				<AssigneeLine assignee={props.handles.assignee} />
 			</Suspense>
 			<Suspense fallback={<Line className="h-3 w-1/3" label="comments" />}>
-				<CommentCount atoms={atoms} id={props.id} />
+				<CommentCount comments={props.handles.comments} />
 			</Suspense>
 		</article>
 	);
@@ -174,7 +175,8 @@ function RenderIssue(props: {
 	readonly children: ReactNode;
 	readonly id: IssueId;
 }) {
-	const result = useAtomResult(useWaterfall(atomsFor.render.issue(props.id)));
+	const source = atomsFor.render.issue;
+	const result = useAtomResult(source, useWaterfall(source, props.id));
 	if (AsyncResult.isFailure(result)) {
 		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
@@ -201,9 +203,8 @@ function RenderAssignee(props: {
 	readonly children: ReactNode;
 	readonly id: IssueId;
 }) {
-	const result = useAtomResult(
-		useWaterfall(atomsFor.render.assignee(props.id)),
-	);
+	const source = atomsFor.render.assignee;
+	const result = useAtomResult(source, useWaterfall(source, props.id));
 	if (AsyncResult.isFailure(result)) {
 		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
@@ -220,9 +221,8 @@ function RenderAssignee(props: {
 }
 
 function RenderComments(props: { readonly id: IssueId }) {
-	const result = useAtomResult(
-		useWaterfall(atomsFor.render.comments(props.id)),
-	);
+	const source = atomsFor.render.comments;
+	const result = useAtomResult(source, useWaterfall(source, props.id));
 	if (AsyncResult.isFailure(result)) {
 		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
@@ -259,6 +259,22 @@ function Home() {
 	return <p className="text-sm text-muted-foreground">Open an issue above.</p>;
 }
 
+function IssueRoute() {
+	// The route's typed hooks resolve through the docs site's registered
+	// router, which doesn't have this route.
+	const id = useRouterState({
+		select: (state) => idOf(state.location.pathname),
+	});
+	// SAFETY: the issue route's loader returns `LoaderHandles`, or nothing
+	// for the render strategy.
+	const handles = useLoaderData({ strict: false }) as LoaderHandles | undefined;
+	return handles === undefined ? (
+		<RenderPage id={id} key={id} />
+	) : (
+		<LoaderPage handles={handles} key={id} />
+	);
+}
+
 /** `/` and `/issues/$id`, whose atoms start where `strategy` says. */
 function makeRouteTree(strategy: Strategy) {
 	const root = createRootRouteWithContext<DemoRouterContext>()({
@@ -272,30 +288,20 @@ function makeRouteTree(strategy: Strategy) {
 	const issueRoute = createRoute({
 		component: IssueRoute,
 		getParentRoute: () => root,
-		loader: (args) => {
+		loader: (args): LoaderHandles | undefined => {
 			if (strategy === "render") {
-				return;
+				return undefined;
 			}
 			const id = IssueId.make(Number(args.params.id));
-			const atoms = atomsFor.loader;
-			args.context.atoms.prefetch(atoms.issue(id));
-			args.context.atoms.prefetch(atoms.assignee(id));
-			args.context.atoms.prefetch(atoms.comments(id));
+			const atoms = args.context.atoms;
+			return {
+				assignee: atoms.prefetch(loaderAtoms.assignee, id),
+				comments: atoms.prefetch(loaderAtoms.comments, id),
+				issue: atoms.prefetch(loaderAtoms.issue, id),
+			};
 		},
 		path: "/issues/$id",
 	});
-	function IssueRoute() {
-		// The route's typed hooks resolve through the docs site's registered
-		// router, which doesn't have this route.
-		const id = useRouterState({
-			select: (state) => idOf(state.location.pathname),
-		});
-		return strategy === "loader" ? (
-			<LoaderPage id={id} key={id} />
-		) : (
-			<RenderPage id={id} key={id} />
-		);
-	}
 	return root.addChildren([home, issueRoute]);
 }
 

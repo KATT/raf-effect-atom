@@ -2,6 +2,7 @@ import * as Atom from "effect/reactivity/Atom";
 import { describe, expect, it } from "tstyche";
 
 import {
+	type Handle,
 	type Loader,
 	useAtomResult,
 	useWaterfall,
@@ -14,18 +15,19 @@ type IssueError = Atom.Failure<ReturnType<typeof issue>>;
 type Issue = Atom.Success<ReturnType<typeof issue>>;
 
 describe("useWaterfall", () => {
-	it("returns the atom it was given", () => {
-		expect(useWaterfall(issue(1))).type.toBe<ReturnType<typeof issue>>();
+	it("returns a handle typed by its source", () => {
+		expect(useWaterfall(issue, 1)).type.toBe<Handle<typeof issue>>();
 	});
 
 	it("feeds useAtomResult the same types", () => {
-		expect(useAtomResult(useWaterfall(issue(1)))).type.toBe<
+		expect(useAtomResult(issue, useWaterfall(issue, 1))).type.toBe<
 			Loader.SettledResult<Issue, IssueError>
 		>();
 	});
 
-	it("takes only AsyncResult atoms", () => {
+	it("takes only AsyncResult sources, with their arguments", () => {
 		expect(useWaterfall).type.toBeCallableWith(counter);
+		expect(useWaterfall).type.not.toBeCallableWith(issue, "1");
 		expect(useWaterfall).type.not.toBeCallableWith(Atom.make(1));
 	});
 });

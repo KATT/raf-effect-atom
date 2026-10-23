@@ -12,10 +12,13 @@ export default async function Page(props: {
 	await forwardCookie();
 	// Waits for results the registry doesn't hold. Every navigation renders
 	// on the server into a new request registry, so it waits like `fetch`.
-	await Promise.all([ensure(issueCounts), ensure(issuePage(input, 0))]);
+	const [counts, page] = await Promise.all([
+		ensure(issueCounts),
+		ensure(issuePage, input, 0),
+	]);
 	return (
 		<HydrateAtoms state={dehydrate()}>
-			<IssuesPage input={input} verb="ensure" />
+			<IssuesPage handles={{ counts, page }} input={input} verb="ensure" />
 		</HydrateAtoms>
 	);
 }

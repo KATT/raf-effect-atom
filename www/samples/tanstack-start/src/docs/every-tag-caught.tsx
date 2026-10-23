@@ -1,6 +1,5 @@
-import type { IssueId } from "@examples/contract";
 import { createErrorBoundary } from "effect-atom-boundary";
-import { useAtomResult } from "raf-effect-atom";
+import { type Handle, useAtomResult } from "raf-effect-atom";
 import { Suspense } from "react";
 
 import { issue } from "~/issues.ts";
@@ -32,20 +31,20 @@ export const [IssuePageBoundary, useIssuePageBoundary] = createErrorBoundary({
 	},
 });
 
-export function IssuePage(props: { id: IssueId }) {
+export function IssuePage(props: { issue: Handle<typeof issue> }) {
 	return (
 		<AppBoundary>
 			<IssuePageBoundary>
 				<Suspense fallback={<p>Loading…</p>}>
-					<IssueTitle id={props.id} />
+					<IssueTitle issue={props.issue} />
 				</Suspense>
 			</IssuePageBoundary>
 		</AppBoundary>
 	);
 }
 
-function IssueTitle(props: { id: IssueId }) {
-	const result = useAtomResult(useIssuePageBoundary().wrap(issue(props.id)));
+function IssueTitle(props: { issue: Handle<typeof issue> }) {
+	const result = useAtomResult(useIssuePageBoundary().wrap(issue), props.issue);
 	//    ^?
 	return <h1>{result.value.title}</h1>;
 }

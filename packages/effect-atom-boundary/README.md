@@ -17,13 +17,13 @@ npm install effect-atom-boundary effect @effect/atom-react react
 
 ## Usage
 
-A boundary catches the tags its `catchTags` name, and no others. `createErrorBoundary` makes one, with a hook whose `wrap(atom)` turns the tags it and the boundaries above it catch into defects. A read that returns typed failures and throws defects, such as [`raf-effect-atom`](https://github.com/KATT/raf-effect-atom/tree/main/packages/raf-effect-atom)'s `useAtomResult`, throws those to their boundaries and returns the failures left, typed without them:
+A boundary catches the tags its `catchTags` name, and no others. `createErrorBoundary` makes one, with a hook whose `wrap(atom)`, or `wrap(family)` for an atom family, turns the tags it and the boundaries above it catch into defects. A read that returns typed failures and throws defects, such as [`raf-effect-atom`](https://github.com/KATT/raf-effect-atom/tree/main/packages/raf-effect-atom)'s `useAtomResult`, throws those to their boundaries and returns the failures left, typed without them:
 
 ```tsx
 import { Match, Option } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import { createErrorBoundary } from "effect-atom-boundary";
-import { useAtomResult } from "raf-effect-atom";
+import { type Handle, useAtomResult } from "raf-effect-atom";
 
 const [AppBoundary] = createErrorBoundary({
 	name: "App",
@@ -38,8 +38,8 @@ const [IssueBoundary, useIssueBoundary] = createErrorBoundary({
 	catchTags: { IssueNotFound: ({ error }) => <NotFound id={error.id} /> },
 });
 
-function IssueTitle(props: { readonly id: number }) {
-	const result = useAtomResult(useIssueBoundary().wrap(issue(props.id)));
+function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
+	const result = useAtomResult(useIssueBoundary().wrap(issue), props.issue);
 	if (AsyncResult.isSuccess(result)) {
 		return <h1>{result.value.title}</h1>;
 	}
@@ -51,13 +51,13 @@ function IssueTitle(props: { readonly id: number }) {
 <AppBoundary>
 	<IssueBoundary>
 		<Suspense fallback={<Spinner />}>
-			<IssueTitle id={id} />
+			<IssueTitle issue={issueHandle} />
 		</Suspense>
 	</IssueBoundary>
 </AppBoundary>;
 ```
 
-`issue`'s error is `IssueNotFound | Unauthorized | RpcClientError`. The read throws `IssueNotFound` to `<IssueBoundary>` and `RpcClientError` to `<AppBoundary>`, and returns `Unauthorized`, the one failure left. `errors` names what the errors come from, for the types: an `AtomRpc` client, an atom, or an atom family. A handler's `reset` refreshes every atom whose failure the boundary has a handler for, and renders the children again.
+`issue`'s error is `IssueNotFound | Unauthorized | RpcClientError`. `issueHandle` is the handle the route's loader got from `raf-effect-atom`'s `ensure(issue, id)`. The read throws `IssueNotFound` to `<IssueBoundary>` and `RpcClientError` to `<AppBoundary>`, and returns `Unauthorized`, the one failure left. `errors` names what the errors come from, for the types: an `AtomRpc` client, an atom, or an atom family. A handler's `reset` refreshes every atom whose failure the boundary has a handler for, and renders the children again.
 
 When the boundaries' `catchTags` name every tag of the atom's error, the read's error type is `never`. See [Error boundaries](https://raf-effect-atom.katt.dev/docs/error-boundaries).
 

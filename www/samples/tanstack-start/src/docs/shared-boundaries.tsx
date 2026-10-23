@@ -1,18 +1,17 @@
-import type { IssueId } from "@examples/contract";
 import { Match, Option } from "effect";
 import { createErrorBoundary } from "effect-atom-boundary";
 import { AsyncResult } from "effect/reactivity";
-import { useAtomResult } from "raf-effect-atom";
+import { type Handle, useAtomResult } from "raf-effect-atom";
 
 import { AppBoundary, useAppBoundary } from "~/boundaries.tsx";
 import { IssuesClient } from "~/issues-client.ts";
 import { issue } from "~/issues.ts";
 
-declare const id: IssueId;
+declare const issueHandle: Handle<typeof issue>;
 
 // #region narrowed
-function IssueTitle(props: { id: IssueId }) {
-	const result = useAtomResult(useAppBoundary().wrap(issue(props.id)));
+function IssueTitle(props: { issue: Handle<typeof issue> }) {
+	const result = useAtomResult(useAppBoundary().wrap(issue), props.issue);
 	if (AsyncResult.isSuccess(result)) {
 		return <h1>{result.value.title}</h1>;
 	}
@@ -41,7 +40,7 @@ createErrorBoundary({
 function App() {
 	return (
 		<AppBoundary>
-			<IssueTitle id={id} />
+			<IssueTitle issue={issueHandle} />
 		</AppBoundary>
 	);
 }

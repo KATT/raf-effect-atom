@@ -10,14 +10,21 @@ export const Route = createFileRoute("/fetch/issues/")({
 	loaderDeps: (args) => args.search,
 	loader: async (args) => {
 		// Waits for fresh results, refreshing any the registry holds.
-		await Promise.all([
+		const [counts, page] = await Promise.all([
 			args.context.atoms.fetch(issueCounts),
-			args.context.atoms.fetch(issuePage(args.deps, 0)),
+			args.context.atoms.fetch(issuePage, args.deps, 0),
 		]);
+		return { counts, page };
 	},
 	component: Page,
 });
 
 function Page() {
-	return <IssuesPage input={Route.useSearch()} verb="fetch" />;
+	return (
+		<IssuesPage
+			handles={Route.useLoaderData()}
+			input={Route.useSearch()}
+			verb="fetch"
+		/>
+	);
 }

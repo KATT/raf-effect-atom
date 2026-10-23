@@ -10,13 +10,15 @@ export default async function Page(props: {
 }) {
 	const issueId = await issueIdParam(props.params);
 	await forwardCookie();
-	// Starts every atom the page reads and renders at once.
-	prefetch(issue(issueId));
-	prefetch(assignee(issueId));
-	prefetch(commentPage(issueId, 0));
+	// Starts every atom the page reads and renders their handles at once.
+	const handles = {
+		assignee: prefetch(assignee, issueId),
+		comments: prefetch(commentPage, issueId, 0),
+		issue: prefetch(issue, issueId),
+	};
 	return (
 		<HydrateAtoms state={dehydrate()}>
-			<IssuePage issueId={issueId} />
+			<IssuePage handles={handles} issueId={issueId} />
 		</HydrateAtoms>
 	);
 }

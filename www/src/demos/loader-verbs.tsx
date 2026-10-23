@@ -8,10 +8,10 @@ import {
 	createRoute,
 	type AnyRoute,
 	Outlet,
-	useRouterState,
+	useLoaderData,
 } from "@tanstack/react-router";
 import { AsyncResult, Atom } from "effect/reactivity";
-import { useAtomResult } from "raf-effect-atom";
+import { type Handle, useAtomResult } from "raf-effect-atom";
 import { Suspense, useState } from "react";
 
 import { IssuesClient } from "~/demo-kit/client.ts";
@@ -36,9 +36,9 @@ const verbs = ["prefetch", "ensure", "fetch"] as const;
 type Verb = (typeof verbs)[number];
 
 const loaderCode = {
-	ensure: "await atoms.ensure(issue(id))",
-	fetch: "await atoms.fetch(issue(id))",
-	prefetch: "atoms.prefetch(issue(id))",
+	ensure: "await atoms.ensure(issue, id)",
+	fetch: "await atoms.fetch(issue, id)",
+	prefetch: "atoms.prefetch(issue, id)",
 } satisfies Record<Verb, string>;
 
 /**
@@ -78,10 +78,13 @@ function IssueSkeleton() {
 	);
 }
 
+type IssueSource = ReturnType<typeof issueFor>;
+
 function IssueContent(props: {
-	readonly atom: ReturnType<ReturnType<typeof issueFor>>;
+	readonly issue: Handle<IssueSource>;
+	readonly source: IssueSource;
 }) {
-	const result = useAtomResult(props.atom);
+	const result = useAtomResult(props.source, props.issue);
 	if (AsyncResult.isFailure(result)) {
 		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
@@ -93,6 +96,11 @@ function IssueContent(props: {
 			<p className="line-clamp-2 text-xs text-muted-foreground">{issue.body}</p>
 		</article>
 	);
+}
+
+/** What the issue route's loader returns: the issue's handle. */
+interface IssueData {
+	readonly issue: Handle<IssueSource>;
 }
 
 /** `/` and `/issues/$id`, whose loader starts the issue with `verb`. */
@@ -108,35 +116,32 @@ function makeRouteTree(verb: Verb) {
 	const issueRoute = createRoute({
 		component: IssueRoute,
 		getParentRoute: () => root,
-		loader: async (args) => {
-			const context = args.context;
-			const atom = issueFor(verb)(IssueId.make(Number(args.params.id)));
+		loader: async (args): Promise<IssueData> => {
+			const atoms = args.context.atoms;
+			const source = issueFor(verb);
+			const id = IssueId.make(Number(args.params.id));
 			switch (verb) {
 				case "ensure": {
-					await context.atoms.ensure(atom);
-					return;
+					return { issue: await atoms.ensure(source, id) };
 				}
 				case "fetch": {
-					await context.atoms.fetch(atom);
-					return;
+					return { issue: await atoms.fetch(source, id) };
 				}
 				case "prefetch": {
-					context.atoms.prefetch(atom);
-					return;
+					return { issue: atoms.prefetch(source, id) };
 				}
 			}
 		},
 		path: "/issues/$id",
 	});
 	function IssueRoute() {
-		// The route's typed hooks resolve through the docs site's registered
-		// router, which doesn't have this route.
-		const id = useRouterState({
-			select: (state) => idOf(state.location.pathname),
-		});
+		// SAFETY: the issue route's loader returns `IssueData`. The route's
+		// typed hooks resolve through the docs site's registered router, which
+		// doesn't have this route.
+		const data = useLoaderData({ strict: false }) as IssueData;
 		return (
-			<Suspense fallback={<IssueSkeleton />} key={id}>
-				<IssueContent atom={issueFor(verb)(id)} />
+			<Suspense fallback={<IssueSkeleton />} key={data.issue.key}>
+				<IssueContent issue={data.issue} source={issueFor(verb)} />
 			</Suspense>
 		);
 	}

@@ -11,10 +11,13 @@ export default async function Page(props: {
 	const input = await listSearchParams(props.searchParams);
 	await forwardCookie();
 	// Waits for fresh results.
-	await Promise.all([fetch(issueCounts), fetch(issuePage(input, 0))]);
+	const [counts, page] = await Promise.all([
+		fetch(issueCounts),
+		fetch(issuePage, input, 0),
+	]);
 	return (
 		<HydrateAtoms state={dehydrate()}>
-			<IssuesPage input={input} verb="fetch" />
+			<IssuesPage handles={{ counts, page }} input={input} verb="fetch" />
 		</HydrateAtoms>
 	);
 }

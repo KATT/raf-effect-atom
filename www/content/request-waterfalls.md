@@ -39,7 +39,7 @@ tanstack-start/src/docs/request-waterfalls.tsx#fetch-on-render
 
 [Suspense](https://react.dev/reference/react/Suspense) makes this worse, not better: a suspended component renders nothing below it, so its children can't even start their requests.
 
-The fix is to start every atom the route reads in its loader. The component stays the same; it reads results that are already on their way:
+The fix is to start every atom the route reads in its loader and pass the [handles](./loader-verbs.md#handles) it returns down to the components. A component reads a result that's already on its way, and since it takes a handle instead of an id, it can't start a request of its own:
 
 ```sample
 tanstack-start/src/routes/issues.$id.tsx#route
@@ -49,7 +49,7 @@ Both requests start the moment the navigation does. With the router's [`defaultP
 
 On the server it matters twice. Only atoms in the registry when the loaders finish are sent to the browser, so an atom first read during render costs a round trip on the server and runs again in the browser.
 
-In development, `useAtomResult` reports a read like `IssuePage`'s, which starts an atom nothing started: see [Finding waterfalls in development](#finding-waterfalls-in-development).
+In development, `useAtomResult` also reports a read that starts an atom nothing started, such as through a handle built by hand: see [Finding waterfalls in development](#finding-waterfalls-in-development).
 
 ## Start every atom before awaiting any
 
@@ -112,13 +112,13 @@ The request starts with the state change, not after the render it causes, and th
 
 ### Render-time inputs: useWaterfall
 
-When an input exists only in render, such as a value a hook debounces, no loader or handler can start the atom. `useWaterfall` starts it during render, like `prefetch`, and returns it, so the read looks like one fed by a loader:
+When an input exists only in render, such as a value a hook debounces, no loader or handler can start the atom. `useWaterfall(source, ...args)` starts it during render, like `prefetch`, and returns its handle, so the read looks like one fed by a loader:
 
 ```sample
 tanstack-start/src/docs/request-waterfalls.tsx#use-waterfall
 ```
 
-It starts the atom only if nothing has, so re-renders don't request it again, and it waits for a result the server is still streaming. Pass it the atom a loader would start, inside an error boundary's `wrap`: the wrapper has no serialization key, so the server couldn't send it.
+It starts the atom only if nothing has, so re-renders don't request it again, and it waits for a result the server is still streaming. Pass it the source a loader would, not a boundary's `wrap` of it: the wrapped atoms have no serialization key, so the server couldn't send them.
 
 The name is the warning: each call is a round trip after the render that found the input. Search a codebase for `useWaterfall` and you have a list of its waterfalls.
 
@@ -139,7 +139,7 @@ tanstack-start/src/routes/__root.tsx#root
 The report names the atom and how to fix it:
 
 ```text
-raf-effect-atom: rendering read AtomRpc:GetIssueAssignee:1 before anything else had started it, so its request waits for this render: a request waterfall. Start it before render, in the route's loader or the server component (atoms.prefetch or atoms.ensure). If the state that picks it, such as a page, a filter or an open dialog, isn't in the URL, put it there so the loader can. As escape hatches for state that can't be in the URL: start it in the event handler that changes the state (Loader.make(registry).prefetch), or, if its input only exists in render, read it with useAtomResult(useWaterfall(atom)). https://raf-effect-atom.katt.dev/docs/request-waterfalls
+raf-effect-atom: rendering read AtomRpc:GetIssueAssignee:1 before anything else had started it, so its request waits for this render: a request waterfall. Start it before render and pass its handle down, from the route's loader or the server component (atoms.prefetch(source, ...args) or atoms.ensure). If the state that picks it, such as a page, a filter or an open dialog, isn't in the URL, put it there so the loader can. As escape hatches for state that can't be in the URL: start it in the event handler that changes the state (Loader.make(registry).prefetch), or, if its input only exists in render, read it with useAtomResult(source, useWaterfall(source, ...args)). https://raf-effect-atom.katt.dev/docs/request-waterfalls
 ```
 
 Atoms a loader, a server component, an event handler or `useWaterfall` started aren't reported, and neither is a derived atom, such as a boundary's `wrap`, over one of those. The example apps use `"throw"`, so a component that forgets its loader breaks the page in development instead of shipping a waterfall.
@@ -152,7 +152,7 @@ Lazy route components are another waterfall: the code has to download before it 
 
 ## Summary
 
-- Start atoms in loaders and server components, never in render.
+- Start atoms in loaders and server components, never in render, and pass their handles to the components that read them.
 - Put the state that picks data in the URL: search params, and routes for dialogs.
 - Start every atom before awaiting any, and give `Effect.all` a `concurrency`.
 - Shape data so a route's inputs come from the URL, not from other atoms.

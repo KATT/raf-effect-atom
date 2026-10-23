@@ -1,10 +1,10 @@
 import { Skeleton } from "@examples/ui/components/skeleton";
 import { ClientOnly } from "@tanstack/react-router";
+import { useAtomResult, useWaterfall } from "raf-effect-atom";
 import { Suspense } from "react";
 
 import { DemoFrame } from "~/demo-kit/frame.tsx";
 import { demoAtom } from "~/demos/registry.ts";
-import { useLoaded } from "~/use-loaded.ts";
 
 function DemoPlaceholder() {
 	return (
@@ -21,7 +21,10 @@ function DemoPlaceholder() {
 }
 
 function LoadedDemo(props: { readonly id: string }) {
-	return <DemoFrame demo={useLoaded(demoAtom(props.id))} />;
+	// The docs page's loader starts its demos on a navigation in the browser.
+	// A page the server rendered starts them here: demos never run there.
+	const handle = useWaterfall(demoAtom, props.id);
+	return <DemoFrame demo={useAtomResult(demoAtom, handle).value} />;
 }
 
 /**

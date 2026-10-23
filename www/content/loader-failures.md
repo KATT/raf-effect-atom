@@ -5,11 +5,11 @@ section: Together
 order: 1
 ---
 
-`ensure` and `fetch` return a typed failure as a result instead of rejecting. A failure from the server reaches the browser as the same tagged error, decoded by the procedure's Schema, so there are two places to handle it.
+`ensure` and `fetch` don't reject on a typed failure: the handle they return reads as the failed result. A failure from the server reaches the browser as the same tagged error, decoded by the procedure's Schema, so there are two places to handle it.
 
 ## In a boundary
 
-Let the route render and the read throw the failure to the boundary that claims it. The issue route reads `useIssueBoundary().wrap(issue(id))`, so `IssueNotFound` goes to `<IssueBoundary>`, `Unauthorized` to `<AuthBoundary>` and `RpcClientError` to `<AppBoundary>`:
+Let the route render and the read throw the failure to the boundary that claims it. The issue route reads its handle through `useIssueBoundary().wrap(issue)`, so `IssueNotFound` goes to `<IssueBoundary>`, `Unauthorized` to `<AuthBoundary>` and `RpcClientError` to `<AppBoundary>`:
 
 ```sample
 tanstack-start/src/boundaries.tsx#issue

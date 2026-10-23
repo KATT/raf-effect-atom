@@ -1,12 +1,12 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Pencil } from "lucide-react";
+import { useAtomResult } from "raf-effect-atom";
 
 import { DocBody } from "~/components/doc-body.tsx";
 import { PageActions } from "~/components/page-actions.tsx";
 import { TableOfContents } from "~/components/toc.tsx";
 import { docAtom, findDoc, neighbours } from "~/content/docs.ts";
 import { demoAtom } from "~/demos/registry.ts";
-import { useLoaded } from "~/use-loaded.ts";
 import { absoluteUrl, pageHead } from "~/seo.ts";
 import { site } from "~/site.ts";
 
@@ -22,10 +22,10 @@ export const Route = createFileRoute("/docs/$slug")({
 		// browser.
 		if ("window" in globalThis) {
 			for (const id of meta.demos) {
-				atoms.prefetch(demoAtom(id));
+				atoms.prefetch(demoAtom, id);
 			}
 		}
-		await atoms.ensure(docAtom(args.params.slug));
+		return { doc: await atoms.ensure(docAtom, args.params.slug) };
 	},
 	head: (args) => {
 		const meta = findDoc(args.params.slug);
@@ -75,8 +75,8 @@ export const Route = createFileRoute("/docs/$slug")({
 });
 
 function DocPage() {
-	const params = Route.useParams();
-	const doc = useLoaded(docAtom(params.slug));
+	// A page can't fail with a typed error, so the read is a success.
+	const doc = useAtomResult(docAtom, Route.useLoaderData().doc).value;
 	const around = neighbours(doc.slug);
 
 	return (

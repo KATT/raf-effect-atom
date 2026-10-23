@@ -1,14 +1,16 @@
-import type { IssueId } from "@examples/contract";
 import { AssigneeCardView } from "@examples/kit/components/user";
-import { useAtomResult } from "raf-effect-atom";
+import { type Handle, useAtomResult } from "raf-effect-atom";
 
 import { useIssueBoundary } from "~/boundaries.tsx";
 import { assignee } from "~/issues.ts";
 
 /** `GetIssueAssignee` loads beside the issue, by the issue's id. */
-export function AssigneeCard(props: { readonly issueId: IssueId }) {
+export function AssigneeCard(props: {
+	readonly assignee: Handle<typeof assignee>;
+}) {
 	const result = useAtomResult(
-		useIssueBoundary().wrap(assignee(props.issueId)),
+		useIssueBoundary().wrap(assignee),
+		props.assignee,
 	);
 	return <AssigneeCardView user={result.value} />;
 }

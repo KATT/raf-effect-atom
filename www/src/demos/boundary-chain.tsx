@@ -6,10 +6,10 @@ import {
 	type Unauthorized,
 } from "@examples/contract";
 import { type CatchTagProps, createErrorBoundary } from "effect-atom-boundary";
-import { useAtomSet, useAtomValue } from "@effect/atom-react";
-import { useAtomResult } from "raf-effect-atom";
+import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react";
+import { type Handle, Loader, useAtomResult } from "raf-effect-atom";
 import { Atom } from "effect/reactivity";
-import { Suspense } from "react";
+import { Suspense, use, useState } from "react";
 
 import { AppBoundary, AppErrorBoundary } from "~/demo-kit/app-boundary.tsx";
 import { BoundaryChain } from "~/demo-kit/boundary-chain.tsx";
@@ -70,11 +70,13 @@ const [IssueBoundary, useIssueBoundary] = createErrorBoundary({
  * `Unauthorized` to `<AuthBoundary>` and `RpcClientError` to `<AppBoundary>`,
  * so no failure is left and the result is a success.
  */
-function IssueTitle(props: { readonly id: IssueId }) {
-	const result = useAtomResult(useIssueBoundary().wrap(issue(props.id)));
+function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
+	const result = useAtomResult(useIssueBoundary().wrap(issue), props.issue);
 	return (
 		<div className="grid gap-1">
-			<p className="font-mono text-xs text-muted-foreground">#{props.id}</p>
+			<p className="font-mono text-xs text-muted-foreground">
+				#{result.value.id}
+			</p>
 			<h3 className="text-lg font-semibold">{result.value.title}</h3>
 		</div>
 	);
@@ -82,20 +84,31 @@ function IssueTitle(props: { readonly id: IssueId }) {
 
 const ids = [1, 2, 404].map((id) => IssueId.make(id));
 
-/** The issue the demo shows, kept across the inline and expanded views. */
-const selectedAtom = Atom.make(ids[0] ?? IssueId.make(1)).pipe(
-	Atom.keepAlive,
-	Atom.withLabel("demo-kit:boundary-chain-issue"),
-);
+const firstId = ids[0] ?? IssueId.make(1);
+
+/**
+ * The issue a button picked, kept across the inline and expanded views:
+ * `undefined` until one does.
+ */
+const selectedAtom = Atom.make<Handle<typeof issue> | undefined>(
+	undefined,
+).pipe(Atom.keepAlive, Atom.withLabel("demo-kit:boundary-chain-issue"));
 
 /** Queues a failure for the next request. */
 function Controls() {
-	return <IssueFailureButtons issueId={useAtomValue(selectedAtom)} />;
+	const id = useAtomValue(selectedAtom)?.args[0] ?? firstId;
+	return <IssueFailureButtons issueId={id} />;
 }
 
 function BoundaryChainDemo() {
-	const id = useAtomValue(selectedAtom);
-	const setId = useAtomSet(selectedAtom);
+	const registry = use(RegistryContext);
+	// Each button starts its issue as it picks it, as an event handler would.
+	const [first] = useState(() =>
+		Loader.make(registry).prefetch(issue, firstId),
+	);
+	const picked = useAtomValue(selectedAtom) ?? first;
+	const setPicked = useAtomSet(selectedAtom);
+	const [id] = picked.args;
 	return (
 		<div className="grid gap-4">
 			<div className="flex flex-wrap gap-1.5">
@@ -104,7 +117,7 @@ function BoundaryChainDemo() {
 						aria-pressed={each === id}
 						key={each}
 						onClick={() => {
-							setId(each);
+							setPicked(Loader.make(registry).prefetch(issue, each));
 						}}
 						size="xs"
 						variant={each === id ? "secondary" : "ghost"}
@@ -118,7 +131,7 @@ function BoundaryChainDemo() {
 					<AuthBoundary>
 						<IssueBoundary>
 							<Suspense fallback={<Skeleton className="h-12 w-full" />}>
-								<IssueTitle id={id} />
+								<IssueTitle issue={picked} />
 							</Suspense>
 						</IssueBoundary>
 					</AuthBoundary>

@@ -1,6 +1,7 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { Option, Predicate, Schema } from "effect";
 import { AsyncResult } from "effect/reactivity";
+import { Loader } from "raf-effect-atom";
 
 import { issue, IssueIdFromString } from "~/issues.ts";
 
@@ -12,8 +13,8 @@ export const Route = createFileRoute("/issues/$id")({
 		}),
 	},
 	loader: async ({ context, params }) => {
-		const result = await context.atoms.ensure(issue(params.id));
-		const error = AsyncResult.error(result);
+		const handle = await context.atoms.ensure(issue, params.id);
+		const error = AsyncResult.error(Loader.result(handle));
 		//    ^?
 		// Only IssueNotFound becomes a 404. Unauthorized and RpcClientError
 		// stay in the result, for the page's boundaries.
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/issues/$id")({
 		) {
 			throw notFound();
 		}
+		return { issue: handle };
 	},
 });
 // #endregion not-found

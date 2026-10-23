@@ -4,41 +4,78 @@ import * as Atom from "effect/reactivity/Atom";
 import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import { describe, expect, it } from "tstyche";
 
-import { Hydration, Loader } from "../src/index.ts";
-import { issue } from "../test/fixtures/issues.ts";
+import {
+	type Handle,
+	Hydration,
+	type LoadedHandle,
+	Loader,
+} from "../src/index.ts";
+import { counter, issue } from "../test/fixtures/issues.ts";
 
 type IssueError = Atom.Failure<ReturnType<typeof issue>>;
 type Issue = Atom.Success<ReturnType<typeof issue>>;
 
 describe("Loader", () => {
-	it("returns the settled result, typed by the atom", () => {
-		expect(Loader.prefetch(issue(1))).type.toBe<
-			Effect.Effect<void, never, AtomRegistry.AtomRegistry>
+	it("returns a handle typed by its source", () => {
+		expect(Loader.prefetch(issue, 1)).type.toBe<
+			Effect.Effect<Handle<typeof issue>, never, AtomRegistry.AtomRegistry>
 		>();
-		expect(Loader.ensure(issue(1))).type.toBe<
+		expect(Loader.ensure(issue, 1)).type.toBe<
 			Effect.Effect<
-				Loader.SettledResult<Issue, IssueError>,
+				LoadedHandle<typeof issue>,
 				never,
 				AtomRegistry.AtomRegistry
 			>
 		>();
-		expect(Loader.fetch(issue(1))).type.toBe<
+		expect(Loader.fetch(issue, 1)).type.toBe<
 			Effect.Effect<
-				Loader.SettledResult<Issue, IssueError>,
+				LoadedHandle<typeof issue>,
 				never,
 				AtomRegistry.AtomRegistry
 			>
 		>();
 	});
 
+	it("records the source's arguments, or none for an atom", () => {
+		expect(hole<Handle<typeof issue>>().args).type.toBe<[id: number]>();
+		expect(Loader.prefetch(counter)).type.toBe<
+			Effect.Effect<Handle<typeof counter>, never, AtomRegistry.AtomRegistry>
+		>();
+		expect(hole<Handle<typeof counter>>().args).type.toBe<[]>();
+	});
+
+	it("checks the arguments against the source", () => {
+		expect(Loader.prefetch).type.not.toBeCallableWith(issue, "1");
+		expect(Loader.prefetch).type.not.toBeCallableWith(issue);
+		expect(Loader.prefetch).type.not.toBeCallableWith(counter, 1);
+	});
+
+	it("returns the result a verb waited for", () => {
+		expect(Loader.result(hole<LoadedHandle<typeof issue>>())).type.toBe<
+			Loader.SettledResult<Issue, IssueError>
+		>();
+		expect(Loader.result).type.not.toBeCallableWith(
+			hole<Handle<typeof issue>>(),
+		);
+	});
+
+	it("fits a loaded handle where a handle goes, not the reverse", () => {
+		expect(hole<LoadedHandle<typeof issue>>()).type.toBeAssignableTo<
+			Handle<typeof issue>
+		>();
+		expect(hole<Handle<typeof issue>>()).type.not.toBeAssignableTo<
+			LoadedHandle<typeof issue>
+		>();
+	});
+
 	it("returns Promises from make", () => {
 		const loader = Loader.make(hole<AtomRegistry.AtomRegistry>());
-		expect(loader.prefetch(issue(1))).type.toBe<void>();
-		expect(loader.ensure(issue(1))).type.toBe<
-			Promise<Loader.SettledResult<Issue, IssueError>>
+		expect(loader.prefetch(issue, 1)).type.toBe<Handle<typeof issue>>();
+		expect(loader.ensure(issue, 1)).type.toBe<
+			Promise<LoadedHandle<typeof issue>>
 		>();
-		expect(loader.fetch(issue(1))).type.toBe<
-			Promise<Loader.SettledResult<Issue, IssueError>>
+		expect(loader.fetch(issue, 1)).type.toBe<
+			Promise<LoadedHandle<typeof issue>>
 		>();
 	});
 

@@ -1,10 +1,15 @@
 import type { IssueId } from "@examples/contract";
 import { Effect } from "effect";
-import { Loader, useAtomResult, useWaterfall } from "raf-effect-atom";
+import {
+	type Handle,
+	Loader,
+	useAtomResult,
+	useWaterfall,
+} from "raf-effect-atom";
 import { startTransition, Suspense, use, useRef, useState } from "react";
-import { RegistryContext } from "@effect/atom-react";
+import { RegistryContext, useAtomSuspense } from "@effect/atom-react";
 
-import { useAuthBoundary, useIssueBoundary } from "~/boundaries.tsx";
+import { useAuthBoundary } from "~/boundaries.tsx";
 import { assignee, issue, searchIssues } from "~/issues.ts";
 
 declare const atoms: Loader.Loader;
@@ -13,10 +18,11 @@ declare const id: IssueId;
 declare function useDebouncedValue<A>(value: A, ms: number): A;
 
 // #region fetch-on-render
-// No loader started these atoms, so each read starts its own request.
+// Each component builds its atom from an id with Effect Atom's own hook, so
+// each read starts its own request.
 function IssuePage(props: { issueId: IssueId }) {
 	// Starts GetIssue, and suspends until it settles.
-	const result = useAtomResult(useIssueBoundary().wrap(issue(props.issueId)));
+	const result = useAtomSuspense(issue(props.issueId));
 	return (
 		<article>
 			<h1>{result.value.title}</h1>
@@ -29,30 +35,28 @@ function IssuePage(props: { issueId: IssueId }) {
 }
 
 function Assignee(props: { issueId: IssueId }) {
-	const result = useAtomResult(
-		useIssueBoundary().wrap(assignee(props.issueId)),
-	);
+	const result = useAtomSuspense(assignee(props.issueId));
 	return <p>{result.value.name}</p>;
 }
 // #endregion fetch-on-render
 
 // #region await-first
 // The assignee starts only once the issue is in: two round trips.
-await atoms.ensure(issue(id));
-atoms.prefetch(assignee(id));
+const issueFirst = await atoms.ensure(issue, id);
+const assigneeLater = atoms.prefetch(assignee, id);
 // #endregion await-first
 
 // #region start-first
 // Both start now; the loader waits only for the issue.
-atoms.prefetch(assignee(id));
-await atoms.ensure(issue(id));
+const assigneeHandle = atoms.prefetch(assignee, id);
+const issueHandle = await atoms.ensure(issue, id);
 // #endregion start-first
 
 // #region await-both
 // Both start now, and the loader waits for both.
-const [issueResult, assigneeResult] = await Promise.all([
-	atoms.ensure(issue(id)),
-	atoms.ensure(assignee(id)),
+const [issueLoaded, assigneeLoaded] = await Promise.all([
+	atoms.ensure(issue, id),
+	atoms.ensure(assignee, id),
 ]);
 // #endregion await-both
 
@@ -61,18 +65,18 @@ const [issueResult, assigneeResult] = await Promise.all([
 // concurrency: without it, the assignee would start after the issue settled.
 const both = Effect.all(
 	//    ^?
-	[Loader.ensure(issue(id)), Loader.ensure(assignee(id))],
+	[Loader.ensure(issue, id), Loader.ensure(assignee, id)],
 	{ concurrency: "unbounded" },
 );
 // #endregion effect-all
 
 // #region event-handler
 // Each keystroke doesn't belong in the URL, so the debounced handler starts
-// the search, then renders its results in a transition, which keeps the
+// the search, then renders its handle in a transition, which keeps the
 // previous results on screen until the new ones are in.
 function IssueSearch() {
 	const registry = use(RegistryContext);
-	const [query, setQuery] = useState("");
+	const [search, setSearch] = useState<Handle<typeof searchIssues>>();
 	const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
 	return (
 		<search>
@@ -82,27 +86,31 @@ function IssueSearch() {
 					const next = event.target.value;
 					clearTimeout(timeout.current);
 					timeout.current = setTimeout(() => {
-						Loader.make(registry).prefetch(searchIssues(next));
+						const started =
+							next === ""
+								? undefined
+								: Loader.make(registry).prefetch(searchIssues, next);
 						startTransition(() => {
-							setQuery(next);
+							setSearch(started);
 						});
 					}, 300);
 				}}
 				type="search"
 			/>
-			{query === "" ? null : (
+			{search === undefined ? null : (
 				<Suspense fallback={<p>Searching…</p>}>
-					<SearchResults query={query} />
+					<SearchResults search={search} />
 				</Suspense>
 			)}
 		</search>
 	);
 }
 
-function SearchResults(props: { query: string }) {
+function SearchResults(props: { search: Handle<typeof searchIssues> }) {
 	// The app and auth boundaries claim RpcClientError and Unauthorized.
 	const result = useAtomResult(
-		useAuthBoundary().wrap(searchIssues(props.query)),
+		useAuthBoundary().wrap(searchIssues),
+		props.search,
 	);
 	return (
 		<ul>
@@ -140,7 +148,8 @@ function DebouncedSearch() {
 
 function DebouncedResults(props: { query: string }) {
 	const result = useAtomResult(
-		useAuthBoundary().wrap(useWaterfall(searchIssues(props.query))),
+		useAuthBoundary().wrap(searchIssues),
+		useWaterfall(searchIssues, props.query),
 	);
 	return (
 		<ul>

@@ -12,16 +12,21 @@ export async function loader(args: Route.LoaderArgs) {
 	const atoms = args.context.get(atomsContext);
 	// The assignee and the comments stream in; the page waits for the issue,
 	// which this request's registry never holds yet.
-	atoms.prefetch(assignee(issueId));
-	atoms.prefetch(commentPage(issueId, 0));
-	await atoms.ensure(issue(issueId));
-	return { atoms: atoms.dehydrate(), issueId };
+	const handles = {
+		assignee: atoms.prefetch(assignee, issueId),
+		comments: atoms.prefetch(commentPage, issueId, 0),
+		issue: await atoms.ensure(issue, issueId),
+	};
+	return { atoms: atoms.dehydrate(), handles, issueId };
 }
 
 export default function Page(props: Route.ComponentProps) {
 	return (
 		<HydrationBoundary state={props.loaderData.atoms}>
-			<IssuePage issueId={props.loaderData.issueId} />
+			<IssuePage
+				handles={props.loaderData.handles}
+				issueId={props.loaderData.issueId}
+			/>
 		</HydrationBoundary>
 	);
 }

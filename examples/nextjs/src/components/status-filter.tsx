@@ -7,7 +7,7 @@ import {
 } from "@examples/kit/components/status-badge";
 import type { LoaderVerb } from "@examples/kit/lib/loader-verb";
 import { cn } from "@examples/ui/lib/utils";
-import { useAtomResult } from "raf-effect-atom";
+import { type Handle, useAtomResult } from "raf-effect-atom";
 
 import { useAuthBoundary } from "~/boundaries.tsx";
 import { AppLink } from "~/components/settings.tsx";
@@ -16,10 +16,14 @@ import { issueCounts } from "~/issues.ts";
 const sorts = ["newest", "oldest"] as const;
 
 export function StatusFilter(props: {
+	readonly counts: Handle<typeof issueCounts>;
 	readonly current: IssueListInput;
 	readonly verb: LoaderVerb;
 }) {
-	const result = useAtomResult(useAuthBoundary().wrap(issueCounts));
+	const result = useAtomResult(
+		useAuthBoundary().wrap(issueCounts),
+		props.counts,
+	);
 	const counts = result.value;
 	const current = props.current;
 

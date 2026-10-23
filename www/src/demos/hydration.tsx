@@ -12,6 +12,7 @@ import {
 } from "effect/reactivity";
 import { ArrowDown, Globe, Server } from "lucide-react";
 import {
+	type Handle,
 	Hydration,
 	Loader,
 	RequestRegistry,
@@ -50,16 +51,24 @@ const id = IssueId.make(1);
  * The page's atoms for one page load, as `GetIssue:1, load <n>`: each load
  * is a fresh request, so it gets fresh atoms in the browser too.
  */
-function pageAtoms(load: number) {
-	const serializationKey = `${id}, load ${load}`;
-	return {
-		assignee: IssuesClient.query(
-			"GetIssueAssignee",
-			{ issueId: id },
-			{ serializationKey },
-		),
-		issue: IssuesClient.query("GetIssue", { id }, { serializationKey }),
-	};
+const issueAt = (load: number) =>
+	IssuesClient.query(
+		"GetIssue",
+		{ id },
+		{ serializationKey: `${id}, load ${load}` },
+	);
+
+const assigneeAt = (load: number) =>
+	IssuesClient.query(
+		"GetIssueAssignee",
+		{ issueId: id },
+		{ serializationKey: `${id}, load ${load}` },
+	);
+
+/** The handles the server's loaders hand the page. */
+interface PageHandles {
+	readonly assignee: Handle<typeof assigneeAt>;
+	readonly issue: Handle<typeof issueAt>;
 }
 
 /** One serializable atom in the server's dehydrated state. */
@@ -74,6 +83,8 @@ interface Sent {
 
 interface PageLoad {
 	readonly error: string | undefined;
+	/** Once the loaders finished: the handles the page reads. */
+	readonly handles: PageHandles | undefined;
 	readonly hydrate: boolean;
 	readonly load: number;
 	/** The server's registry for this request. */
@@ -115,6 +126,7 @@ function makePageLoad(load: number, hydrate: boolean) {
 		}
 		let current: PageLoad = {
 			error: undefined,
+			handles: undefined,
 			hydrate,
 			load,
 			registry: server,
@@ -130,10 +142,10 @@ function makePageLoad(load: number, hydrate: boolean) {
 		};
 
 		const atoms = Loader.make(server);
-		const page = pageAtoms(load);
-		atoms.prefetch(page.assignee);
-		atoms.ensure(page.issue).then(
-			() => {
+		const page = { assignee: assigneeAt(load), issue: issueAt(load) };
+		const assignee = atoms.prefetch(assigneeAt, load);
+		atoms.ensure(issueAt, load).then(
+			(issue) => {
 				if (disposed) {
 					return;
 				}
@@ -160,6 +172,7 @@ function makePageLoad(load: number, hydrate: boolean) {
 					}));
 				update((each) => ({
 					...each,
+					handles: { assignee, issue },
 					sent: phases().map((entry) => ({
 						arrivedAt: undefined,
 						key: entry.key.replace(/^AtomRpc:/, ""),
@@ -350,8 +363,8 @@ function SentState(props: { readonly load: PageLoad }) {
 	);
 }
 
-function IssueHeading(props: { readonly load: number }) {
-	const result = useAtomResult(pageAtoms(props.load).issue);
+function IssueHeading(props: { readonly issue: Handle<typeof issueAt> }) {
+	const result = useAtomResult(issueAt, props.issue);
 	if (AsyncResult.isFailure(result)) {
 		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
@@ -365,8 +378,8 @@ function IssueHeading(props: { readonly load: number }) {
 	);
 }
 
-function Assignee(props: { readonly load: number }) {
-	const result = useAtomResult(pageAtoms(props.load).assignee);
+function Assignee(props: { readonly assignee: Handle<typeof assigneeAt> }) {
+	const result = useAtomResult(assigneeAt, props.assignee);
 	if (AsyncResult.isFailure(result)) {
 		return <IssueFailure caughtBy="the assignee" failure={result} />;
 	}
@@ -381,7 +394,8 @@ function Assignee(props: { readonly load: number }) {
 function BrowserPage(props: { readonly load: PageLoad }) {
 	const requests = useAtomValue(requestsAtom);
 	const sentAt = props.load.sentAt;
-	if (sentAt === undefined) {
+	const handles = props.load.handles;
+	if (sentAt === undefined || handles === undefined) {
 		return (
 			<p className="text-xs text-muted-foreground">
 				Waiting for the page’s HTML…
@@ -393,10 +407,10 @@ function BrowserPage(props: { readonly load: PageLoad }) {
 		<>
 			<div className="grid gap-2 rounded-md border p-3">
 				<Suspense fallback={<Skeleton className="h-9 w-3/4" />}>
-					<IssueHeading load={props.load.load} />
+					<IssueHeading issue={handles.issue} />
 				</Suspense>
 				<Suspense fallback={<Skeleton className="h-4 w-1/2" />}>
-					<Assignee load={props.load.load} />
+					<Assignee assignee={handles.assignee} />
 				</Suspense>
 			</div>
 			<RequestCount count={count} from="the browser" repeated={count > 0} />
@@ -418,7 +432,9 @@ function PageLoadView(props: {
 				title="Server: the request’s registry"
 			>
 				<pre className="font-mono text-[11px] leading-relaxed text-muted-foreground">
-					{"atoms.prefetch(assignee(1))\nawait atoms.ensure(issue(1))"}
+					{
+						"const assigneeHandle = atoms.prefetch(assignee, 1)\nconst issueHandle = await atoms.ensure(issue, 1)"
+					}
 				</pre>
 				<RegistryContext.Provider value={pageLoad.registry}>
 					<ServerTrace startedAt={pageLoad.startedAt} />

@@ -1,4 +1,3 @@
-import type { IssueListInput } from "@examples/contract";
 import {
 	IssueListSummary,
 	IssueRow,
@@ -11,7 +10,7 @@ import type { LoaderVerb } from "@examples/kit/lib/loader-verb";
 import { Card } from "@examples/ui/components/card";
 import { cn } from "@examples/ui/lib/utils";
 import { RegistryContext } from "@effect/atom-react";
-import { Loader, useAtomResult } from "raf-effect-atom";
+import { type Handle, Loader, useAtomResult } from "raf-effect-atom";
 import { Suspense, use, useState } from "react";
 
 import { useAuthBoundary } from "~/boundaries.tsx";
@@ -24,41 +23,34 @@ import { issuePage } from "~/issues.ts";
  * renders the next one when "Load more" is pressed.
  */
 export function IssueList(props: {
-	readonly input: IssueListInput;
+	readonly page: Handle<typeof issuePage>;
 	readonly verb: LoaderVerb;
 }) {
 	return (
 		<Card className="gap-0 py-0">
-			<IssuePage
-				cursor={0}
-				input={props.input}
-				key={`${props.input.status}:${props.input.sort}`}
-				verb={props.verb}
-			/>
+			<IssuePage key={props.page.key} page={props.page} verb={props.verb} />
 		</Card>
 	);
 }
 
 function IssuePage(props: {
-	readonly cursor: number;
-	readonly input: IssueListInput;
+	readonly page: Handle<typeof issuePage>;
 	readonly verb: LoaderVerb;
 }) {
-	const result = useAtomResult(
-		useAuthBoundary().wrap(issuePage(props.input, props.cursor)),
-	);
-	const [more, setMore] = useState(false);
+	const result = useAtomResult(useAuthBoundary().wrap(issuePage), props.page);
+	const [more, setMore] = useState<Handle<typeof issuePage>>();
 	const registry = use(RegistryContext);
+	const [input, cursor] = props.page.args;
 	const page = result.value;
 	const next = page.nextCursor;
-	const shown = props.cursor + page.issues.length;
+	const shown = cursor + page.issues.length;
 	return (
 		<>
 			{shown === 0 ? <NoIssues /> : null}
 			<div
 				className={cn(
 					"divide-y border-b last:border-b-0",
-					props.cursor > 0 && "animate-in duration-500 fade-in",
+					cursor > 0 && "animate-in duration-500 fade-in",
 				)}
 			>
 				{page.issues.map((issue) => (
@@ -81,7 +73,7 @@ function IssuePage(props: {
 						/>
 					}
 				>
-					<IssuePage cursor={next} input={props.input} verb={props.verb} />
+					<IssuePage page={more} verb={props.verb} />
 				</Suspense>
 			) : (
 				<div className="grid gap-3 p-4">
@@ -89,8 +81,7 @@ function IssuePage(props: {
 					<LoadMore
 						onLoad={() => {
 							// Starts the next page here, not in its reader's render.
-							Loader.make(registry).prefetch(issuePage(props.input, next));
-							setMore(true);
+							setMore(Loader.make(registry).prefetch(issuePage, input, next));
 						}}
 					/>
 				</div>

@@ -11,11 +11,13 @@ When a component starts its own data, nested components wait for each other: a p
 tanstack-start/src/docs/loader-verbs.ts#verbs
 ```
 
-| Verb       | Starts the atom                          | Waits                             | When the atom has a result | Returns            |
-| ---------- | ---------------------------------------- | --------------------------------- | -------------------------- | ------------------ |
-| `prefetch` | if it isn't in the registry              | never                             | leaves it alone            | nothing            |
-| `ensure`   | if it isn't in the registry              | only while the atom has no result | returns it at once         | the settled result |
-| `fetch`    | yes, and refreshes it if it has a result | until the new result settles      | refreshes it, then waits   | the settled result |
+Each verb takes a source, an atom family or one atom, and the family's arguments: `atoms.ensure(issue, id)` starts `issue(id)`.
+
+| Verb       | Starts the atom                          | Waits                             | When the atom has a result | Returns         |
+| ---------- | ---------------------------------------- | --------------------------------- | -------------------------- | --------------- |
+| `prefetch` | if it isn't in the registry              | never                             | leaves it alone            | a handle        |
+| `ensure`   | if it isn't in the registry              | only while the atom has no result | returns it at once         | a loaded handle |
+| `fetch`    | yes, and refreshes it if it has a result | until the new result settles      | refreshes it, then waits   | a loaded handle |
 
 - Use `prefetch` for data the route needs but its loader doesn't: it streams in while the page renders.
 - Use `ensure` when the loader needs the result, or the page shouldn't render without it.
@@ -27,9 +29,13 @@ Below, three copies of an app differ only in the verb their issue route's loader
 loader-verbs
 ```
 
+## Handles
+
+A handle is plain data, the arguments and the atom's key, that names the atom a verb started. The loader returns it and the page passes it to the component that reads the atom, as a prop: `useAtomResult(issue, props.issue)` reads `issue(...props.issue.args)`. It crosses loader data and server component props as is. Its type names its source, so a component that takes a `Handle<typeof assignee>` can't be given an id or another family's handle, and can't start a request of its own. `ensure` and `fetch` return a `LoadedHandle`, for a component that should only get a handle whose atom had a result when the loader returned. See [Reading atoms](./reading-atoms.md#handles).
+
 ## Typed failures are results
 
-`ensure` and `fetch` don't reject on a typed failure: they return the `AsyncResult`, so the loader can decide what a failure means, and otherwise the page renders it through a boundary. Only a defect or an interruption rejects.
+`ensure` and `fetch` don't reject on a typed failure: they return a handle whose atom failed, so the loader can decide what the failure means, and otherwise the page renders it through a boundary. Only a defect or an interruption rejects. `Loader.result(handle)` returns the settled `AsyncResult` in the loader that waited for it; it throws for a copy of the handle, such as one read back from loader data.
 
 The result's error type lists every tag the atom can fail with, so a loader can decide tag by tag. [`Match.valueTags`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/Match.ts) takes one handler per tag, and doesn't compile when one is missing.
 

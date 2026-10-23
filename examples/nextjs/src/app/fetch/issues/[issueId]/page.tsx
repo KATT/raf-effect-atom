@@ -12,12 +12,14 @@ export default async function Page(props: {
 	await forwardCookie();
 	// The assignee and the comments stream in; the page waits for a fresh
 	// issue.
-	prefetch(assignee(issueId));
-	prefetch(commentPage(issueId, 0));
-	await fetch(issue(issueId));
+	const handles = {
+		assignee: prefetch(assignee, issueId),
+		comments: prefetch(commentPage, issueId, 0),
+		issue: await fetch(issue, issueId),
+	};
 	return (
 		<HydrateAtoms state={dehydrate()}>
-			<IssuePage issueId={issueId} />
+			<IssuePage handles={handles} issueId={issueId} />
 		</HydrateAtoms>
 	);
 }

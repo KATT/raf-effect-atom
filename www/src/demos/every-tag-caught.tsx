@@ -5,11 +5,11 @@ import {
 	type IssueNotFound,
 	type Unauthorized,
 } from "@examples/contract";
-import { useAtomSet, useAtomValue } from "@effect/atom-react";
+import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react";
 import { type CatchTagProps, createErrorBoundary } from "effect-atom-boundary";
-import { useAtomResult } from "raf-effect-atom";
+import { type Handle, Loader, useAtomResult } from "raf-effect-atom";
 import { Atom } from "effect/reactivity";
-import { Suspense } from "react";
+import { Suspense, use, useState } from "react";
 
 import { AppBoundary, AppErrorBoundary } from "~/demo-kit/app-boundary.tsx";
 import { BoundaryChain } from "~/demo-kit/boundary-chain.tsx";
@@ -26,11 +26,13 @@ const ids = [1, 2, 3, 404].map((id) => IssueId.make(id));
  * Reads an issue under `<IssuePageBoundary>`: its `catchTags` and its
  * parent's name every tag of the atom's error, so the result is a success.
  */
-function IssueTitle(props: { readonly id: IssueId }) {
-	const result = useAtomResult(useIssuePageBoundary().wrap(issue(props.id)));
+function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
+	const result = useAtomResult(useIssuePageBoundary().wrap(issue), props.issue);
 	return (
 		<div className="grid gap-1">
-			<p className="font-mono text-xs text-muted-foreground">#{props.id}</p>
+			<p className="font-mono text-xs text-muted-foreground">
+				#{result.value.id}
+			</p>
 			<h3 className="text-lg font-semibold">{result.value.title}</h3>
 		</div>
 	);
@@ -75,30 +77,41 @@ const [IssuePageBoundary, useIssuePageBoundary] = createErrorBoundary({
 	parent: AppBoundary,
 });
 
-function IssuePanel(props: { readonly id: IssueId }) {
+function IssuePanel(props: { readonly issue: Handle<typeof issue> }) {
 	return (
 		<IssuePageBoundary>
 			<Suspense fallback={<Skeleton className="h-12 w-full" />}>
-				<IssueTitle id={props.id} />
+				<IssueTitle issue={props.issue} />
 			</Suspense>
 		</IssuePageBoundary>
 	);
 }
 
-/** The issue the demo shows, kept across the inline and expanded views. */
-const selectedAtom = Atom.make(ids[0] ?? IssueId.make(1)).pipe(
-	Atom.keepAlive,
-	Atom.withLabel("demo-kit:every-tag-caught-issue"),
-);
+const firstId = ids[0] ?? IssueId.make(1);
+
+/**
+ * The issue a button picked, kept across the inline and expanded views:
+ * `undefined` until one does.
+ */
+const selectedAtom = Atom.make<Handle<typeof issue> | undefined>(
+	undefined,
+).pipe(Atom.keepAlive, Atom.withLabel("demo-kit:every-tag-caught-issue"));
 
 /** Queues a failure for the next request. */
 function Controls() {
-	return <IssueFailureButtons issueId={useAtomValue(selectedAtom)} />;
+	const id = useAtomValue(selectedAtom)?.args[0] ?? firstId;
+	return <IssueFailureButtons issueId={id} />;
 }
 
 function EveryTagCaughtDemo() {
-	const id = useAtomValue(selectedAtom);
-	const setId = useAtomSet(selectedAtom);
+	const registry = use(RegistryContext);
+	// Each button starts its issue as it picks it, as an event handler would.
+	const [first] = useState(() =>
+		Loader.make(registry).prefetch(issue, firstId),
+	);
+	const picked = useAtomValue(selectedAtom) ?? first;
+	const setPicked = useAtomSet(selectedAtom);
+	const [id] = picked.args;
 	return (
 		<div className="grid gap-4">
 			<div className="flex flex-wrap gap-1.5">
@@ -107,7 +120,7 @@ function EveryTagCaughtDemo() {
 						aria-pressed={each === id}
 						key={each}
 						onClick={() => {
-							setId(each);
+							setPicked(Loader.make(registry).prefetch(issue, each));
 						}}
 						size="xs"
 						variant={each === id ? "secondary" : "ghost"}
@@ -118,7 +131,7 @@ function EveryTagCaughtDemo() {
 			</div>
 			<AppErrorBoundary>
 				<AppBoundary>
-					<IssuePanel id={id} />
+					<IssuePanel issue={picked} />
 				</AppBoundary>
 			</AppErrorBoundary>
 			<BoundaryChain

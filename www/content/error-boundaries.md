@@ -28,7 +28,7 @@ It returns the boundary component and its hook, named by destructuring.
 
 ## Reads under it are typed without what it catches
 
-A component under `<IssueBoundary>` reads `useIssueBoundary().wrap(atom)`: the same atom with the tags this boundary and its parents catch turned into defects. The read throws `IssueNotFound` to `<IssueBoundary>` and `RpcClientError` to `<AppBoundary>`. `raf-effect-atom`'s [`useAtomResult`](./reading-atoms.md) returns any other failure, typed without the caught tags. The `^?` above shows `Unauthorized`, the one tag of `issue`'s error that neither boundary's `catchTags` names, and the component handles it by its tag.
+A component under `<IssueBoundary>` reads its handle through `useIssueBoundary().wrap(issue)`: the same atoms with the tags this boundary and its parents catch turned into defects. The read throws `IssueNotFound` to `<IssueBoundary>` and `RpcClientError` to `<AppBoundary>`. `raf-effect-atom`'s [`useAtomResult`](./reading-atoms.md) returns any other failure, typed without the caught tags. The `^?` above shows `Unauthorized`, the one tag of `issue`'s error that neither boundary's `catchTags` names, and the component handles it by its tag.
 
 A caught failure renders the boundary's handler in place of its children. `reset` refreshes every atom in the registry that failed with a tag the boundary handles, and renders the children again.
 

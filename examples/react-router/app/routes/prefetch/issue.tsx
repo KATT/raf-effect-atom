@@ -10,17 +10,22 @@ import type { Route } from "./+types/issue";
 export function loader(args: Route.LoaderArgs) {
 	const issueId = parseIssueId(args.params.issueId);
 	const atoms = args.context.get(atomsContext);
-	// Starts every atom the page reads and returns at once.
-	atoms.prefetch(issue(issueId));
-	atoms.prefetch(assignee(issueId));
-	atoms.prefetch(commentPage(issueId, 0));
-	return { atoms: atoms.dehydrate(), issueId };
+	// Starts every atom the page reads and returns their handles at once.
+	const handles = {
+		assignee: atoms.prefetch(assignee, issueId),
+		comments: atoms.prefetch(commentPage, issueId, 0),
+		issue: atoms.prefetch(issue, issueId),
+	};
+	return { atoms: atoms.dehydrate(), handles, issueId };
 }
 
 export default function Page(props: Route.ComponentProps) {
 	return (
 		<HydrationBoundary state={props.loaderData.atoms}>
-			<IssuePage issueId={props.loaderData.issueId} />
+			<IssuePage
+				handles={props.loaderData.handles}
+				issueId={props.loaderData.issueId}
+			/>
 		</HydrationBoundary>
 	);
 }

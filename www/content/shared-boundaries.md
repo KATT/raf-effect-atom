@@ -15,7 +15,7 @@ tanstack-start/src/boundaries.tsx#app
 
 ## Reads under the boundary
 
-`useAppBoundary().wrap(atom)` returns the same atom with the failures the boundary claims turned into defects, recorded with the atom. A read that returns typed failures and throws defects, such as `raf-effect-atom`'s `useAtomResult`, throws them to the boundary and returns a result typed without them:
+`useAppBoundary().wrap(atom)` returns the same atom with the failures the boundary claims turned into defects, recorded with the atom. Given an atom family, such as `wrap(issue)`, it returns a family of wrapped atoms, which a component reads with the handle its loader returned for `issue`. A read that returns typed failures and throws defects, such as `raf-effect-atom`'s `useAtomResult`, throws them to the boundary and returns a result typed without them:
 
 ```sample
 tanstack-start/src/docs/shared-boundaries.tsx#narrowed
@@ -45,7 +45,7 @@ tanstack-start/src/boundaries.tsx#auth
 tanstack-start/src/boundaries.tsx#issue
 ```
 
-A read of `useIssueBoundary().wrap(atom)` throws `IssueNotFound` to `<IssueBoundary>`, `Unauthorized` to `<AuthBoundary>` and `RpcClientError` to `<AppBoundary>`. No failure is left, so `useAtomResult` types its result as a success. `<IssueBoundary>` throws when `<AuthBoundary>` isn't mounted above it.
+A read through `useIssueBoundary().wrap(issue)` throws `IssueNotFound` to `<IssueBoundary>`, `Unauthorized` to `<AuthBoundary>` and `RpcClientError` to `<AppBoundary>`. No failure is left, so `useAtomResult` types its result as a success. `<IssueBoundary>` throws when `<AuthBoundary>` isn't mounted above it.
 
 ```demo
 boundary-chain
@@ -57,6 +57,6 @@ A shared boundary catches a claimed tag from any atom read under it, not only fr
 
 ## Reading a wrapped atom
 
-The wrapper is a derived atom with no serialization key: start the atom itself in loaders, and read the wrapper in components. It points at the atom with Effect's `initialValueTarget`, which `raf-effect-atom`'s `useAtomResult` follows to hydrate the atom and wait for its streamed result.
+The wrapper is a derived atom with no serialization key: start the atom itself in loaders, and read the wrapper in components with the handle the loader returned. It points at the atom with Effect's `initialValueTarget`, which `raf-effect-atom`'s `useAtomResult` follows to hydrate the atom and wait for its streamed result.
 
 `useAtomSuspense` with `includeFailure` returns claimed failures instead of throwing them, and without it throws every failure, including the ones left. Under a shared boundary, use a read that throws only defects: `raf-effect-atom`'s `useAtomResult`, or your own over `useAtomSuspense(atom, { includeFailure: true, suspendOnWaiting: true })`.

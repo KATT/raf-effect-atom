@@ -160,10 +160,8 @@ const mistakes: ReadonlyArray<{
 	readonly title: string;
 }> = [
 	{
-		caughtBy: "Throws in development",
+		caughtBy: "Doesn't compile",
 		code: fetchInRender,
-		report:
-			"raf-effect-atom: rendering read AtomRpc:GetIssueAssignee:1 before anything else had started it, so its request waits for this render: a request waterfall.",
 		title: "Fetches in a component",
 	},
 	{
@@ -253,11 +251,12 @@ const readStep = (componentCode: Sample, clientNote?: ReactNode): Step => ({
 		<>
 			{clientNote}
 			<p>
-				<code>useAtomResult</code> reads the atom the loader started from the
-				registry: it suspends until the result settles, and never starts a
-				request of its own. Wrapped by the issue boundary, every failure goes to
-				the boundary that claims its tag, so none is left in the type and the
-				result is a success.
+				A component takes the handle of the atom it reads, not an id, and{" "}
+				<code>useAtomResult</code> reads that atom from the registry: it
+				suspends until the result settles, and never starts a request of its
+				own. Wrapped by the issue boundary, every failure goes to the boundary
+				that claims its tag, so none is left in the type and the result is a
+				success.
 			</p>
 			<p>
 				A result still loading suspends only its own subtree, so the assignee
@@ -345,10 +344,11 @@ const stepsByMode = {
 					</p>
 					<p>
 						<code>prefetch</code> starts an atom without waiting, and{" "}
-						<code>ensure</code> waits for one the page can’t lay out without.{" "}
-						<code>HydrateAtoms</code> sends <code>dehydrate()</code> to the
-						browser’s registry, with the results still loading as promises, so
-						nothing is fetched twice.
+						<code>ensure</code> waits for one the page can’t lay out without.
+						Each returns a handle, which the page passes to the client component
+						that reads the atom. <code>HydrateAtoms</code> sends{" "}
+						<code>dehydrate()</code> to the browser’s registry, with the results
+						still loading as promises, so nothing is fetched twice.
 					</p>
 				</>
 			),
@@ -412,10 +412,10 @@ const stepsByMode = {
 					<p>
 						<code>prefetch</code> starts an atom without waiting, and{" "}
 						<code>ensure</code> waits for one the page can’t lay out without.
-						The loader returns <code>atoms.dehydrate()</code>, React Router
-						streams the results still loading, and{" "}
-						<code>HydrationBoundary</code> writes them into the browser’s
-						registry, so nothing is fetched twice.
+						The loader returns the handles they return with{" "}
+						<code>atoms.dehydrate()</code>, React Router streams the results
+						still loading, and <code>HydrationBoundary</code> writes them into
+						the browser’s registry, so nothing is fetched twice.
 					</p>
 				</>
 			),
@@ -474,8 +474,9 @@ const stepsByMode = {
 					<p>
 						<code>prefetch</code> starts an atom without waiting, and{" "}
 						<code>ensure</code> waits for one the page can’t lay out without.
-						Results still loading cross to the browser as promises, so nothing
-						is fetched twice.
+						The loader returns the handles they return, for the page to pass
+						down. Results still loading cross to the browser as promises, so
+						nothing is fetched twice.
 					</p>
 				</>
 			),

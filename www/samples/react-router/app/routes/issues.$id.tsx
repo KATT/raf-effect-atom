@@ -1,6 +1,5 @@
-import type { IssueId } from "@examples/contract";
 import { Schema } from "effect";
-import { HydrationBoundary, useAtomResult } from "raf-effect-atom";
+import { type Handle, HydrationBoundary, useAtomResult } from "raf-effect-atom";
 import { Suspense } from "react";
 
 import { atomsContext } from "~/atoms.ts";
@@ -14,19 +13,21 @@ import type { Route } from "./+types/issues.$id";
 export async function loader({ context, params }: Route.LoaderArgs) {
 	const id = Schema.decodeSync(IssueIdFromString)(params.id);
 	const atoms = context.get(atomsContext);
-	// Starts the assignee; it streams in while the page renders.
-	atoms.prefetch(assignee(id));
-	// Waits for the issue, so the page renders with it.
-	await atoms.ensure(issue(id));
+	const handles = {
+		// Starts the assignee; it streams in while the page renders.
+		assignee: atoms.prefetch(assignee, id),
+		// Waits for the issue, so the page renders with it.
+		issue: await atoms.ensure(issue, id),
+	};
 	// The registry's results go to the browser, still-loading ones as promises.
-	return { atoms: atoms.dehydrate(), id };
+	return { atoms: atoms.dehydrate(), handles };
 }
 
 export default function Page({ loaderData }: Route.ComponentProps) {
 	return (
 		<HydrationBoundary state={loaderData.atoms}>
 			<IssueBoundary>
-				<IssuePage id={loaderData.id} />
+				<IssuePage {...loaderData.handles} />
 			</IssueBoundary>
 		</HydrationBoundary>
 	);
@@ -34,24 +35,30 @@ export default function Page({ loaderData }: Route.ComponentProps) {
 // #endregion loader
 
 // #region component
-function IssuePage(props: { id: IssueId }) {
+function IssuePage(props: {
+	assignee: Handle<typeof assignee>;
+	issue: Handle<typeof issue>;
+}) {
 	// IssueNotFound, Unauthorized and RpcClientError go to their boundaries,
 	// so no failure is left.
-	const result = useAtomResult(useIssueBoundary().wrap(issue(props.id)));
+	const result = useAtomResult(useIssueBoundary().wrap(issue), props.issue);
 	//    ^?
 	return (
 		<article>
 			<h1>{result.value.title}</h1>
 			<Suspense fallback={<p>Loading the assignee…</p>}>
-				<Assignee issueId={props.id} />
+				<Assignee assignee={props.assignee} />
 			</Suspense>
 		</article>
 	);
 }
 
-function Assignee(props: { issueId: IssueId }) {
+// Takes the handle the loader returned, not an id: it reads a request that
+// already started, and can't start its own.
+function Assignee(props: { assignee: Handle<typeof assignee> }) {
 	const result = useAtomResult(
-		useIssueBoundary().wrap(assignee(props.issueId)),
+		useIssueBoundary().wrap(assignee),
+		props.assignee,
 	);
 	return <p>{result.value.name}</p>;
 }

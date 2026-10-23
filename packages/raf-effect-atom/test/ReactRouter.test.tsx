@@ -13,7 +13,7 @@ import {
 	RouterContextProvider,
 } from "react-router";
 
-import { HydrationBoundary, useAtomResult } from "../src/index.ts";
+import { type Handle, HydrationBoundary, useAtomResult } from "../src/index.ts";
 import {
 	atomsMiddleware,
 	RegistryProvider,
@@ -27,6 +27,7 @@ const atomsContext = createContext<RequestAtoms>();
 
 interface IssueData {
 	readonly atoms: Array<EffectHydration.DehydratedAtom>;
+	readonly issue: Handle<typeof issue>;
 	readonly registry: AtomRegistry.AtomRegistry;
 }
 
@@ -36,16 +37,24 @@ const handler = createStaticHandler([
 			{
 				loader: async (args): Promise<IssueData> => {
 					const atoms = args.context.get(atomsContext);
-					await atoms.ensure(issue(Number(args.params.id)));
-					return { atoms: atoms.dehydrate(), registry: atoms.registry };
+					const handle = await atoms.ensure(issue, Number(args.params.id));
+					return {
+						atoms: atoms.dehydrate(),
+						issue: handle,
+						registry: atoms.registry,
+					};
 				},
 				path: "issues/:id",
 			},
 			{
 				loader: (args): IssueData => {
 					const atoms = args.context.get(atomsContext);
-					atoms.prefetch(issue(Number(args.params.id)));
-					return { atoms: atoms.dehydrate(), registry: atoms.registry };
+					const handle = atoms.prefetch(issue, Number(args.params.id));
+					return {
+						atoms: atoms.dehydrate(),
+						issue: handle,
+						registry: atoms.registry,
+					};
 				},
 				path: "streamed/:id",
 			},
@@ -96,8 +105,8 @@ const handle = async (path: string) => {
 
 const isIssueNotFound = Schema.is(IssueNotFound);
 
-function Title(props: { readonly id: number }) {
-	const result = useAtomResult(issue(props.id));
+function Title(props: { readonly issue: Handle<typeof issue> }) {
+	const result = useAtomResult(issue, props.issue);
 	if (AsyncResult.isSuccess(result)) {
 		return <p>{result.value.title}</p>;
 	}
@@ -112,13 +121,13 @@ function Title(props: { readonly id: number }) {
 }
 
 /** Renders the route in the browser from its loader data. */
-const renderRoute = async (id: number, data: IssueData) => {
+const renderRoute = async (data: IssueData) => {
 	await act(async () => {
 		render(
 			<RegistryProvider>
 				<HydrationBoundary state={wire(data.atoms)}>
 					<React.Suspense fallback={<p>Loading</p>}>
-						<Title id={id} />
+						<Title issue={structuredClone(data.issue)} />
 					</React.Suspense>
 				</HydrationBoundary>
 			</RegistryProvider>,
@@ -133,7 +142,7 @@ describe("atomsMiddleware", () => {
 		using server = serve({ 1: ["missing"] });
 		const handled = await handle("/issues/1");
 		await handled.response.text();
-		using _route = await renderRoute(1, handled.data);
+		using _route = await renderRoute(handled.data);
 		assert.isDefined(screen.getByText("IssueNotFound 1"));
 		assert.strictEqual(server.requests(1), 1);
 	});
@@ -141,7 +150,7 @@ describe("atomsMiddleware", () => {
 	it("streams a prefetched result without requesting it again", async () => {
 		using server = serve({});
 		const handled = await handle("/streamed/2");
-		using _route = await renderRoute(2, handled.data);
+		using _route = await renderRoute(handled.data);
 		await handled.response.text();
 		await settle();
 		assert.isDefined(screen.getByText("Issue 2"));

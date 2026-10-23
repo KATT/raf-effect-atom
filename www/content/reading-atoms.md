@@ -5,17 +5,25 @@ section: raf-effect-atom
 order: 3
 ---
 
-Components read the atoms their loader started with `raf-effect-atom`'s `useAtomResult`. It suspends like [`useAtomSuspense`](https://github.com/Effect-TS/effect/tree/effect%404.0.6/packages/atom/react) until the atom has a result, and returns it:
+Components read the atoms their loader started with `raf-effect-atom`'s `useAtomResult(source, handle)`. It takes the source the loader passed to its verb and the [handle](./loader-verbs.md#handles) the verb returned, suspends like [`useAtomSuspense`](https://github.com/Effect-TS/effect/tree/effect%404.0.6/packages/atom/react) until the atom has a result, and returns it:
 
 ```sample
 tanstack-start/src/routes/issues.$id.tsx#component
 ```
 
+## Handles
+
+A component that reads an atom takes its handle as a prop, not the id it was built from. A component given an id could build the atom and start the request as it renders; given a handle, it reads a request a loader, a server component or an event handler already started. The handle's type names its source, so `Handle<typeof assignee>` takes no id and no other family's handle.
+
+A handle is plain data, so it goes through loader data and server component props unchanged. In development, `useAtomResult` throws when the atom the source makes from the handle's arguments has a different key from the handle's, such as a handle passed with the wrong source.
+
+An event handler makes a handle with `Loader.make(registry).prefetch(source, ...args)`, and keeps it in state for the component that reads it. A value that exists only in render, such as a debounced query, gets one from [`useWaterfall`](./request-waterfalls.md#render-time-inputs-usewaterfall).
+
 ## Failures
 
-`useAtomResult(atom)` returns the settled result, typed failures included: check it with `AsyncResult.isFailure` or [`AsyncResult.match`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/reactivity/AsyncResult.ts). A defect or an interruption isn't a typed failure: it throws `Cause.squash(cause)` to the error boundaries above.
+`useAtomResult(source, handle)` returns the settled result, typed failures included: check it with `AsyncResult.isFailure` or [`AsyncResult.match`](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/reactivity/AsyncResult.ts). A defect or an interruption isn't a typed failure: it throws `Cause.squash(cause)` to the error boundaries above.
 
-To send some failures to an `effect-atom-boundary` boundary, read the atom its claims wrap: `useAtomResult(useIssueBoundary().wrap(issue(id)))` throws the claimed failures to their boundaries, as defects, and returns a result typed without them. When the boundaries claim every failure, as the issue route's do, no typed failure is left and the result is typed as a success: the component reads `result.value` without a check. `raf-effect-atom` doesn't import `effect-atom-boundary`.
+To send some failures to an `effect-atom-boundary` boundary, read through the family its claims wrap: `useAtomResult(useIssueBoundary().wrap(issue), props.issue)` throws the claimed failures to their boundaries, as defects, and returns a result typed without them. When the boundaries claim every failure, as the issue route's do, no typed failure is left and the result is typed as a success: the component reads `result.value` without a check. `raf-effect-atom` doesn't import `effect-atom-boundary`.
 
 While a failed atom refreshes, such as after a boundary's `reset`, the read suspends instead of returning the old failure again.
 

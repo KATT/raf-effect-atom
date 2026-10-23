@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "@effect/vitest";
 import { screen } from "@testing-library/react";
-import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
@@ -8,7 +7,12 @@ import * as Schema from "effect/Schema";
 import { createErrorBoundary } from "effect-atom-boundary";
 import * as React from "react";
 
-import { HydrationBoundary, Loader, useAtomResult } from "../src/index.ts";
+import {
+	type Handle,
+	HydrationBoundary,
+	Loader,
+	useAtomResult,
+} from "../src/index.ts";
 import {
 	click,
 	mount,
@@ -32,8 +36,10 @@ const [NotFoundBoundary, useNotFoundBoundary] = createErrorBoundary({
 	name: "NotFound",
 });
 
-function Title(props: { readonly id: number }) {
-	const result = useAtomResult(useNotFoundBoundary().wrap(issue(props.id)));
+type IssueHandle = Handle<typeof issue>;
+
+function Title(props: { readonly issue: IssueHandle }) {
+	const result = useAtomResult(useNotFoundBoundary().wrap(issue), props.issue);
 	if (AsyncResult.isSuccess(result)) {
 		return <p>{result.value.title}</p>;
 	}
@@ -43,8 +49,8 @@ function Title(props: { readonly id: number }) {
 	);
 }
 
-function UnclaimedTitle(props: { readonly id: number }) {
-	const result = useAtomResult(issue(props.id));
+function UnclaimedTitle(props: { readonly issue: IssueHandle }) {
+	const result = useAtomResult(issue, props.issue);
 	const error = AsyncResult.error(result);
 	return (
 		<p>{Option.isSome(error) ? `Result: ${error.value._tag}` : "Found"}</p>
@@ -52,15 +58,18 @@ function UnclaimedTitle(props: { readonly id: number }) {
 }
 
 function Page(props: {
-	readonly ids: ReadonlyArray<number>;
+	readonly issues: ReadonlyArray<IssueHandle>;
 	readonly state?: Parameters<typeof HydrationBoundary>[0]["state"];
 }) {
 	return (
 		<HydrationBoundary state={props.state}>
 			<NotFoundBoundary>
-				{props.ids.map((id) => (
-					<React.Suspense fallback={<p>{`Loading ${id}`}</p>} key={id}>
-						<Title id={id} />
+				{props.issues.map((handle) => (
+					<React.Suspense
+						fallback={<p>{`Loading ${handle.args[0]}`}</p>}
+						key={handle.args[0]}
+					>
+						<Title issue={handle} />
 					</React.Suspense>
 				))}
 			</NotFoundBoundary>
@@ -76,9 +85,11 @@ describe("useAtomResult after server rendering", () => {
 	it("calls use() again on the retry after a streamed result", async () => {
 		using server = serve();
 		using errors = vi.spyOn(console, "error");
-		using rendered = await load(Loader.prefetch(issue(2)));
+		using rendered = await load(Loader.prefetch(issue, 2));
 		using app = mount();
-		await app.render(<Page ids={[2]} state={rendered.state} />);
+		await app.render(
+			<Page issues={[rendered.handles]} state={rendered.state} />,
+		);
 		await settle(100);
 		expect(screen.getByText("Issue 2")).toBeDefined();
 		const reported = errors.mock.calls.flat().map(String);
@@ -89,18 +100,23 @@ describe("useAtomResult after server rendering", () => {
 	it("catches a server-side IssueNotFound as an IssueNotFound", async () => {
 		using server = serve({ 1: ["missing"] });
 		using _errors = silenceCaughtErrors();
-		using rendered = await load(Loader.ensure(issue(1)));
+		using rendered = await load(Loader.ensure(issue, 1));
 		using app = mount();
-		await app.render(<Page ids={[1]} state={rendered.state} />);
+		await app.render(
+			<Page issues={[rendered.handles]} state={rendered.state} />,
+		);
 		expect(screen.getByText("No issue 1")).toBeDefined();
 		expect(server.requests(1)).toBe(1);
 	});
 
 	it("shows a hydrated success without requesting it again", async () => {
 		using server = serve();
-		using rendered = await load(Loader.ensure(issue(1)));
+		using rendered = await load(Loader.ensure(issue, 1));
 		using app = mount();
-		await app.render(<Page ids={[1]} state={rendered.state} />, true);
+		await app.render(
+			<Page issues={[rendered.handles]} state={rendered.state} />,
+			true,
+		);
 		await settle(100);
 		expect(screen.getByText("Issue 1")).toBeDefined();
 		expect(server.requests(1)).toBe(1);
@@ -108,9 +124,12 @@ describe("useAtomResult after server rendering", () => {
 
 	it("waits for a streamed result instead of requesting it", async () => {
 		using server = serve();
-		using rendered = await load(Loader.prefetch(issue(2)));
+		using rendered = await load(Loader.prefetch(issue, 2));
 		using app = mount();
-		await app.render(<Page ids={[2]} state={rendered.state} />, true);
+		await app.render(
+			<Page issues={[rendered.handles]} state={rendered.state} />,
+			true,
+		);
 		expect(screen.getByText("Issue 2")).toBeDefined();
 		await settle(100);
 		expect(server.requests(2)).toBe(1);
@@ -119,9 +138,11 @@ describe("useAtomResult after server rendering", () => {
 	it("streams a typed failure as one too", async () => {
 		using server = serve({ 3: ["missing"] });
 		using _errors = silenceCaughtErrors();
-		using rendered = await load(Loader.prefetch(issue(3)));
+		using rendered = await load(Loader.prefetch(issue, 3));
 		using app = mount();
-		await app.render(<Page ids={[3]} state={rendered.state} />);
+		await app.render(
+			<Page issues={[rendered.handles]} state={rendered.state} />,
+		);
 		expect(screen.getByText("No issue 3")).toBeDefined();
 		expect(server.requests(3)).toBe(1);
 	});
@@ -129,9 +150,11 @@ describe("useAtomResult after server rendering", () => {
 	it("refreshes a hydrated failure on the boundary's reset", async () => {
 		using server = serve({ 1: ["missing", "found"] });
 		using _errors = silenceCaughtErrors();
-		using rendered = await load(Loader.ensure(issue(1)));
+		using rendered = await load(Loader.ensure(issue, 1));
 		using app = mount();
-		await app.render(<Page ids={[1]} state={rendered.state} />);
+		await app.render(
+			<Page issues={[rendered.handles]} state={rendered.state} />,
+		);
 		await click("No issue 1");
 		expect(screen.getByText("Issue 1")).toBeDefined();
 		expect(server.requests(1)).toBe(2);
@@ -151,18 +174,18 @@ const titled = Atom.family((id: number) =>
 	),
 );
 
-function DerivedTitle(props: { readonly id: number }) {
-	const result = useAtomResult(titled(props.id));
+function DerivedTitle(props: { readonly issue: IssueHandle }) {
+	const result = useAtomResult(titled, props.issue);
 	return <p>{AsyncResult.isSuccess(result) ? result.value.title : "Failed"}</p>;
 }
 
 const DerivedPage = (props: {
-	readonly id: number;
+	readonly issue: IssueHandle;
 	readonly state?: Parameters<typeof HydrationBoundary>[0]["state"];
 }) => (
 	<HydrationBoundary state={props.state}>
 		<React.Suspense fallback={<p>Loading</p>}>
-			<DerivedTitle id={props.id} />
+			<DerivedTitle issue={props.issue} />
 		</React.Suspense>
 	</HydrationBoundary>
 );
@@ -170,9 +193,12 @@ const DerivedPage = (props: {
 describe("useAtomResult on a derived atom", () => {
 	it("reads its source's hydrated result, one request", async () => {
 		using server = serve();
-		using rendered = await load(Loader.ensure(issue(1)));
+		using rendered = await load(Loader.ensure(issue, 1));
 		using app = mount();
-		await app.render(<DerivedPage id={1} state={rendered.state} />, true);
+		await app.render(
+			<DerivedPage issue={rendered.handles} state={rendered.state} />,
+			true,
+		);
 		await settle(100);
 		expect(screen.getByText("Titled Issue 1")).toBeDefined();
 		expect(server.requests(1)).toBe(1);
@@ -180,9 +206,12 @@ describe("useAtomResult on a derived atom", () => {
 
 	it("waits for its source's streamed result, one request", async () => {
 		using server = serve();
-		using rendered = await load(Loader.prefetch(issue(2)));
+		using rendered = await load(Loader.prefetch(issue, 2));
 		using app = mount();
-		await app.render(<DerivedPage id={2} state={rendered.state} />, true);
+		await app.render(
+			<DerivedPage issue={rendered.handles} state={rendered.state} />,
+			true,
+		);
 		await settle(100);
 		expect(screen.getByText("Titled Issue 2")).toBeDefined();
 		expect(server.requests(2)).toBe(1);
@@ -191,8 +220,8 @@ describe("useAtomResult on a derived atom", () => {
 	it("ends the loader's lease on its source", async () => {
 		using server = serve();
 		using app = mount();
-		Loader.make(app.registry).prefetch(issue(3));
-		await app.render(<DerivedPage id={3} />);
+		const handle = Loader.make(app.registry).prefetch(issue, 3);
+		await app.render(<DerivedPage issue={handle} />);
 		expect(screen.getByText("Titled Issue 3")).toBeDefined();
 		await app.unmount();
 		await settle(2000);
@@ -201,14 +230,25 @@ describe("useAtomResult on a derived atom", () => {
 	});
 });
 
+/** Counts the renders of a Suspense fallback: how often a read suspended. */
+const suspensions = () => {
+	const rendered = vi.fn();
+	const Fallback = () => {
+		rendered();
+		return <p>Loading</p>;
+	};
+	return { count: () => rendered.mock.calls.length, fallback: <Fallback /> };
+};
+
 describe("useAtomResult", () => {
 	it("throws a defect to the error boundaries above", async () => {
 		using _server = serve({ 1: ["crash"] });
 		using _errors = silenceCaughtErrors();
 		using app = mount();
+		const handle = Loader.make(app.registry).prefetch(issue, 1);
 		await app.render(
 			<React.Suspense fallback={<p>Loading</p>}>
-				<UnclaimedTitle id={1} />
+				<UnclaimedTitle issue={handle} />
 			</React.Suspense>,
 		);
 		expect(screen.getByText(/^Outer: .*the server crashed/)).toBeDefined();
@@ -217,9 +257,10 @@ describe("useAtomResult", () => {
 	it("returns a typed failure", async () => {
 		using _server = serve({ 1: ["missing"] });
 		using app = mount();
+		const handle = Loader.make(app.registry).prefetch(issue, 1);
 		await app.render(
 			<React.Suspense fallback={<p>Loading</p>}>
-				<UnclaimedTitle id={1} />
+				<UnclaimedTitle issue={handle} />
 			</React.Suspense>,
 		);
 		expect(screen.getByText("Result: IssueNotFound")).toBeDefined();
@@ -228,15 +269,16 @@ describe("useAtomResult", () => {
 	it("returns a failure the boundary above doesn't claim", async () => {
 		using _server = serve({ 1: ["signed-out"] });
 		using app = mount();
-		await app.render(<Page ids={[1]} />);
+		const handle = Loader.make(app.registry).prefetch(issue, 1);
+		await app.render(<Page issues={[handle]} />);
 		expect(screen.getByText("Result: Unauthorized")).toBeDefined();
 	});
 
 	it("takes over a loader's atom, ending its lease", async () => {
 		using server = serve();
 		using app = mount();
-		Loader.make(app.registry).prefetch(issue(1));
-		await app.render(<Page ids={[1]} />);
+		const handle = Loader.make(app.registry).prefetch(issue, 1);
+		await app.render(<Page issues={[handle]} />);
 		expect(screen.getByText("Issue 1")).toBeDefined();
 		await app.unmount();
 		await settle(2000);
@@ -247,19 +289,60 @@ describe("useAtomResult", () => {
 	it("leaves the atom to its lease until a component mounts it", async () => {
 		using _server = serve();
 		using app = mount();
-		Loader.make(app.registry).prefetch(issue(1));
+		Loader.make(app.registry).prefetch(issue, 1);
 		await settle(1500);
 		expect(nodeOf(app, 1)).toBeDefined();
 	});
 
-	it("reads a loader's settled result without requesting it again", async () => {
+	it("reads a loader's settled result without suspending or requesting it again", async () => {
 		using server = serve();
 		using app = mount();
-		await Effect.runPromise(
-			Effect.promise(() => Loader.make(app.registry).ensure(issue(1))),
+		const handle = await Loader.make(app.registry).ensure(issue, 1);
+		const suspended = suspensions();
+		await app.render(
+			<React.Suspense fallback={suspended.fallback}>
+				<UnclaimedTitle issue={handle} />
+			</React.Suspense>,
+			true,
 		);
-		await app.render(<Page ids={[1]} />, true);
-		expect(screen.getByText("Issue 1")).toBeDefined();
+		expect(screen.getByText("Found")).toBeDefined();
+		expect(suspended.count()).toBe(0);
 		expect(server.requests(1)).toBe(1);
+	});
+
+	it("suspends on a prefetched handle until its result settles", async () => {
+		using _server = serve();
+		using app = mount();
+		const handle = Loader.make(app.registry).prefetch(issue, 1);
+		const suspended = suspensions();
+		await app.render(
+			<React.Suspense fallback={suspended.fallback}>
+				<UnclaimedTitle issue={handle} />
+			</React.Suspense>,
+		);
+		expect(screen.getByText("Found")).toBeDefined();
+		expect(suspended.count()).toBeGreaterThan(0);
+	});
+
+	it("throws in development on a handle from another source", async () => {
+		using _server = serve();
+		using _errors = silenceCaughtErrors();
+		using app = mount();
+		const handle = Loader.make(app.registry).prefetch(issue, 1);
+		const next = (id: number) => issue(id + 1);
+		const Misread = () => {
+			useAtomResult(next, handle);
+			return null;
+		};
+		await app.render(
+			<React.Suspense fallback={<p>Loading</p>}>
+				<Misread />
+			</React.Suspense>,
+		);
+		expect(
+			screen.getByText(
+				/read the handle of AtomRpc:GetIssue:1 through a source that makes AtomRpc:GetIssue:2/,
+			),
+		).toBeDefined();
 	});
 });

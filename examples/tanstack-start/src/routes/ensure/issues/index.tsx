@@ -11,14 +11,21 @@ export const Route = createFileRoute("/ensure/issues/")({
 	loader: async (args) => {
 		// Waits for results the registry doesn't hold yet; one it holds
 		// renders at once, without a request.
-		await Promise.all([
+		const [counts, page] = await Promise.all([
 			args.context.atoms.ensure(issueCounts),
-			args.context.atoms.ensure(issuePage(args.deps, 0)),
+			args.context.atoms.ensure(issuePage, args.deps, 0),
 		]);
+		return { counts, page };
 	},
 	component: Page,
 });
 
 function Page() {
-	return <IssuesPage input={Route.useSearch()} verb="ensure" />;
+	return (
+		<IssuesPage
+			handles={Route.useLoaderData()}
+			input={Route.useSearch()}
+			verb="ensure"
+		/>
+	);
 }

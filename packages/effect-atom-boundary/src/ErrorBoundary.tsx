@@ -453,8 +453,8 @@ const isMounted = (at: Mounted | undefined, boundary: Internal): boolean => {
  *   catchTags: { Unauthorized: ({ reset }) => <SignIn onSignedIn={reset} /> }
  * })
  *
- * function IssueTitle(props: { readonly id: number }) {
- *   const result = useAtomResult(useAuthBoundary().wrap(issue(props.id)))
+ * function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
+ *   const result = useAtomResult(useAuthBoundary().wrap(issue), props.issue)
  *   // AsyncResult<Issue, IssueNotFound | RpcClientError>
  * }
  * ```

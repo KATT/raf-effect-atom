@@ -1,26 +1,33 @@
 import type { IssueId } from "@examples/contract";
 import { Match, Option } from "effect";
 import { AsyncResult } from "effect/reactivity";
-import { useAtomResult } from "raf-effect-atom";
+import { type Handle, useAtomResult } from "raf-effect-atom";
 
 import { useAppBoundary, useIssueBoundary } from "~/boundaries.tsx";
 import { assignee, issue } from "~/issues.ts";
 
 // #region fetch-in-render
-// No loader started the assignee, so in development this read throws.
-function Assignee(props: { issueId: IssueId }) {
+// Reads take the handle a loader returned. An id would start the request
+// in render, so it isn't one.
+function Assignee(props: { assignee: Handle<typeof assignee> }) {
 	const result = useAtomResult(
-		useIssueBoundary().wrap(assignee(props.issueId)),
+		useIssueBoundary().wrap(assignee),
+		props.assignee,
 	);
 	return <p>{result.value.name}</p>;
+}
+
+function IssuePage(props: { issueId: IssueId }) {
+	// @ts-expect-error -- 2739: an IssueId isn't a handle
+	return <Assignee assignee={props.issueId} />;
 }
 // #endregion fetch-in-render
 
 // #region forgotten-tag
 // The app boundary claims RpcClientError: IssueNotFound and Unauthorized
 // are left.
-function IssueTitle(props: { id: IssueId }) {
-	const result = useAtomResult(useAppBoundary().wrap(issue(props.id)));
+function IssueTitle(props: { issue: Handle<typeof issue> }) {
+	const result = useAtomResult(useAppBoundary().wrap(issue), props.issue);
 	if (AsyncResult.isSuccess(result)) {
 		return <h1>{result.value.title}</h1>;
 	}
@@ -35,4 +42,4 @@ function IssueTitle(props: { id: IssueId }) {
 }
 // #endregion forgotten-tag
 
-export { Assignee, IssueTitle };
+export { IssuePage, IssueTitle };

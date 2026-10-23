@@ -10,18 +10,21 @@ declare const atoms: Loader.Loader;
 declare const id: IssueId;
 
 // #region verbs
-// Starts the atom and returns at once.
-atoms.prefetch(assignee(id));
+// Starts the atom and returns its handle at once.
+const assigneeHandle = atoms.prefetch(assignee, id);
+//    ^?
 
 // Waits for a result, unless the atom already has one.
-const result = await atoms.ensure(issue(id));
+const issueHandle = await atoms.ensure(issue, id);
 //    ^?
 
 // Refreshes the atom if it has a result, and waits for the new one.
-await atoms.fetch(issue(id));
+await atoms.fetch(issue, id);
 // #endregion verbs
 
 // #region match
+// The result ensure or fetch waited for, in the loader that called it.
+const result = Loader.result(issueHandle);
 const error = AsyncResult.error(result);
 //    ^?
 if (Option.isSome(error)) {
@@ -40,7 +43,8 @@ if (Option.isSome(error)) {
 
 // #region effect
 const program = Effect.gen(function* () {
-	yield* Loader.prefetch(assignee(id));
-	return yield* Loader.ensure(issue(id));
+	const assigneeHandle = yield* Loader.prefetch(assignee, id);
+	const issueHandle = yield* Loader.ensure(issue, id);
+	return { assignee: assigneeHandle, issue: issueHandle };
 });
 // #endregion effect
