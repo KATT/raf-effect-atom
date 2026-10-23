@@ -103,7 +103,9 @@ function DropNextButton() {
 
 /**
  * The failures the boundary demos queue: the contract's two errors, a dropped
- * request, and a `Crash` no procedure declares. `IssueNotFound` names `issueId`.
+ * request, and a `Crash` no procedure declares. The server makes
+ * `IssueNotFound` name the issue of the request it fails, or `issueId` for a
+ * request that names none.
  */
 export function IssueFailureButtons(props: { readonly issueId: IssueId }) {
 	return (

@@ -88,7 +88,7 @@ const selectedAtom = Atom.make(ids[0] ?? IssueId.make(1)).pipe(
 	Atom.withLabel("demo-kit:boundary-chain-issue"),
 );
 
-/** Queues a failure for the next request; `IssueNotFound` names the open issue. */
+/** Queues a failure for the next request. */
 function Controls() {
 	return <IssueFailureButtons issueId={useAtomValue(selectedAtom)} />;
 }

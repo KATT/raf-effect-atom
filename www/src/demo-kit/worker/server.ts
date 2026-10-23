@@ -1,10 +1,17 @@
-import { Authorization, CurrentUser, Latency } from "@examples/contract";
+import {
+	Authorization,
+	CurrentUser,
+	IssueId,
+	IssueNotFound,
+	Latency,
+} from "@examples/contract";
 import { DbLatency, exampleUser, Issues } from "@examples/db";
 import {
 	Clock,
 	Context,
 	Effect,
 	Layer,
+	Option,
 	PubSub,
 	Random,
 	Ref,
@@ -122,6 +129,27 @@ const declaredBy = (rpc: Rpc.AnyWithProps) =>
 		]),
 	);
 
+/** The issue a request names: `issueId`, or an `id` that is an `IssueId`. */
+const decodeIssueId = Schema.decodeUnknownOption(
+	Schema.Struct({ issueId: IssueId }),
+);
+const decodeId = Schema.decodeUnknownOption(Schema.Struct({ id: IssueId }));
+
+/**
+ * A queued `IssueNotFound` names the issue the request it fails asked for,
+ * not the one that was open when it was queued.
+ */
+const forRequest = (
+	error: InjectedError,
+	requested: Option.Option<IssueId>,
+): InjectedError =>
+	Schema.is(IssueNotFound)(error)
+		? Option.match(requested, {
+				onNone: () => error,
+				onSome: (id) => new IssueNotFound({ id }),
+			})
+		: error;
+
 const InjectedFailureLayer = Layer.effect(
 	InjectedFailure,
 	Effect.gen(function* () {
@@ -141,13 +169,23 @@ const InjectedFailureLayer = Layer.effect(
 		return InjectedFailure.of((effect, options) => {
 			const requestId = String(options.requestId);
 			const handled = Effect.gen(function* () {
-				const next = yield* Ref.modify(
+				const queued = yield* Ref.modify(
 					controls.queued,
 					([first, ...rest]) => [first, rest] as const,
 				);
-				if (next === undefined) {
+				if (queued === undefined) {
 					return yield* effect;
 				}
+				// A comment's own `id` is a CommentId, so `issueId` goes first.
+				const requested = Option.map(
+					decodeIssueId(options.payload),
+					(request) => request.issueId,
+				).pipe(
+					Option.orElse(() =>
+						Option.map(decodeId(options.payload), (request) => request.id),
+					),
+				);
+				const next = forRequest(queued, requested);
 				const ms = yield* Ref.get(controls.latency);
 				yield* Effect.sleep(ms * (yield* Random.nextBetween(0.5, 1.5)));
 				if (declaredBy(options.rpc)(next)) {

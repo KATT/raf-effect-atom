@@ -32,7 +32,7 @@ export type InjectedError = typeof InjectedError.Type;
  * Fails a request with the next queued error, after the demo's latency. An
  * error the procedure doesn't declare (`IssueNotFound` for `CountIssues`, or
  * a {@link Crash}) becomes a defect, as an undeclared error would on a real
- * server.
+ * server. A queued `IssueNotFound` names the issue the request asked for.
  */
 export class InjectedFailure extends RpcMiddleware.Service<InjectedFailure>()(
 	"www/demo-kit/InjectedFailure",
