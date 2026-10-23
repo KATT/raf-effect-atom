@@ -63,6 +63,13 @@
 			// with the CLI and stay available to the apps.
 			"includeEntryExports": false,
 		},
+		"examples/nextjs": {
+			"ignoreIssues": {
+				// `#rpc-transport` resolves here under the `react-server` condition,
+				// which Knip doesn't follow.
+				"src/rpc-transport.server.ts": ["exports"],
+			},
+		},
 		"examples/tanstack-start": {
 			"ignoreIssues": {
 				// `#rpc-transport` resolves here under the `browser` condition,

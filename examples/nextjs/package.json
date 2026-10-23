@@ -1,0 +1,45 @@
+{
+	"name": "@examples/nextjs",
+	"version": "0.0.0",
+	"private": true,
+	"description": "The issue tracker on the Next.js App Router: atoms started in server components and streamed into client components, over Effect RPC served from a route handler",
+	"type": "module",
+	"imports": {
+		"#rpc-transport": {
+			"react-server": "./src/rpc-transport.server.ts",
+			"default": "./src/rpc-transport.ts"
+		}
+	},
+	"scripts": {
+		"build": "next build",
+		"check:bundle": "bundle-check .next/static --forbid @examples/db --forbid @examples/backend",
+		"dev": "next dev --port 3006",
+		"start": "next start --port 3006",
+		"typecheck": "tsc"
+	},
+	"dependencies": {
+		"@effect/atom-react": "4.0.6",
+		"@examples/backend": "workspace:*",
+		"@examples/contract": "workspace:*",
+		"@examples/kit": "workspace:*",
+		"@examples/ui": "workspace:*",
+		"@tanstack/react-form": "1.33.5",
+		"effect": "catalog:",
+		"effect-atom-boundary": "workspace:*",
+		"next": "16.4.3",
+		"raf-effect-atom": "workspace:*",
+		"react": "19.3.1",
+		"react-dom": "19.3.1",
+		"server-only": "0.0.1",
+		"sonner": "2.0.8"
+	},
+	"devDependencies": {
+		"@tailwindcss/postcss": "4.3.3",
+		"@tooling/bundle-check": "workspace:*",
+		"@types/node": "24.19.2",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"babel-plugin-react-compiler": "1.0.0",
+		"typescript": "7.0.2"
+	}
+}
