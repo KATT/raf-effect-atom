@@ -4,12 +4,13 @@ import {
 	useAtomSuspense,
 } from "@effect/atom-react";
 import { describe, expect, it, vi } from "@effect/vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import * as Cause from "effect/Cause";
 import * as Option from "effect/Option";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
-import type * as Atom from "effect/reactivity/Atom";
+import * as Atom from "effect/reactivity/Atom";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
+import * as Schema from "effect/Schema";
 import * as React from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -553,6 +554,110 @@ describe("request count", () => {
 			await app.render(<Tree id={1} />, true);
 			await settle(500);
 			expect(server.requests(1)).toBe(2);
+		},
+	);
+});
+
+class SignedOut extends Schema.TaggedError<SignedOut>()("SignedOut", {}) {}
+
+/** One error object for every failure, as an app's module-level error is. */
+const signedOut = new SignedOut();
+
+const sessionRuns = new WeakMap<AtomRegistry.AtomRegistry, number>();
+
+/** Fails with `signedOut` on its first run in each registry. */
+const session = Atom.make((get): AsyncResult.AsyncResult<string, SignedOut> => {
+	const run = (sessionRuns.get(get.registry) ?? 0) + 1;
+	sessionRuns.set(get.registry, run);
+	return run === 1
+		? AsyncResult.fail(signedOut)
+		: AsyncResult.success("Signed in");
+});
+
+const SignIn = (props: CatchTagProps<SignedOut>) => (
+	<button onClick={props.reset} type="button">
+		Sign in
+	</button>
+);
+
+const [SessionBoundary, useSessionBoundary] = createErrorBoundary({
+	catchTags: { SignedOut: SignIn },
+	errors: session,
+	name: "Session",
+});
+
+function SessionText(props: {
+	readonly atom: Atom.Atom<AsyncResult.AsyncResult<string, never>>;
+}) {
+	const result = useRead(props.atom);
+	return <p>{AsyncResult.isSuccess(result) ? result.value : "Not caught"}</p>;
+}
+
+function SharedSessionText() {
+	return <SessionText atom={useSessionBoundary().wrap(session)} />;
+}
+
+describe("two registries failing with one error object", () => {
+	it.each([
+		{
+			name: "AtomErrorBoundary",
+			tree: () => (
+				<AtomErrorBoundary atom={session} catchTags={{ SignedOut: SignIn }}>
+					<SessionText atom={AtomErrorBoundary.claim(session)} />
+				</AtomErrorBoundary>
+			),
+		},
+		{
+			name: "createErrorBoundary",
+			tree: () => (
+				<SessionBoundary>
+					<SharedSessionText />
+				</SessionBoundary>
+			),
+		},
+	])(
+		"resets the failure in the registry of the boundary that caught it ($name)",
+		async (each) => {
+			using _errors = silenceCaughtErrors();
+			const first = AtomRegistry.make({ defaultIdleTTL: 400, scheduleTask });
+			const second = AtomRegistry.make({ defaultIdleTTL: 400, scheduleTask });
+			// Mounted, as a loader's lease mounts what it starts.
+			const leases = [first.mount(session), second.mount(session)];
+			using _apps = {
+				[Symbol.dispose]: () => {
+					cleanup();
+					for (const release of leases) {
+						release();
+					}
+					first.dispose();
+					second.dispose();
+				},
+			};
+			const app = (registry: AtomRegistry.AtomRegistry) => (
+				<RegistryContext.Provider value={registry}>
+					{each.tree()}
+				</RegistryContext.Provider>
+			);
+			const firstRoot = render(app(first));
+			const firstApp = within(firstRoot.container);
+			await settle();
+			const secondApp = within(render(app(second)).container);
+			await settle();
+			// The first app renders again after the second one's failure.
+			await act(async () => {
+				firstRoot.rerender(app(first));
+			});
+			expect(firstApp.getByText("Sign in")).toBeDefined();
+			expect(secondApp.getByText("Sign in")).toBeDefined();
+
+			await act(async () => {
+				firstApp.getByText("Sign in").click();
+			});
+			await settle();
+			expect(firstApp.getByText("Signed in")).toBeDefined();
+			expect(secondApp.getByText("Sign in")).toBeDefined();
+			expect(sessionRuns.get(first)).toBe(2);
+			expect(sessionRuns.get(second)).toBe(1);
 		},
 	);
 });

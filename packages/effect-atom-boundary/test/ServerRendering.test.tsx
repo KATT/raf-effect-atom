@@ -5,7 +5,7 @@ import {
 	useAtomSuspense,
 } from "@effect/atom-react";
 import { describe, expect, it, vi } from "@effect/vitest";
-import { act, screen } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import * as Cause from "effect/Cause";
 import * as Option from "effect/Option";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
@@ -108,6 +108,27 @@ const OwnPage = (props: { readonly id: number }) => (
 	</AtomErrorBoundary>
 );
 
+/**
+ * Holds server renders until every request it lets in waits at it, so they
+ * render their pages at the same time.
+ */
+const makeGate = (requests: number) => {
+	const open = Promise.withResolvers<void>();
+	const waiting = new Set<string>();
+	function Gate(props: {
+		readonly children?: React.ReactNode;
+		readonly request: string;
+	}) {
+		waiting.add(props.request);
+		if (waiting.size === requests) {
+			open.resolve();
+		}
+		React.use(open.promise);
+		return props.children;
+	}
+	return Gate;
+};
+
 const settle = async (ms = 30) => {
 	await act(async () => {
 		await new Promise((resolve) => {
@@ -116,11 +137,22 @@ const settle = async (ms = 30) => {
 	});
 };
 
-/**
- * Loads the issue in a request registry, as a loader would, renders `page`
- * with React's server renderer, and dehydrates the registry.
- */
-const renderOnServer = async (id: number, page: React.ReactNode) => {
+/** Runs `server` without a `window`, as a server does. */
+const withoutWindow = async <A,>(server: () => Promise<A>): Promise<A> => {
+	const window = Object.getOwnPropertyDescriptor(globalThis, "window");
+	// oxlint-disable-next-line typescript/no-dynamic-delete -- a server has no window
+	Reflect.deleteProperty(globalThis, "window");
+	try {
+		return await server();
+	} finally {
+		if (window !== undefined) {
+			Object.defineProperty(globalThis, "window", window);
+		}
+	}
+};
+
+/** One request's registry, with the issue loaded as a loader would. */
+const load = async (id: number) => {
 	const registry = AtomRegistry.make();
 	const release = registry.mount(hydratedIssue(id));
 	while (AsyncResult.isInitial(registry.get(hydratedIssue(id)))) {
@@ -128,32 +160,57 @@ const renderOnServer = async (id: number, page: React.ReactNode) => {
 			setTimeout(resolve, 5);
 		});
 	}
-	const errors: Array<unknown> = [];
-	const window = Object.getOwnPropertyDescriptor(globalThis, "window");
-	// oxlint-disable-next-line typescript/no-dynamic-delete -- a server has no window
-	Reflect.deleteProperty(globalThis, "window");
-	try {
-		const stream = await renderToReadableStream(
-			<RegistryContext.Provider value={registry}>
-				{page}
-			</RegistryContext.Provider>,
-			{
-				onError: (error) => {
-					errors.push(error);
-				},
-			},
-		);
-		await stream.allReady;
-		const html = await new Response(stream).text();
-		return { errors, html, state: Hydration.dehydrate(registry) };
-	} finally {
-		if (window !== undefined) {
-			Object.defineProperty(globalThis, "window", window);
-		}
-		release();
-		registry.dispose();
-	}
+	return {
+		registry,
+		[Symbol.dispose]: () => {
+			release();
+			registry.dispose();
+		},
+	};
 };
+
+/**
+ * Starts rendering `page` in the request's registry with React's server
+ * renderer, returning once the shell is out. `finish` waits for the rest of
+ * the stream and dehydrates the registry.
+ */
+const stream = async (
+	registry: AtomRegistry.AtomRegistry,
+	page: React.ReactNode,
+) => {
+	const errors: Array<unknown> = [];
+	const html = await renderToReadableStream(
+		<RegistryContext.Provider value={registry}>
+			{page}
+		</RegistryContext.Provider>,
+		{
+			onError: (error) => {
+				errors.push(error);
+			},
+		},
+	);
+	return {
+		finish: async () => {
+			await html.allReady;
+			return {
+				errors,
+				html: await new Response(html).text(),
+				state: Hydration.dehydrate(registry),
+			};
+		},
+	};
+};
+
+/**
+ * Loads the issue in a request registry, as a loader would, renders `page`
+ * with React's server renderer, and dehydrates the registry.
+ */
+const renderOnServer = (id: number, page: React.ReactNode) =>
+	withoutWindow(async () => {
+		using request = await load(id);
+		const rendering = await stream(request.registry, page);
+		return await rendering.finish();
+	});
 
 /** Hydrates the server's HTML in the browser with a fresh registry. */
 const hydrateInBrowser = async (
@@ -177,6 +234,7 @@ const hydrateInBrowser = async (
 	await settle();
 	return {
 		recoverable,
+		screen: within(container),
 		[Symbol.dispose]: () => {
 			act(() => {
 				root.unmount();
@@ -234,6 +292,56 @@ describe("a boundary during server rendering", () => {
 		expect(browser.recoverable).toEqual([]);
 		await click("Own: no issue 3");
 		expect(screen.getByText("Issue 3")).toBeDefined();
+	});
+
+	it("keeps two overlapping requests' failures and resets apart", async () => {
+		// The first request's load fails, the second's and the reset find it.
+		using server = serve({ 5: ["signed-out", "found"] });
+		using _errors = silenceCaughtErrors();
+		const Gate = makeGate(2);
+		const [signedOut, signedIn] = await withoutWindow(async () => {
+			using first = await load(5);
+			using second = await load(5);
+			const render = async (
+				request: string,
+				registry: AtomRegistry.AtomRegistry,
+			) => {
+				const rendering = await stream(
+					registry,
+					<Gate request={request}>
+						<SharedPage id={5} />
+					</Gate>,
+				);
+				return await rendering.finish();
+			};
+			return await Promise.all([
+				render("first", first.registry),
+				render("second", second.registry),
+			]);
+		});
+		expect(signedOut.errors).toEqual([]);
+		expect(signedOut.html).toContain("Signed out: expired");
+		expect(signedOut.html).not.toContain("Issue 5");
+		expect(signedIn.errors).toEqual([]);
+		expect(signedIn.html).toContain("Issue 5");
+		expect(signedIn.html).not.toContain("Signed out");
+
+		using signedOutTab = await hydrateInBrowser(
+			signedOut,
+			<SharedPage id={5} />,
+		);
+		using signedInTab = await hydrateInBrowser(signedIn, <SharedPage id={5} />);
+		expect(signedOutTab.recoverable).toEqual([]);
+		expect(signedInTab.recoverable).toEqual([]);
+		expect(server.requests(5)).toBe(2);
+
+		await act(async () => {
+			signedOutTab.screen.getByText("Signed out: expired").click();
+		});
+		await settle();
+		expect(signedOutTab.screen.getByText("Issue 5")).toBeDefined();
+		expect(signedInTab.screen.getByText("Issue 5")).toBeDefined();
+		expect(server.requests(5)).toBe(3);
 	});
 
 	it("renders the children when nothing it catches failed", async () => {
