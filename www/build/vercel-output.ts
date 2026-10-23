@@ -5,7 +5,7 @@
  * and every page is a file. Routes here run before the files, so a page's URL
  * answers `Accept: text/markdown` with the page's markdown.
  */
-import { Effect, FileSystem, Path } from "effect";
+import { Config, Effect, FileSystem, Option, Path } from "effect";
 
 const contentTypes = new Map([
 	[".html", "text/html; charset=utf-8"],
@@ -40,14 +40,38 @@ const acceptsMarkdown = [
 	{ key: "accept", type: "header", value: "(.*)text/markdown(.*)" },
 ];
 
+/**
+ * [Skew Protection](https://vercel.com/docs/skew-protection): every document
+ * response sets `__vdpl` to the deployment that served it, before the page
+ * requests anything, so the chunks a page imports after a newer deployment
+ * goes live still come from its own. Vercel routes navigations to the latest
+ * deployment whatever the cookie says.
+ */
+const skewProtection = (deploymentId: Option.Option<string>) =>
+	Option.match(deploymentId, {
+		onNone: () => [],
+		onSome: (id) => [
+			{
+				continue: true,
+				has: [{ key: "Sec-Fetch-Dest", type: "header", value: "document" }],
+				headers: {
+					"Set-Cookie": `__vdpl=${id}; Path=/; SameSite=Lax; Secure; HttpOnly`,
+				},
+				src: "^/.*$",
+			},
+		],
+	});
+
 /** `files` are the static files' paths, relative and `/`-separated. */
 const vercelConfig = (options: {
+	readonly deploymentId: Option.Option<string>;
 	readonly files: ReadonlyArray<string>;
 	readonly firstDoc: string;
 	readonly siteUrl: string;
 }) => ({
 	overrides: overrides(options.files),
 	routes: [
+		...skewProtection(options.deploymentId),
 		{ headers: { Location: "/$1" }, src: "^/(.+)/$", status: 308 },
 		{
 			headers: { Location: "/$1" },
@@ -130,8 +154,18 @@ export const writeVercelOutput = Effect.fn("writeVercelOutput")(function* (
 	yield* fs.copy(path.join(root, "dist/client"), staticDir);
 
 	const files = yield* fs.readDirectory(staticDir, { recursive: true });
+	const skewProtectionEnabled = yield* Config.String(
+		"VERCEL_SKEW_PROTECTION_ENABLED",
+	).pipe(Config.withDefault(""));
+	const deploymentId = yield* Config.String("VERCEL_DEPLOYMENT_ID").pipe(
+		Config.option,
+	);
 	const config = vercelConfig({
 		...options,
+		deploymentId: Option.filter(
+			deploymentId,
+			() => skewProtectionEnabled === "1",
+		),
 		files: files.map((file) => file.split(path.sep).join("/")),
 	});
 	yield* fs.writeFileString(

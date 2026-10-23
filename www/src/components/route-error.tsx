@@ -12,9 +12,10 @@ import { isModuleNotFoundError } from "@tanstack/router-core";
 const reloadKey = (error: Error) => `tanstack_router_reload:${error.message}`;
 
 /**
- * A chunk the page's deployment no longer serves, such as a doc's content or
- * a demo's code loaded in a loader after a deploy outlived Skew Protection,
- * that the page hasn't reloaded for yet this session.
+ * A chunk of the page's deployment that the request didn't reach, such as a
+ * doc's content or a demo's code loaded in a loader, once another tab loaded
+ * a newer deployment or the page outlived Skew Protection's max age, that the
+ * page hasn't reloaded for yet this session.
  */
 const isStaleChunk = (error: ErrorComponentProps["error"]): error is Error =>
 	error instanceof Error &&

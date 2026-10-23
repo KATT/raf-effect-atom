@@ -1,6 +1,6 @@
-import { deploymentHeaders } from "@examples/kit/lib/skew-protection";
-
 import type { RpcTransport } from "./issues.ts";
+
+const deploymentId = process.env.NEXT_DEPLOYMENT_ID;
 
 /**
  * `POST`s to the app's `/rpc` route handler, on the page's origin, answered
@@ -10,6 +10,6 @@ import type { RpcTransport } from "./issues.ts";
  * `HydrateAtoms`.
  */
 export const rpcTransport: RpcTransport = {
-	headers: deploymentHeaders(process.env.NEXT_DEPLOYMENT_ID || undefined),
+	headers: deploymentId ? { "x-deployment-id": deploymentId } : {},
 	url: "/rpc",
 };

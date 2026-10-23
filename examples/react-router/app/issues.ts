@@ -20,8 +20,6 @@ import { RpcClient, RpcSerialization } from "effect/rpc";
 export interface RpcTransport {
 	/** Replaces `globalThis.fetch`. */
 	readonly fetch?: typeof globalThis.fetch;
-	/** Sent with every request. */
-	readonly headers?: Readonly<Record<string, string>>;
 	readonly url: string;
 }
 
@@ -52,15 +50,12 @@ export class IssuesClient extends AtomRpc.Service<IssuesClient>()(
 		protocol: (get) => {
 			const cookie = get(requestCookie);
 			return RpcClient.layerProtocolHttp({
-				transformClient: HttpClient.mapRequest((request) => {
-					const sent = HttpClientRequest.setHeaders(
-						request,
-						rpcTransport.headers ?? {},
-					);
-					return cookie === undefined
-						? sent
-						: HttpClientRequest.setHeader(sent, "cookie", cookie);
-				}),
+				transformClient:
+					cookie === undefined
+						? undefined
+						: HttpClient.mapRequest((request) =>
+								HttpClientRequest.setHeader(request, "cookie", cookie),
+							),
 				url: rpcTransport.url,
 			}).pipe(Layer.provide([RpcSerialization.layerJson, httpClient]));
 		},

@@ -1,4 +1,3 @@
-import { deploymentOf, pinAssets } from "@examples/kit/lib/skew-protection";
 import { createRouter } from "@tanstack/react-router";
 import { Loader } from "raf-effect-atom";
 import {
@@ -11,7 +10,6 @@ import { reloadForStaleChunk, RouteError } from "./components/route-error.tsx";
 import { routeTree } from "./routeTree.gen.ts";
 
 export function getRouter() {
-	pinAssets(deploymentOf(import.meta.env));
 	const registry = makeRegistry();
 	const router = createRouter({
 		context: { atoms: Loader.make(registry) },

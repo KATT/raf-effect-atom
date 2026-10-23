@@ -1,4 +1,3 @@
-import { deploymentOf, pinAssets } from "@examples/kit/lib/skew-protection";
 import { createRouter } from "@tanstack/react-router";
 import { Loader } from "raf-effect-atom";
 import {
@@ -15,7 +14,6 @@ import {
 } from "./settings.ts";
 
 export function getRouter() {
-	pinAssets(deploymentOf(import.meta.env));
 	// A request registry on the server, the browser's registry in the browser.
 	const registry = makeRegistry();
 	registry.set(requestCookie, readRequestCookie());

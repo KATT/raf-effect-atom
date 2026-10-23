@@ -7,7 +7,6 @@ import { Effect } from "effect";
 import { defineConfig } from "vite";
 
 import { logoSvg } from "@examples/kit/lib/logo";
-import { envPrefix } from "@examples/kit/lib/skew-protection";
 import { OgCard } from "@tooling/og-image/render";
 import { ogImages } from "@tooling/og-image/vite";
 
@@ -32,7 +31,6 @@ const pages = await Effect.runPromise(
 const canonicalPaths = new Set(["/", ...pages.map((page) => page.path)]);
 
 export default defineConfig({
-	envPrefix,
 	plugins: [
 		docsContent({
 			agentRules: "coding-agents",
