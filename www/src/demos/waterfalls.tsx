@@ -15,8 +15,8 @@ import { useAtomResult } from "raf-effect-atom";
 import { type ReactNode, Suspense, useState } from "react";
 
 import { IssuesClient } from "~/demo-kit/client.ts";
-import { ErrorNotice } from "~/demo-kit/controls.tsx";
 import { defineDemo } from "~/demo-kit/define.ts";
+import { IssueFailure } from "~/demo-kit/issue-failure.tsx";
 import { useNow, useReducedMotion } from "~/demo-kit/now.ts";
 import {
 	BrowserWindow,
@@ -25,12 +25,11 @@ import {
 	navigationsAtom,
 	useDemoRouter,
 } from "~/demo-kit/router.tsx";
-import { formatMs, phaseText, stateFill } from "~/demo-kit/state.tsx";
+import { formatMs, stateFill } from "~/demo-kit/state.tsx";
 import {
 	type AtomPhase,
 	type AtomTrack,
 	atomTracksAtom,
-	failureOf,
 } from "~/demo-kit/trace.ts";
 
 const strategies = ["loader", "render"] as const;
@@ -95,17 +94,6 @@ function idOf(pathname: string) {
 	return IssueId.make(Number(pathname.split("/").at(-1)));
 }
 
-function Failed(props: {
-	readonly cause: Parameters<typeof failureOf>[0];
-	readonly what: string;
-}) {
-	return (
-		<ErrorNotice caughtBy="the page" type={phaseText(failureOf(props.cause))}>
-			The {props.what} didn’t load.
-		</ErrorNotice>
-	);
-}
-
 function Line(props: { readonly className: string; readonly label: string }) {
 	return (
 		<Skeleton
@@ -122,7 +110,7 @@ function IssueTitle(props: {
 }) {
 	const result = useAtomResult(props.atoms.issue(props.id));
 	if (AsyncResult.isFailure(result)) {
-		return <Failed cause={result.cause} what="issue" />;
+		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
 	return (
 		<h3 className="text-sm leading-snug font-semibold">{result.value.title}</h3>
@@ -135,7 +123,7 @@ function AssigneeLine(props: {
 }) {
 	const result = useAtomResult(props.atoms.assignee(props.id));
 	if (AsyncResult.isFailure(result)) {
-		return <Failed cause={result.cause} what="assignee" />;
+		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
 	return (
 		<p className="text-xs text-muted-foreground">
@@ -150,7 +138,7 @@ function CommentCount(props: {
 }) {
 	const result = useAtomResult(props.atoms.comments(props.id));
 	if (AsyncResult.isFailure(result)) {
-		return <Failed cause={result.cause} what="comments" />;
+		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
 	return (
 		<p className="text-xs text-muted-foreground">
@@ -187,7 +175,7 @@ function RenderIssue(props: {
 }) {
 	const result = useAtomResult(atomsFor.render.issue(props.id));
 	if (AsyncResult.isFailure(result)) {
-		return <Failed cause={result.cause} what="issue" />;
+		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
 	return (
 		<>
@@ -214,7 +202,7 @@ function RenderAssignee(props: {
 }) {
 	const result = useAtomResult(atomsFor.render.assignee(props.id));
 	if (AsyncResult.isFailure(result)) {
-		return <Failed cause={result.cause} what="assignee" />;
+		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
 	return (
 		<>

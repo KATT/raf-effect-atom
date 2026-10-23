@@ -5,7 +5,7 @@ import type { RpcClientError } from "effect/rpc";
 
 import { ErrorNotice } from "./controls.tsx";
 
-/** What reading an issue, or its assignee, can fail with. */
+/** What reading an issue, its assignee or its comments can fail with. */
 type IssueError = IssueNotFound | RpcClientError.RpcClientError | Unauthorized;
 
 /**

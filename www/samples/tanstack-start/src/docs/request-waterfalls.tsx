@@ -16,6 +16,7 @@ function IssuePage(props: { issueId: IssueId }) {
 	// Starts GetIssue, and suspends until it settles.
 	const result = useAtomResult(useIssueBoundary().wrap(issue(props.issueId)));
 	if (AsyncResult.isFailure(result)) {
+		// RpcClientError: the boundaries took IssueNotFound and Unauthorized.
 		return <p>Couldn't reach the server.</p>;
 	}
 	return (
@@ -33,7 +34,11 @@ function Assignee(props: { issueId: IssueId }) {
 	const result = useAtomResult(
 		useIssueBoundary().wrap(assignee(props.issueId)),
 	);
-	return AsyncResult.isSuccess(result) ? <p>{result.value.name}</p> : null;
+	if (AsyncResult.isFailure(result)) {
+		// RpcClientError, as for the issue.
+		return <p>Couldn't load the assignee.</p>;
+	}
+	return <p>{result.value.name}</p>;
 }
 // #endregion fetch-on-render
 
