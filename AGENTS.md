@@ -1,7 +1,7 @@
 ## Environment
 
 - Node is pinned in `.nvmrc`. The default shell Node may be older; switch first (`fnm use`, `nvm use`, or put `~/.nvm/versions/node/v<version>/bin` first on `PATH`).
-- If `pnpm` fails with `Cannot find module .../corepack/v1/pnpm/<version>/bin/pnpm.cjs`, the installed corepack can't launch the pnpm version in `packageManager`. Upgrade corepack (`npm i -g corepack@latest`) or call the cached binary directly: `~/.cache/node/corepack/v1/pnpm/<version>/pnpm`.
+- Node 26 doesn't bundle corepack. Install pnpm once per Node install (`npm i -g pnpm`); it switches itself to the version in `packageManager`.
 
 ## Commits go straight to `main`
 

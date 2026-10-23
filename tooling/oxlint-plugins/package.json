@@ -15,7 +15,7 @@
 		"@oxlint/plugins": "1.85.0"
 	},
 	"devDependencies": {
-		"@types/node": "26.6.4",
+		"@types/node": "26.6.5",
 		"oxc-parser": "0.153.0",
 		"oxlint": "1.85.0",
 		"typescript": "7.0.2",
