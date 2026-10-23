@@ -24,7 +24,7 @@ import {
 } from "react-router";
 
 import { atomsContext } from "~/atoms.ts";
-import { AuthBoundary } from "~/boundaries.tsx";
+import { AppBoundary, AuthBoundary } from "~/boundaries.tsx";
 import { AppLink, PrefetchContext } from "~/components/app-link.tsx";
 import { Settings } from "~/components/settings.tsx";
 import { requestCookie } from "~/issues.ts";
@@ -115,9 +115,11 @@ export default function App(props: Route.ComponentProps) {
 				verb={verb}
 			/>
 			<main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
-				<AuthBoundary>
-					<Outlet />
-				</AuthBoundary>
+				<AppBoundary>
+					<AuthBoundary>
+						<Outlet />
+					</AuthBoundary>
+				</AppBoundary>
 			</main>
 			<SiteFooter />
 			<Toaster closeButton position="bottom-right" richColors />

@@ -41,7 +41,7 @@ Walk the list top to bottom for a broad regression.
 - [Comments](comments.md): paged comments, posting with a pending row, the server's validation.
 - [Settings bar](settings-bar.md): loader verb, link prefetch, latency, session, Reset.
 - [Loader verb](loader-verb.md): `prefetch`, `ensure` or `fetch` from the URL and the `Loader` select, and what each waits for.
-- [Error boundaries](error-boundaries.md): signed out, missing issues and unknown URLs.
+- [Error boundaries](error-boundaries.md): the server unreachable, signed out, missing issues and unknown URLs.
 - [Navigation progress bar](navigation-progress.md): the bar along the top while a navigation waits.
 - [Demo write warning](demo-write-toast.md): the toast deployed demos show on writes.
 - [Theme](theme.md): light and dark follow the system.

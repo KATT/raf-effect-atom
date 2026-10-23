@@ -5,20 +5,15 @@ import { cn } from "@examples/ui/lib/utils";
 import { useAtomSet } from "@effect/atom-react";
 import { useForm } from "@tanstack/react-form";
 import { Cause, Exit, Option, Predicate } from "effect";
-import { AsyncResult } from "effect/reactivity";
 import { useAtomResult } from "raf-effect-atom";
 
 import { useIssueBoundary } from "~/boundaries.tsx";
-import { LoadFailed } from "~/components/load-failed.tsx";
 import { StatusSelect } from "~/components/status-select.tsx";
 import { issue, refreshIssues, updateBody, updateTitle } from "~/issues.ts";
 
 /** The issue's title, status, date and description, each editable in place. */
 export function IssueDetail(props: { readonly id: IssueId }) {
 	const result = useAtomResult(useIssueBoundary().wrap(issue(props.id)));
-	if (!AsyncResult.isSuccess(result)) {
-		return <LoadFailed result={result} />;
-	}
 	const current = result.value;
 	return (
 		<div className="grid gap-6">

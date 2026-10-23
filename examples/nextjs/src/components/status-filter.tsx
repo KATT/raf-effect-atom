@@ -7,12 +7,10 @@ import {
 } from "@examples/kit/components/status-badge";
 import type { LoaderVerb } from "@examples/kit/lib/loader-verb";
 import { cn } from "@examples/ui/lib/utils";
-import { AsyncResult } from "effect/reactivity";
 import { useAtomResult } from "raf-effect-atom";
 
 import { useAuthBoundary } from "~/boundaries.tsx";
 import { AppLink } from "~/components/settings.tsx";
-import { LoadFailed } from "~/components/load-failed.tsx";
 import { issueCounts } from "~/issues.ts";
 
 const sorts = ["newest", "oldest"] as const;
@@ -22,9 +20,6 @@ export function StatusFilter(props: {
 	readonly verb: LoaderVerb;
 }) {
 	const result = useAtomResult(useAuthBoundary().wrap(issueCounts));
-	if (!AsyncResult.isSuccess(result)) {
-		return <LoadFailed result={result} />;
-	}
 	const counts = result.value;
 	const current = props.current;
 

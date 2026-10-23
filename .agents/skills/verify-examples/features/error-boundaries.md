@@ -1,9 +1,10 @@
 # Error boundaries
 
-Typed failures from the server are caught by name, in the browser, by the boundary around the part of the page they belong to. Signed out, every page shows the auth boundary with a `Sign in` button. A well-formed id with no issue shows the issue boundary. URLs that aren't pages, and ids that aren't issue ids, show `Nothing here.`
+Typed failures from the server are caught by name, in the browser, by the boundary around the part of the page they belong to. When the server can't be reached, the app boundary replaces the page, under the header, with `Try again`. Signed out, every page shows the auth boundary with a `Sign in` button. A well-formed id with no issue shows the issue boundary. URLs that aren't pages, and ids that aren't issue ids, show `Nothing here.`
 
 ## Sub-features
 
+- `boundary-app` with the server gone, a read that needs a request shows `Can't reach the server, so this page didn't load.` and `button "Try again"`, marked `AppBoundary` / `RpcClientError`, inside the normal header and settings bar. `Try again` loads the atom that failed again.
 - `boundary-auth` signed out, the page shows `You're signed out, so the server refuses every request.` and `button "Sign in"`, which signs in and reloads. It's marked `data-boundary="AuthBoundary"` and `data-tag="Unauthorized"`.
 - `boundary-issue` `/<verb>/issues/999` shows `Issue #999 doesn't exist.`, marked `IssueBoundary` / `IssueNotFound`, inside the normal header and settings bar.
 - `nf-route` an unknown path such as `/nope` answers 404 with `Nothing here.`
@@ -11,6 +12,7 @@ Typed failures from the server are caught by name, in the browser, by the bounda
 
 ## How to get to it (user POV)
 
+- Lose the server while a page is open, then keep using the page.
 - Choose `Signed out` in the header's `Session` select.
 - Type or follow a bad URL.
 
@@ -29,6 +31,7 @@ CAUGHT='[...document.querySelectorAll("[data-boundary]")].map(e => e.dataset.bou
 Commands:
 
 - **Missing issue, every verb.** For `v` in `prefetch ensure fetch`: `$CE open $U/$v/issues/999; $CE wait --text "doesn't exist"; $CE eval "$CAUGHT"`. `["IssueBoundary:IssueNotFound"]`, and `$CE text` still has the header (`raf-effect-atom · <framework>`, such as `raf-effect-atom · React Router`). The failure came with the page: `$CE eval 'performance.getEntriesByType("resource").filter(e => new URL(e.name).pathname.startsWith("/rpc")).length'` is `0`.
+- **Server unreachable.** `$CE open $U/prefetch/issues`, then stop the app's server: `tmux -f /exec-daemon/tmux.portal.conf kill-session -t example-<app>`. `$CE scroll bottom; $CE wait --text "Can't reach the server"; $CE eval "$CAUGHT"`: `["AppBoundary:RpcClientError"]`, and `$CE text` still has the header. Start the server again as in Launch, wait until it answers, then `$CE click --role button --name 'Try again'; $CE wait --text Showing`: `Showing 20 of 42 issues`, and `$CAUGHT` is `[]`.
 - **Signed out.** `$CE select --name Session --value 'Signed out'`, wait for the reload, `$CE eval "$CAUGHT"`: `["AuthBoundary:Unauthorized"]`. `$CE click --role button --name 'Sign in'; $CE wait --text Showing`: back to the list.
 - **Unknown path.** `curl -s -o /dev/null -w '%{http_code}\n' $U/nope` is `404`. `$CE open $U/nope; $CE text | grep -E '^Nothing here\.$'`.
 - **Bad id.** The same for `$U/prefetch/issues/abc` and `$U/prefetch/issues/0`: `404`, `Nothing here.`
@@ -38,3 +41,6 @@ Commands:
 - Under `ensure` and `fetch`, a missing issue's boundary is in the server's HTML on TanStack Start and React Router, with a `200`. Under `prefetch`, and on Next.js, it renders in the browser, so `curl` doesn't see it; React Router answers `500` there, and when signed out. See [server rendering](server-rendering.md). Assert what the page shows with `$CE`.
 - Where the failure is thrown on the server, the production server logs `Error in renderToReadableStream` with the claimed error. The browser console logs React's report of the caught error in every case, since the hydrated page throws it to the boundary again; `$CE open` prints that stack. Both are expected for a claimed failure.
 - The typed failure crosses intact: `issue-not-found.test.ts` in each app (`src/` or `app/`) checks that a server-side `IssueNotFound` hydrates in the browser as an `IssueNotFound` instance. Next.js checks it in Chrome instead, in `src/hydration.test.ts`: the boundary shows `IssueNotFound` under every verb without calling `/rpc`.
+- Scrolling is the way to the app boundary on every app: the next page's request goes from the browser to `/rpc`. A link to another URL needs the server first on Next.js (its RSC payload), so with the server gone Next.js fails the navigation itself.
+- Restarting the server reseeds its data, so run the server-unreachable recipe after recipes that write, or put their writes back first.
+- When one outage fails several atoms, such as opening an issue (issue, assignee and comments), `Try again` loads the atom whose failure the boundary caught and the next read shows the boundary again. A second atom whose failure arrived after the page unmounted doesn't load again on `Try again`: a known library bug, being fixed. Until then, the recipe above covers one failed atom.

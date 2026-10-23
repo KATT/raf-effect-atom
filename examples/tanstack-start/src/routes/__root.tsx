@@ -21,7 +21,7 @@ import {
 import { type Loader, WaterfallDetection } from "raf-effect-atom";
 import { type ReactNode, useState } from "react";
 
-import { AuthBoundary } from "~/boundaries.tsx";
+import { AppBoundary, AuthBoundary } from "~/boundaries.tsx";
 import { Settings } from "~/components/settings.tsx";
 import { readPrefetch, toDefaultPreload } from "~/settings.ts";
 import appCss from "~/styles.css?url";
@@ -100,7 +100,9 @@ function RootDocument(props: { readonly children: ReactNode }) {
 					>
 						{/* In development, a component reading an atom no loader started throws. */}
 						<WaterfallDetection mode="throw">
-							<AuthBoundary>{props.children}</AuthBoundary>
+							<AppBoundary>
+								<AuthBoundary>{props.children}</AuthBoundary>
+							</AppBoundary>
 						</WaterfallDetection>
 					</main>
 					<SiteFooter />

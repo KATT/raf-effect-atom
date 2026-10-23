@@ -15,7 +15,7 @@ import { WaterfallDetection } from "raf-effect-atom";
 import { RegistryProvider } from "raf-effect-atom/next";
 import type { ReactNode } from "react";
 
-import { AuthBoundary } from "~/boundaries.tsx";
+import { AppBoundary, AuthBoundary } from "~/boundaries.tsx";
 import { Header } from "~/components/header.tsx";
 import { SettingsProvider } from "~/components/settings.tsx";
 import { parseSettings } from "~/settings.ts";
@@ -68,7 +68,9 @@ export default async function RootLayout(props: {
 							<SettingsProvider prefetch={settings.prefetch}>
 								<Header settings={settings} />
 								<main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
-									<AuthBoundary>{props.children}</AuthBoundary>
+									<AppBoundary>
+										<AuthBoundary>{props.children}</AuthBoundary>
+									</AppBoundary>
 								</main>
 							</SettingsProvider>
 						</WaterfallDetection>

@@ -11,13 +11,11 @@ import type { LoaderVerb } from "@examples/kit/lib/loader-verb";
 import { Card } from "@examples/ui/components/card";
 import { cn } from "@examples/ui/lib/utils";
 import { Link } from "@tanstack/react-router";
-import { AsyncResult } from "effect/reactivity";
 import { RegistryContext } from "@effect/atom-react";
 import { Loader, useAtomResult } from "raf-effect-atom";
 import { Suspense, use, useState } from "react";
 
 import { useAuthBoundary } from "~/boundaries.tsx";
-import { LoadFailed } from "~/components/load-failed.tsx";
 import { StatusSelect } from "~/components/status-select.tsx";
 import { issuePage } from "~/issues.ts";
 
@@ -51,9 +49,6 @@ function IssuePage(props: {
 	);
 	const [more, setMore] = useState(false);
 	const registry = use(RegistryContext);
-	if (!AsyncResult.isSuccess(result)) {
-		return <LoadFailed result={result} />;
-	}
 	const page = result.value;
 	const next = page.nextCursor;
 	const shown = props.cursor + page.issues.length;

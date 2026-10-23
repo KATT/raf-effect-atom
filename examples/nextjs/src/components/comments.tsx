@@ -17,12 +17,10 @@ import { warnMockDbWrite } from "@examples/kit/lib/mock-db-toast";
 import { RegistryContext, useAtomSet } from "@effect/atom-react";
 import { useForm } from "@tanstack/react-form";
 import { Cause, DateTime, Exit, Option, Predicate } from "effect";
-import { AsyncResult } from "effect/reactivity";
 import { Loader, useAtomResult } from "raf-effect-atom";
 import { Suspense, use, useState } from "react";
 
 import { useIssueBoundary } from "~/boundaries.tsx";
-import { LoadFailed } from "~/components/load-failed.tsx";
 import { addComment, commentPage, refreshIssues } from "~/issues.ts";
 
 /** The author a comment shows while it saves; the server sets the real one. */
@@ -49,9 +47,6 @@ function CommentPage(props: {
 	);
 	const [more, setMore] = useState(false);
 	const registry = use(RegistryContext);
-	if (!AsyncResult.isSuccess(result)) {
-		return <LoadFailed result={result} />;
-	}
 	const page = result.value;
 	const next = page.nextCursor;
 	return (
