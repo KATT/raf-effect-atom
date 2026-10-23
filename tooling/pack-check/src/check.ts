@@ -101,7 +101,7 @@ export const reactServerTargets = (
 			)
 		: [];
 
-/** `src/Hooks.ts` is built to `dist/Hooks.mjs` (`vp pack` with `unbundle`). */
+/** `src/use-atom-result.ts` is built to `dist/use-atom-result.mjs` (`vp pack` with `unbundle`). */
 export const builtFile = (source: string) =>
 	source.replace(/^src\//, "dist/").replace(/\.tsx?$/, ".mjs");
 

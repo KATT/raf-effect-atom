@@ -17,7 +17,7 @@ import {
 	atomsMiddleware,
 	clientAtomsMiddleware,
 	type RequestAtoms,
-} from "../src/ReactRouter.ts";
+} from "../src/react-router.ts";
 import { counter, issue } from "../test/fixtures/issues.ts";
 
 const atomsContext = createContext<RequestAtoms>();

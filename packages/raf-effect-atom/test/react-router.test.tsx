@@ -29,7 +29,7 @@ import {
 	atomsMiddleware,
 	clientAtomsMiddleware,
 	type RequestAtoms,
-} from "../src/ReactRouter.ts";
+} from "../src/react-router.ts";
 import { settle } from "./fixtures/browser.tsx";
 import {
 	counter,

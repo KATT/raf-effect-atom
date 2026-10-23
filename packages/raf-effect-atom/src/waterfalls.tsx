@@ -13,7 +13,7 @@ import * as Predicate from "effect/Predicate";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import * as React from "react";
 
-import type { ArgsOf, Handle, Source } from "./Handle.ts";
+import type { ArgsOf, Handle, Source } from "./handle.ts";
 import { hydrated } from "./Hydration.ts";
 import * as Handles from "./internal/handles.ts";
 import * as Leases from "./internal/leases.ts";

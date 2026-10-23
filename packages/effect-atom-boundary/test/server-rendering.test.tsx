@@ -17,7 +17,7 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToReadableStream } from "react-dom/server";
 
 import { AtomErrorBoundary, createErrorBoundary } from "../src/index.ts";
-import { hydratedIssue, Issues, serve } from "./fixtures/Issues.ts";
+import { hydratedIssue, Issues, serve } from "./fixtures/issues.ts";
 
 const [AuthBoundary, useAuthBoundary] = createErrorBoundary({
 	catchTags: {

@@ -11,7 +11,7 @@ import {
 } from "./check.ts";
 
 const manifest: Manifest = {
-	exports: { ".": "./dist/index.mjs", "./next": "./dist/Next.mjs" },
+	exports: { ".": "./dist/index.mjs", "./rsc": "./dist/rsc.mjs" },
 	name: "lib",
 	peerDependencies: { effect: "^4.0.6" },
 	version: "1.0.0",
@@ -20,16 +20,16 @@ const manifest: Manifest = {
 const files = [
 	"LICENSE",
 	"README.md",
-	"dist/Hooks.mjs",
-	"dist/Next.d.mts",
-	"dist/Next.mjs",
+	"dist/use-atom-result.mjs",
+	"dist/rsc.d.mts",
+	"dist/rsc.mjs",
 	"dist/index.d.mts",
 	"dist/index.mjs",
 	"package.json",
 ];
 
 const tarball = (overrides: Partial<Tarball> = {}): Tarball => ({
-	clientModules: new Set(["dist/Hooks.mjs"]),
+	clientModules: new Set(["dist/use-atom-result.mjs"]),
 	files,
 	manifest,
 	...overrides,
@@ -37,7 +37,10 @@ const tarball = (overrides: Partial<Tarball> = {}): Tarball => ({
 
 describe("tarballProblems", () => {
 	it("passes a complete tarball", () => {
-		assert.deepStrictEqual(tarballProblems(tarball(), ["src/Hooks.ts"]), []);
+		assert.deepStrictEqual(
+			tarballProblems(tarball(), ["src/use-atom-result.ts"]),
+			[],
+		);
 	});
 
 	it("reports a missing LICENSE", () => {
@@ -77,8 +80,8 @@ describe("tarballProblems", () => {
 						...manifest,
 						exports: {
 							".": "./src/index.ts",
-							"./gone": { default: "./dist/Gone.mjs" },
-							"./next": "./dist/Next.mjs",
+							"./gone": { default: "./dist/gone.mjs" },
+							"./rsc": "./dist/rsc.mjs",
 						},
 					},
 				}),
@@ -86,7 +89,7 @@ describe("tarballProblems", () => {
 			),
 			[
 				"exports points at ./src/index.ts, outside dist/: publishConfig.exports wasn't applied.",
-				"exports points at ./dist/Gone.mjs, which isn't in the tarball.",
+				"exports points at ./dist/gone.mjs, which isn't in the tarball.",
 			],
 		);
 	});
@@ -94,22 +97,22 @@ describe("tarballProblems", () => {
 	it("reports an entry without declarations", () => {
 		assert.deepStrictEqual(
 			tarballProblems(
-				tarball({ files: files.filter((file) => file !== "dist/Next.d.mts") }),
+				tarball({ files: files.filter((file) => file !== "dist/rsc.d.mts") }),
 				[],
 			),
-			["./dist/Next.mjs has no type declarations next to it (.d.mts)."],
+			["./dist/rsc.mjs has no type declarations next to it (.d.mts)."],
 		);
 	});
 
 	it('reports a client module that lost "use client"', () => {
 		assert.deepStrictEqual(
 			tarballProblems(tarball({ clientModules: new Set() }), [
-				"src/Hooks.ts",
-				"src/Gone.tsx",
+				"src/use-atom-result.ts",
+				"src/gone.tsx",
 			]),
 			[
-				'src/Hooks.ts starts with "use client" but dist/Hooks.mjs lost the directive.',
-				'src/Gone.tsx starts with "use client" but dist/Gone.mjs isn\'t in the tarball.',
+				'src/use-atom-result.ts starts with "use client" but dist/use-atom-result.mjs lost the directive.',
+				'src/gone.tsx starts with "use client" but dist/gone.mjs isn\'t in the tarball.',
 			],
 		);
 	});
@@ -123,12 +126,12 @@ describe("reactServerTargets", () => {
 				exports: {
 					".": {
 						default: "./dist/index.mjs",
-						"react-server": "./dist/index.react-server.mjs",
+						"react-server": "./dist/index-react-server.mjs",
 					},
-					"./next": "./dist/Next.mjs",
+					"./rsc": "./dist/rsc.mjs",
 				},
 			}),
-			[{ specifier: "lib", target: "./dist/index.react-server.mjs" }],
+			[{ specifier: "lib", target: "./dist/index-react-server.mjs" }],
 		);
 	});
 
@@ -139,7 +142,7 @@ describe("reactServerTargets", () => {
 
 describe("specifiers", () => {
 	it("names each subpath export", () => {
-		assert.deepStrictEqual(specifiers(manifest), ["lib", "lib/next"]);
+		assert.deepStrictEqual(specifiers(manifest), ["lib", "lib/rsc"]);
 	});
 
 	it("names the package when exports is a single target", () => {

@@ -11,7 +11,7 @@ import * as Hydration from "./Hydration.ts";
 import {
 	HydrationBoundary as ClientHydrationBoundary,
 	type HydrationBoundaryProps,
-} from "./ReactHydration.tsx";
+} from "./hydration-boundary.tsx";
 import * as RequestRegistry from "./RequestRegistry.ts";
 
 /**

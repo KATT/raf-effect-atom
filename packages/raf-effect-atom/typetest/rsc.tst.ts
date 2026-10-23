@@ -3,7 +3,7 @@ import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import { describe, expect, it } from "tstyche";
 
 import { type Handle, type LoadedHandle, Loader } from "../src/index.ts";
-import * as Rsc from "../src/Rsc.ts";
+import * as Rsc from "../src/rsc.ts";
 import { issue } from "../test/fixtures/issues.ts";
 
 describe("raf-effect-atom/rsc", () => {

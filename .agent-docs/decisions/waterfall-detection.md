@@ -17,4 +17,4 @@
   - registry options (the integrations own the registries);
   - `throw` as the default (too abrupt for existing apps; the docs recommend it);
   - a per-atom opt-out (a waterfall is about the read site, not the atom).
-- Files: `packages/raf-effect-atom/src/{Waterfalls.tsx,internal/waterfalls.ts,Hooks.ts}`, `test/Waterfalls.test.tsx`, `www/content/request-waterfalls.md`.
+- Files: `packages/raf-effect-atom/src/{waterfalls.tsx,internal/waterfalls.ts,use-atom-result.ts}`, `test/waterfalls.test.tsx`, `www/content/request-waterfalls.md`.

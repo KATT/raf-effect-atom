@@ -20,14 +20,14 @@ import {
 	type CatchTags,
 	createErrorBoundary,
 } from "../src/index.ts";
-import { CompiledNotFound, type IssueNotFound } from "./fixtures/Handlers.tsx";
+import { CompiledNotFound, type IssueNotFound } from "./fixtures/handlers.tsx";
 import {
 	issue,
 	Issues,
 	keyedIssue,
 	remadeIssue,
 	serve,
-} from "./fixtures/Issues.ts";
+} from "./fixtures/issues.ts";
 
 const [OfflineBoundary, useOfflineBoundary] = createErrorBoundary({
 	catchTags: { Offline: () => <p>Offline</p> },

@@ -17,7 +17,7 @@ import {
 	type ErrorsOf,
 	type UseErrorBoundary,
 } from "../src/index.ts";
-import { issue, Issues, user } from "../test/fixtures/Issues.ts";
+import { issue, Issues, user } from "../test/fixtures/issues.ts";
 
 // The UI side imports the client and its atoms, never an error class: every
 // error type below comes from the atoms.

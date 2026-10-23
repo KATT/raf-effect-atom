@@ -13,7 +13,7 @@ import * as Atom from "effect/reactivity/Atom";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 
 import { type LoadedHandle, Loader, RequestRegistry } from "../src/index.ts";
-import { makeRegistry, setupRouterAtoms } from "../src/TanStackRouter.tsx";
+import { makeRegistry, setupRouterAtoms } from "../src/tanstack-router.tsx";
 import {
 	counter,
 	gated,

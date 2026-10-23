@@ -31,8 +31,8 @@ import {
 	TypeId,
 	type UseErrorBoundary,
 	type Variance,
-} from "./Claim.ts";
-import * as FailedReads from "./internal/failedReads.ts";
+} from "./claim.ts";
+import * as FailedReads from "./internal/failed-reads.ts";
 import * as Prerender from "./internal/prerender.tsx";
 import * as Refresh from "./internal/refresh.ts";
 import { variance } from "./internal/variance.ts";

@@ -12,17 +12,17 @@ import {
 	renderToReadableStream,
 } from "react-server-dom-webpack/server";
 
-import type { LoadedHandle } from "../src/Handle.ts";
+import type { LoadedHandle } from "../src/handle.ts";
 import {
 	Hydration,
 	HydrationBoundary,
 	Loader,
 	RequestRegistry,
 	useAtomResult,
-} from "../src/index.react-server.ts";
+} from "../src/index-react-server.ts";
 import * as Pending from "../src/internal/pending.ts";
 import * as RscInternal from "../src/internal/rsc.ts";
-import { HydrationBoundary as ServerHydrationBoundary } from "../src/ReactHydration.react-server.tsx";
+import { HydrationBoundary as ServerHydrationBoundary } from "../src/hydration-boundary-react-server.tsx";
 import {
 	counter,
 	gated,

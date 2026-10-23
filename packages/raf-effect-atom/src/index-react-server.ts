@@ -9,9 +9,9 @@
 /**
  * @since 0.3.0
  */
-export * from "./index.shared.ts";
+export * from "./index-shared.ts";
 
 /**
  * @since 0.3.0
  */
-export { HydrationBoundary } from "./ReactHydration.react-server.tsx";
+export { HydrationBoundary } from "./hydration-boundary-react-server.tsx";

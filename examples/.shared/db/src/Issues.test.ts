@@ -10,7 +10,7 @@ import { ConfigProvider, DateTime, Effect, Fiber, Layer } from "effect";
 import { TestClock } from "effect/testing";
 
 import { DbLatency, Issues } from "./Issues.ts";
-import { exampleUser } from "./Seed.ts";
+import { exampleUser } from "./seed.ts";
 
 const TestLayer = Layer.merge(Issues.layerTest, Layer.succeed(DbLatency)(0));
 

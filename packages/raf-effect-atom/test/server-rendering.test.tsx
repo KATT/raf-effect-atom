@@ -16,7 +16,7 @@ import {
 	RequestRegistry,
 	useAtomResult,
 } from "../src/index.ts";
-import { makeRegistry } from "../src/TanStackRouter.tsx";
+import { makeRegistry } from "../src/tanstack-router.tsx";
 import { issue, serve, unloaded } from "./fixtures/issues.ts";
 import { load } from "./fixtures/server.ts";
 import { wire } from "./fixtures/wire.ts";

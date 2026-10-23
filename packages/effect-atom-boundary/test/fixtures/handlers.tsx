@@ -1,7 +1,7 @@
 import type * as Atom from "effect/reactivity/Atom";
 
 import type { CatchTagProps } from "../../src/index.ts";
-import type { issue } from "./Issues.ts";
+import type { issue } from "./issues.ts";
 
 export type IssueNotFound = Extract<
 	Atom.Failure<ReturnType<typeof issue>>,

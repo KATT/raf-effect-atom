@@ -14,7 +14,7 @@ import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
 import * as React from "react";
 
-import type { ErrorOf, Handle, Source, SuccessOf } from "./Handle.ts";
+import type { ErrorOf, Handle, Source, SuccessOf } from "./handle.ts";
 import { hydrated } from "./Hydration.ts";
 import * as Handles from "./internal/handles.ts";
 import * as Leases from "./internal/leases.ts";

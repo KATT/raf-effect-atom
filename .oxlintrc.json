@@ -518,26 +518,30 @@
 			}
 		},
 		{
-			// Effect's file names (.agent-docs/decisions/file-names.md): a module
-			// is PascalCase after what it exports, and its tests mirror it.
+			// File names (.agent-docs/decisions/file-names.md): kebab-case, as in
+			// raf-query; a module's tests mirror its name.
 			"files": [
-				"packages/*/src/*.{ts,tsx}",
-				"packages/*/test/*.test.{ts,tsx}",
-				"packages/*/typetest/*.tst.{ts,tsx}",
-				"examples/.shared/{contract,db,backend}/src/*.{ts,tsx}"
+				"packages/*/src/**/*.{ts,tsx}",
+				"packages/*/test/**/*.{ts,tsx}",
+				"packages/*/typetest/**/*.{ts,tsx}",
+				"examples/.shared/*/src/**/*.{ts,tsx}"
 			],
 			"rules": {
-				"unicorn/filename-case": ["error", { "case": "pascalCase" }]
+				"unicorn/filename-case": ["error", { "case": "kebabCase" }]
 			}
 		},
 		{
-			// Effect's internal modules are camelCase (`internal/dateTime.ts`).
+			// Effect-style namespace modules (`export * as Loader`, used as
+			// `Loader.make`) and the Effect services, Layers and Schemas of the
+			// example backend keep Effect's PascalCase, and so do their tests.
 			"files": [
-				"packages/*/src/internal/**/*.{ts,tsx}",
-				"examples/.shared/{contract,db,backend}/src/internal/**/*.{ts,tsx}"
+				"packages/raf-effect-atom/{src,test,typetest}/{Hydration,Loader,RequestRegistry}.*",
+				"examples/.shared/contract/src/{Authorization,Issue,IssueErrors,IssueRpcs,Latency}.*",
+				"examples/.shared/backend/src/{Authorization,IssueHandlers,Latency,RpcRoutes}.*",
+				"examples/.shared/db/src/Issues.*"
 			],
 			"rules": {
-				"unicorn/filename-case": ["error", { "case": "camelCase" }]
+				"unicorn/filename-case": ["error", { "case": "pascalCase" }]
 			}
 		},
 		{
