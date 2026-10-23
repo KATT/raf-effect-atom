@@ -22,11 +22,14 @@ export {
 	 * @since 0.1.0
 	 */
 	HydrateAtoms,
+} from "./NextClient.tsx";
+
+export {
 	/**
 	 * @since 0.1.0
 	 */
 	RegistryProvider,
-} from "./NextClient.tsx";
+} from "./RegistryProvider.tsx";
 
 /**
  * Returns the request registry of the server render in progress.
