@@ -55,6 +55,14 @@ Each request has its own registry, so `ensure` waits like `fetch` and nothing re
 
 In development, a verb fails fast when a loader on the server starts an atom without a serialization key, since the browser would request it again.
 
+## Aborted requests
+
+When a navigation is left while its loaders wait, because another one interrupted it or the browser closed the request, `ensure` and `fetch` stop waiting and reject with the abort reason, which the router ignores. The atoms they started keep loading, in the browser's registry or until the request's registry is disposed. Nothing changes in the loaders:
+
+- On React Router, the [middleware](https://reactrouter.com/how-to/middleware) `atomsMiddleware` gives the verbs the server request's [`signal`](https://developer.mozilla.org/en-US/docs/Web/API/Request/signal), and `clientAtomsMiddleware` gives client loaders the navigation's.
+- On Next.js, the verbs take React's [`cacheSignal`](https://react.dev/reference/react/cacheSignal), which aborts with the server component render.
+- Another integration passes its own: `Loader.make(registry, { signal })`.
+
 ## In Effect code
 
 The verbs are Effects that need an `AtomRegistry`. The framework integrations put them on the router context as Promises, through `Loader.make(registry)`, because loaders are async functions.
