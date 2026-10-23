@@ -1,6 +1,6 @@
 {
 	"name": "raf-effect-atom",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Render-as-you-fetch for Effect Atom: start atoms from route loaders and stream them into the browser, typed failures intact",
 	"keywords": [
 		"effect",
