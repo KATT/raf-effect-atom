@@ -15,6 +15,8 @@ import type * as Hydration from "effect/reactivity/Hydration";
 import * as React from "react";
 
 import * as Pending from "./internal/pending.ts";
+import * as Registry from "./internal/registry.ts";
+import * as Sources from "./internal/sources.ts";
 
 /**
  * Props for `HydrationBoundary`.
@@ -46,6 +48,12 @@ export interface HydrationBoundaryProps {
  * streamed result is held until it arrives, so `useAtomResult` waits for it
  * instead of requesting it again.
  *
+ * During server rendering, when `state` is the array `dehydrate` returned,
+ * as React Router passes a loader's data to the server render, the children
+ * read the registry it came from instead of a copy. The loaders' atoms are
+ * there, so an `effect-atom-boundary` boundary sees their failures before
+ * its children read them and renders its handler on the server.
+ *
  * **Example**
  *
  * ```tsx
@@ -63,17 +71,24 @@ export interface HydrationBoundaryProps {
 export const HydrationBoundary = (
 	props: HydrationBoundaryProps,
 ): React.ReactNode => {
-	const registry = React.useContext(RegistryContext);
+	const context = React.useContext(RegistryContext);
 	const state = props.state;
+	const source = Registry.isServer() ? Sources.sourceOf(state) : undefined;
+	const registry = source ?? context;
 	// Holding a streamed result must happen in render, before the children
 	// read it; it's idempotent per entry.
 	const settled = React.useMemo(
-		() => (state === undefined ? undefined : Pending.split(registry, state)),
-		[registry, state],
+		() =>
+			state === undefined || source !== undefined
+				? undefined
+				: Pending.split(registry, state),
+		[registry, source, state],
 	);
 	return (
-		<AtomHydrationBoundary state={settled}>
-			{props.children}
-		</AtomHydrationBoundary>
+		<RegistryContext.Provider value={registry}>
+			<AtomHydrationBoundary state={settled}>
+				{props.children}
+			</AtomHydrationBoundary>
+		</RegistryContext.Provider>
 	);
 };

@@ -23,6 +23,7 @@ import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import * as EffectHydration from "effect/reactivity/Hydration";
 
 import * as Pending from "./internal/pending.ts";
+import * as Sources from "./internal/sources.ts";
 
 const copies = new WeakMap<Atom.Atom<unknown>, Atom.Atom<unknown>>();
 
@@ -118,7 +119,10 @@ export const hydrated = <Self extends Atom.Atom<unknown>>(atom: Self): Self => {
 export const dehydrate = (
 	registry: AtomRegistry.AtomRegistry,
 ): Array<EffectHydration.DehydratedAtom> =>
-	EffectHydration.dehydrate(registry, { encodeInitialAs: "promise" });
+	Sources.remember(
+		EffectHydration.dehydrate(registry, { encodeInitialAs: "promise" }),
+		registry,
+	);
 
 /**
  * Applies dehydrated state to the browser's registry.

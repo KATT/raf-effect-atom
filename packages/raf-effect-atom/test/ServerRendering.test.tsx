@@ -3,10 +3,17 @@ import { RegistryContext } from "@effect/atom-react";
 import { describe, expect, it } from "@effect/vitest";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
+import type * as EffectHydration from "effect/reactivity/Hydration";
 import * as React from "react";
 import { renderToString } from "react-dom/server";
 
-import { Loader, RequestRegistry, useAtomResult } from "../src/index.ts";
+import {
+	Hydration,
+	HydrationBoundary,
+	Loader,
+	RequestRegistry,
+	useAtomResult,
+} from "../src/index.ts";
 import { RegistryProvider } from "../src/Next.ts";
 import { makeRegistry } from "../src/TanStackRouter.tsx";
 import { issue, serve } from "./fixtures/issues.ts";
@@ -46,6 +53,44 @@ describe("useAtomResult on the server", () => {
 		);
 		expect(server.requests(1)).toBe(0);
 		registry.dispose();
+	});
+});
+
+/** Says whether it reads `source` or another registry. */
+const Reads = (props: { readonly source: AtomRegistry.AtomRegistry }) => (
+	<p>
+		{React.useContext(RegistryContext) === props.source ? "source" : "nearest"}
+	</p>
+);
+
+describe("HydrationBoundary on the server", () => {
+	const render = (
+		state: Iterable<EffectHydration.DehydratedAtom>,
+		source: AtomRegistry.AtomRegistry,
+	) => {
+		const nearest = RequestRegistry.make();
+		const html = renderToString(
+			<RegistryContext.Provider value={nearest}>
+				<HydrationBoundary state={state}>
+					<Reads source={source} />
+				</HydrationBoundary>
+			</RegistryContext.Provider>,
+		);
+		nearest.dispose();
+		return html;
+	};
+
+	it("reads the registry the loader data's state came from", async () => {
+		using _server = serve();
+		using loaded = await load(Loader.ensure(issue(1)));
+		const state = Hydration.dehydrate(loaded.registry);
+		expect(render(state, loaded.registry)).toContain("source");
+	});
+
+	it("hydrates the nearest registry with state that crossed a wire", async () => {
+		using _server = serve();
+		using loaded = await load(Loader.ensure(issue(1)));
+		expect(render(loaded.state, loaded.registry)).toContain("nearest");
 	});
 });
 
