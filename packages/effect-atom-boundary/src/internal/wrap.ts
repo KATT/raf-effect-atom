@@ -3,25 +3,26 @@ import * as Option from "effect/Option";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
 
+import type { Wrap } from "../Claim.ts";
 import * as FailedReads from "./failedReads.ts";
 
-/** @internal */
-export type Wrap<Tags extends string> = <A, E>(
-	atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-) => Atom.Atom<AsyncResult.AsyncResult<A, Exclude<E, { readonly _tag: Tags }>>>;
+// oxlint-disable-next-line typescript/no-explicit-any -- any atom's result
+type AnyAtom = Atom.Atom<AsyncResult.AsyncResult<any, any>>;
+
+type Family = (...args: ReadonlyArray<unknown>) => AnyAtom;
 
 /**
- * Returns a `wrap` for the errors `owns` claims, memoized per atom so a
- * component reads the same derived atom on every render.
+ * Returns a `wrap` for the errors `owns` claims, memoized per atom and per
+ * family so a component reads the same derived atom on every render.
  *
  * @internal
  */
 export const make = <Tags extends string>(
 	owns: (error: unknown) => boolean,
 ): Wrap<Tags> => {
-	// oxlint-disable-next-line typescript/no-explicit-any -- any atom's result
-	const wrapped = new WeakMap<Atom.Atom<any>, Atom.Atom<any>>();
-	return (source) => {
+	const wrapped = new WeakMap<AnyAtom, AnyAtom>();
+	const families = new WeakMap<Family, Family>();
+	const wrapAtom = (source: AnyAtom): AnyAtom => {
 		const cached = wrapped.get(source);
 		if (cached !== undefined) {
 			return cached;
@@ -53,4 +54,17 @@ export const make = <Tags extends string>(
 		wrapped.set(source, pointed);
 		return pointed;
 	};
+	const wrapFamily = (family: Family): Family => {
+		const cached = families.get(family);
+		if (cached !== undefined) {
+			return cached;
+		}
+		const made: Family = (...args) => wrapAtom(family(...args));
+		families.set(family, made);
+		return made;
+	};
+	// SAFETY: the overloads type what each branch returns: a wrapped atom for
+	// an atom, a family of wrapped atoms for a family.
+	return ((source: AnyAtom | Family) =>
+		Atom.isAtom(source) ? wrapAtom(source) : wrapFamily(source)) as Wrap<Tags>;
 };

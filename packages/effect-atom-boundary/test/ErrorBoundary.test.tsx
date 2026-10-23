@@ -83,7 +83,7 @@ function Title(props: TitleProps) {
 
 function ClaimedTitle(props: TitleProps) {
 	const of = props.of ?? issue;
-	const result = useRead(useAuthBoundary().wrap(of(props.id)));
+	const result = useRead(useAuthBoundary().wrap(of)(props.id));
 	if (AsyncResult.isSuccess(result)) {
 		return <p>{result.value.title}</p>;
 	}
@@ -371,6 +371,31 @@ describe("createErrorBoundary", () => {
 		expect(screen.getByText("Same")).toBeDefined();
 		const claimed = AtomErrorBoundary.claim(issue(1));
 		expect(AtomErrorBoundary.claim(issue(1))).toBe(claimed);
+	});
+
+	it("wraps a family once, into a family of the atoms' wrappers", async () => {
+		using _server = serve();
+		using app = mount();
+		function Same() {
+			const claims = useAuthBoundary();
+			const family = claims.wrap(issue);
+			const same =
+				claims.wrap(issue) === family &&
+				family(1) === claims.wrap(issue(1)) &&
+				family(2) !== family(1);
+			return <p>{same ? "Same" : "Different"}</p>;
+		}
+		await app.render(
+			<OfflineBoundary>
+				<AuthBoundary>
+					<Same />
+				</AuthBoundary>
+			</OfflineBoundary>,
+		);
+		expect(screen.getByText("Same")).toBeDefined();
+		const claimed = AtomErrorBoundary.claim(issue);
+		expect(AtomErrorBoundary.claim(issue)).toBe(claimed);
+		expect(claimed(1)).toBe(AtomErrorBoundary.claim(issue(1)));
 	});
 
 	it("points the wrapper at the atom it wraps, not past it", () => {
