@@ -12,7 +12,7 @@
   - Keyed per request: `RequestRegistry`'s marks, leases, pending and streamed results, seeds, `sources`, waterfall warnings (per registry) and errors (per node), `Loader.result`'s results (per handle object).
   - Definitions only: `Hydration.hydrated`'s copies (atom to copy), `wrap`'s per-boundary atom and family memos, `createErrorBoundary`'s component internals, `ModeContext`, `LeaseTTL`, and the never-resolving promise `Prerendered` suspends on, which only the browser renders.
   - Per request through React: `raf-effect-atom/next`'s `React.cache` registry.
-  - Browser only: `internal/registry.ts`'s `mounted` registry for `clientAtomsMiddleware`, set from `RegistryProvider`'s effect, which never runs on the server, and `ReactRouter`'s `browserAtoms`, keyed by that registry.
+  - Browser only: `internal/registry.ts`'s `mounted` registry for `clientAtomsMiddleware`, set from `RegistryProvider`'s effect, which never runs on the server.
 - **Limits accepted:**
   - The request-registry guards are development-only, like `useAtomResult`'s, so production pays nothing for them.
   - `RequestRegistry.layer` built into a long-lived runtime is one registry for every request. That's how Layer memoization works, not module state.
