@@ -7,6 +7,7 @@ import * as React from "react";
 import { renderToString } from "react-dom/server";
 
 import { Loader, RequestRegistry, useAtomResult } from "../src/index.ts";
+import { RegistryProvider } from "../src/next.ts";
 import { makeRegistry } from "../src/tanstack-router.tsx";
 import { issue, serve } from "./fixtures/issues.ts";
 import { load } from "./fixtures/server.ts";
@@ -53,5 +54,20 @@ describe("makeRegistry on the server", () => {
 		const registry = makeRegistry();
 		expect(RequestRegistry.isRequestRegistry(registry)).toBe(true);
 		registry.dispose();
+	});
+});
+
+describe("raf-effect-atom/next's RegistryProvider on the server", () => {
+	it("renders client components with a request registry", () => {
+		using server = serve();
+		const tree = (
+			<RegistryProvider>
+				<React.Suspense fallback={<p>Loading</p>}>
+					<Title id={1} />
+				</React.Suspense>
+			</RegistryProvider>
+		);
+		expect(renderToString(tree)).toContain("Loading");
+		expect(server.requests(1)).toBe(1);
 	});
 });

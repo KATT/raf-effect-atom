@@ -28,14 +28,15 @@
  * @stability unstable
  * @since 0.1.0
  */
-import { RegistryContext, scheduleTask } from "@effect/atom-react";
+import { RegistryContext } from "@effect/atom-react";
 import type { AnyRouter } from "@tanstack/react-router";
 import * as Predicate from "effect/Predicate";
-import * as AtomRegistry from "effect/reactivity/AtomRegistry";
+import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as EffectHydration from "effect/reactivity/Hydration";
 import * as React from "react";
 
 import * as Hydration from "./hydration.ts";
+import * as Registry from "./internal/registry.ts";
 import * as RequestRegistry from "./request-registry.ts";
 
 /**
@@ -77,10 +78,7 @@ export interface RouterAtomsOptions<TRouter extends AnyRouter> {
  * @category constructors
  * @since 0.1.0
  */
-export const makeRegistry = (): AtomRegistry.AtomRegistry =>
-	"window" in globalThis
-		? AtomRegistry.make({ defaultIdleTTL: 400, scheduleTask })
-		: RequestRegistry.make();
+export const makeRegistry: () => AtomRegistry.AtomRegistry = Registry.make;
 
 const hasRouterAtoms = (value: unknown): value is DehydratedRouterAtoms =>
 	Predicate.hasProperty(value, "raf-effect-atom") &&

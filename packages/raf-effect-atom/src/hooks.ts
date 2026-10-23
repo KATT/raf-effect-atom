@@ -18,6 +18,7 @@ import { hydrated } from "./hydration.ts";
 import { isDevelopment } from "./internal/development.ts";
 import * as Leases from "./internal/leases.ts";
 import * as Pending from "./internal/pending.ts";
+import * as Registry from "./internal/registry.ts";
 import type { SettledResult } from "./loader.ts";
 import { isRequestRegistry } from "./request-registry.ts";
 
@@ -80,7 +81,7 @@ export function useAtomResult<A, E>(
 ): ClaimedResult<A, E, string> | SettledResult<A, E> {
 	const registry = React.useContext(RegistryContext);
 	if (
-		!("window" in globalThis) &&
+		Registry.isServer() &&
 		!isRequestRegistry(registry) &&
 		Effect.runSync(isDevelopment)
 	) {
