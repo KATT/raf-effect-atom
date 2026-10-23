@@ -52,13 +52,16 @@ export class IssuesClient extends AtomRpc.Service<IssuesClient>()(
 		protocol: (get) => {
 			const cookie = get(requestCookie);
 			return RpcClient.layerProtocolHttp({
-				transformClient:
-					cookie === undefined
-						? undefined
-						: HttpClient.mapRequest((request) =>
-								HttpClientRequest.setHeader(request, "cookie", cookie),
-							),
-				url: rpcTransport.url,
+				// `url` is joined with each request's empty path as `/rpc/`, which
+				// Next.js redirects to `/rpc` (308), so the request gets the whole
+				// URL instead.
+				transformClient: HttpClient.mapRequest((request) => {
+					const sent = HttpClientRequest.setUrl(request, rpcTransport.url);
+					return cookie === undefined
+						? sent
+						: HttpClientRequest.setHeader(sent, "cookie", cookie);
+				}),
+				url: "",
 			}).pipe(Layer.provide([RpcSerialization.layerJson, httpClient]));
 		},
 	},
