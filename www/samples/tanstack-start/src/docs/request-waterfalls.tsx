@@ -1,4 +1,8 @@
 import type { IssueId, UserId } from "@examples/contract";
+import {
+	createRootRouteWithContext,
+	createRoute,
+} from "@tanstack/react-router";
 import { Effect } from "effect";
 import { AsyncResult } from "effect/reactivity";
 import {
@@ -15,6 +19,8 @@ import { assignee, issue, searchIssues } from "~/issues.ts";
 
 declare const atoms: Loader.Loader;
 declare const id: IssueId;
+/** What a one-time token grants. It only runs in the browser. */
+declare const connection: (token: string) => ReturnType<typeof issue>;
 /** A user by id, from an API the app can't reshape. */
 declare const user: (id: UserId) => ReturnType<typeof assignee>;
 /** `value`, once it has stopped changing for `ms`. */
@@ -81,6 +87,43 @@ const userHandle = AsyncResult.isSuccess(found)
 	? atoms.prefetch(user, found.value.assigneeId)
 	: undefined;
 // #endregion dependent
+
+// #region browser-only
+// The router's context: getRouter reads `entry` from the URL fragment in the
+// browser, and erases it there. On the server it's undefined.
+const appRoot = createRootRouteWithContext<{
+	readonly atoms: Loader.Loader;
+	readonly entry: { readonly token: string } | undefined;
+}>()();
+
+const connectRoute = createRoute({
+	getParentRoute: () => appRoot,
+	path: "/connect",
+	// The server renders the pending component; the loader and the page run
+	// in the browser, where the token is.
+	ssr: false,
+	pendingComponent: () => <p>Opening the connection…</p>,
+	loader: ({ context }) => ({
+		connection:
+			context.entry === undefined
+				? undefined
+				: context.atoms.prefetch(connection, context.entry.token),
+	}),
+});
+
+// The page passes the loader's handle down, as for any other route.
+function Connection(props: { connection: Handle<typeof connection> }) {
+	const result = useAtomResult(
+		useAuthBoundary().wrap(connection),
+		props.connection,
+	);
+	return AsyncResult.isSuccess(result) ? (
+		<h1>{result.value.title}</h1>
+	) : (
+		<p>This link has expired.</p>
+	);
+}
+// #endregion browser-only
 
 // #region event-handler
 // Each keystroke doesn't belong in the URL, so a debounce starts the search

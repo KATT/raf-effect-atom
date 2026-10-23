@@ -100,6 +100,19 @@ Loaders start what the URL names. The example apps' issue list keeps its status 
 > [!TIP]
 > A page number, a filter, the selected item or a dialog that shows data goes in the URL: in search params ([TanStack Router](https://tanstack.com/router/latest/docs/framework/react/guide/search-params), [Next.js](https://nextjs.org/docs/app/api-reference/file-conventions/page#searchparams-optional), [React Router](https://reactrouter.com/api/hooks/useSearchParams)), or for a dialog, in a route of its own, shown over the page with [route masking](https://tanstack.com/router/latest/docs/framework/react/guide/route-masking) in TanStack Router or [parallel](https://nextjs.org/docs/app/api-reference/file-conventions/parallel-routes#modals) and [intercepting routes](https://nextjs.org/docs/app/api-reference/file-conventions/intercepting-routes) in Next.js. The loader then starts its atoms with the page's, and a link opens it, a reload keeps it and the back button closes it.
 
+## Inputs only the browser has
+
+Some inputs never reach the server: a one-time token in the URL's fragment, or an OAuth callback the browser erases from the address bar before anything reads it. A loader on the server can't start what they pick, and setting them in an atom after hydration starts the read during a render instead.
+
+On TanStack Start, make the route client-only with [`ssr: false`](https://tanstack.com/start/latest/docs/framework/react/guide/selective-ssr#ssr-false). The server renders its `pendingComponent`. In the browser, the router runs its loader before the page renders, during hydration or the navigation. The browser's `getRouter` reads the input, erases it from the URL and puts it in the router context, and the loader starts the atom with it as the family's argument:
+
+```sample
+tanstack-start/src/docs/request-waterfalls.tsx#browser-only
+```
+
+- The atom needs no serialization key, since the server never starts it.
+- An input that can arrive on any page, such as a pairing link, gets a client-only route of its own. That route's loader uses it and redirects.
+
 ## Escape hatches
 
 What's left is state that shouldn't be in the URL, such as each keystroke in a search box. Two escape hatches start its atoms, and both start the request later than a loader would.
@@ -160,5 +173,6 @@ Lazy route components are another waterfall: the code has to download before it 
 - Put the state that picks data in the URL: search params, and routes for dialogs.
 - Start every atom before awaiting any, and give `Effect.all` a `concurrency`.
 - Shape data so a route's inputs come from the URL, not from other atoms.
+- Start what browser-only inputs pick, such as a token in the URL's fragment, in a client-only route's loader.
 - For state that can't be in the URL, start atoms in the event handler that changes it, or with `useWaterfall`, and treat each one as a known cost.
 - Keep `<WaterfallDetection mode="throw">` in the root layout, so development finds the rest.
