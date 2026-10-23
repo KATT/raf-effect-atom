@@ -1,8 +1,11 @@
 import { Button } from "@examples/ui/components/button";
 import { Predicate } from "effect";
+import { type CatchTagProps, createErrorBoundary } from "effect-atom-boundary";
+import type { RpcClientError } from "effect/rpc";
 import { RotateCcw } from "lucide-react";
 import { Component, createContext, type ReactNode, useContext } from "react";
 
+import { IssuesClient } from "./client.ts";
 import { ErrorNotice } from "./controls.tsx";
 
 /** Starts the demo over: a new registry, and with it a new worker. */
@@ -58,7 +61,34 @@ class Uncaught extends Component<
  * frame puts one around every demo; a demo puts its own around the part
  * that can fail, to keep its diagrams in view.
  */
-export function AppBoundary(props: { readonly children: ReactNode }) {
+export function AppErrorBoundary(props: { readonly children: ReactNode }) {
 	const startOver = useContext(StartOverContext);
 	return <Uncaught onStartOver={startOver}>{props.children}</Uncaught>;
 }
+
+function Unreachable(props: CatchTagProps<RpcClientError.RpcClientError>) {
+	return (
+		<ErrorNotice
+			action={
+				<Button onClick={props.reset} size="xs" variant="outline">
+					Try again
+				</Button>
+			}
+			caughtBy="<AppBoundary>"
+			type="RpcClientError"
+		>
+			Can’t reach the server.
+		</ErrorNotice>
+	);
+}
+
+/**
+ * The boundary around the demo's app, under its error boundary: it claims
+ * `RpcClientError`, which every procedure fails with when the request
+ * doesn't reach the server.
+ */
+export const [AppBoundary] = createErrorBoundary({
+	catchTags: { RpcClientError: Unreachable },
+	errors: IssuesClient,
+	name: "App",
+});

@@ -1,17 +1,18 @@
 import { Button } from "@examples/ui/components/button";
 import { Skeleton } from "@examples/ui/components/skeleton";
 import { IssueId, IssueNotFound, Unauthorized } from "@examples/contract";
-import { Match, Option } from "effect";
 import { type CatchTagProps, createErrorBoundary } from "effect-atom-boundary";
-import { AsyncResult } from "effect/reactivity";
-import type { RpcClientError } from "effect/rpc";
 import { useAtomResult } from "raf-effect-atom";
 import { Suspense, useState } from "react";
 
-import { AppBoundary } from "~/demo-kit/app-boundary.tsx";
+import { AppBoundary, AppErrorBoundary } from "~/demo-kit/app-boundary.tsx";
 import { BoundaryChain } from "~/demo-kit/boundary-chain.tsx";
 import { IssuesClient } from "~/demo-kit/client.ts";
-import { ErrorNotice, FailNextButton } from "~/demo-kit/controls.tsx";
+import {
+	DropNextButton,
+	ErrorNotice,
+	FailNextButton,
+} from "~/demo-kit/controls.tsx";
 import { defineDemo } from "~/demo-kit/define.ts";
 import { Crash } from "~/demo-kit/rpcs.ts";
 
@@ -53,6 +54,7 @@ const [AuthBoundary] = createErrorBoundary({
 	catchTags: { Unauthorized: SignedOut },
 	errors: IssuesClient,
 	name: "Auth",
+	parent: AppBoundary,
 });
 
 const [IssueBoundary, useIssueBoundary] = createErrorBoundary({
@@ -64,33 +66,16 @@ const [IssueBoundary, useIssueBoundary] = createErrorBoundary({
 
 /**
  * Reads an issue under `<IssueBoundary>`: `IssueNotFound` goes to it,
- * `Unauthorized` to `<AuthBoundary>`, and what's left is returned.
+ * `Unauthorized` to `<AuthBoundary>` and `RpcClientError` to `<AppBoundary>`,
+ * so no failure is left and the result is a success.
  */
-function useIssue(id: IssueId) {
-	return useAtomResult(useIssueBoundary().wrap(issue(id)));
-}
-
 function IssueTitle(props: { readonly id: IssueId }) {
-	const result = useIssue(props.id);
-	if (AsyncResult.isSuccess(result)) {
-		return (
-			<div className="grid gap-1">
-				<p className="font-mono text-xs text-muted-foreground">#{props.id}</p>
-				<h3 className="text-lg font-semibold">{result.value.title}</h3>
-			</div>
-		);
-	}
-	// useAtomResult throws defects, so a failure it returns has a typed error.
-	return Match.valueTags(Option.getOrThrow(AsyncResult.error(result)), {
-		RpcClientError: unreachable,
-	});
-}
-
-function unreachable(error: RpcClientError.RpcClientError) {
+	const result = useAtomResult(useIssueBoundary().wrap(issue(props.id)));
 	return (
-		<ErrorNotice caughtBy="IssueTitle" type="RpcClientError">
-			The request didn’t reach the server: {error.reason.message}
-		</ErrorNotice>
+		<div className="grid gap-1">
+			<p className="font-mono text-xs text-muted-foreground">#{props.id}</p>
+			<h3 className="text-lg font-semibold">{result.value.title}</h3>
+		</div>
 	);
 }
 
@@ -115,20 +100,23 @@ function BoundaryChainDemo() {
 					</Button>
 				))}
 			</div>
-			<AppBoundary>
-				<AuthBoundary>
-					<IssueBoundary>
-						<Suspense fallback={<Skeleton className="h-12 w-full" />}>
-							<IssueTitle id={id} />
-						</Suspense>
-					</IssueBoundary>
-				</AuthBoundary>
-			</AppBoundary>
+			<AppErrorBoundary>
+				<AppBoundary>
+					<AuthBoundary>
+						<IssueBoundary>
+							<Suspense fallback={<Skeleton className="h-12 w-full" />}>
+								<IssueTitle id={id} />
+							</Suspense>
+						</IssueBoundary>
+					</AuthBoundary>
+				</AppBoundary>
+			</AppErrorBoundary>
 			<BoundaryChain
 				atom={`GetIssue:${id}`}
 				levels={[
 					{ claims: ["IssueNotFound"], name: "<IssueBoundary>" },
 					{ claims: ["Unauthorized"], name: "<AuthBoundary>" },
+					{ claims: ["RpcClientError"], name: "<AppBoundary>" },
 				]}
 				reader="<IssueTitle>"
 			/>
@@ -138,6 +126,7 @@ function BoundaryChainDemo() {
 					make={() => new IssueNotFound({ id })}
 					tag="IssueNotFound"
 				/>
+				<DropNextButton />
 				<FailNextButton
 					make={() => new Crash({ message: "The server threw" })}
 					tag="Crash"
@@ -149,6 +138,6 @@ function BoundaryChainDemo() {
 
 export default defineDemo({
 	Component: BoundaryChainDemo,
-	hint: "Queue a failure, then open another issue or press Try again. Watch the error climb: IssueNotFound stops at <IssueBoundary>, Unauthorized passes it to <AuthBoundary>, and a Crash, typed unknown, climbs to the app’s boundary.",
+	hint: "Queue a failure, then open another issue or press Try again. Watch the error climb: IssueNotFound stops at <IssueBoundary>, Unauthorized at <AuthBoundary>, and RpcClientError, a request that never reached the server, at <AppBoundary>. A Crash, typed unknown, climbs to the app’s error boundary.",
 	title: "Chained boundaries",
 });

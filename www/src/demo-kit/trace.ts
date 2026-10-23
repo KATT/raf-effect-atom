@@ -11,20 +11,28 @@ export type Outcome =
 	| { readonly status: "success" };
 
 /**
- * How a failure ended: its typed error by tag (`Schema.TaggedError`s are
- * named after their tag), or a defect.
+ * How a failure ended: its typed error by `_tag`, or by `name` for an error
+ * without one, or a defect.
  */
 export const failureOf = (cause: Cause.Cause<unknown>): Outcome =>
 	Option.match(Cause.findErrorOption(cause), {
 		onNone: () =>
 			Cause.hasDies(cause) ? { status: "defect" } : { status: "interrupted" },
-		onSome: (error) => ({
-			error:
-				Predicate.hasProperty(error, "name") && Predicate.isString(error.name)
-					? error.name
-					: "Error",
-			status: "failure",
-		}),
+		onSome: (error) => {
+			// oxlint-disable-next-line eslint/no-underscore-dangle -- Effect's errors are told apart by `_tag`
+			const tag = Predicate.hasProperty(error, "_tag") ? error._tag : undefined;
+			const name = Predicate.hasProperty(error, "name")
+				? error.name
+				: undefined;
+			return {
+				error: Predicate.isString(tag)
+					? tag
+					: Predicate.isString(name)
+						? name
+						: "Error",
+				status: "failure",
+			};
+		},
 	});
 
 /**

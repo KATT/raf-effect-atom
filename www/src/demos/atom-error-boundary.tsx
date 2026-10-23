@@ -3,12 +3,15 @@ import { Skeleton } from "@examples/ui/components/skeleton";
 import { IssueId, IssueNotFound, Unauthorized } from "@examples/contract";
 import { useAtomSuspense } from "@effect/atom-react";
 import { AtomErrorBoundary, type CatchTagProps } from "effect-atom-boundary";
-import type { RpcClientError } from "effect/rpc";
 import { Suspense, useState } from "react";
 
-import { AppBoundary } from "~/demo-kit/app-boundary.tsx";
+import { AppBoundary, AppErrorBoundary } from "~/demo-kit/app-boundary.tsx";
 import { BoundaryChain } from "~/demo-kit/boundary-chain.tsx";
-import { ErrorNotice, FailNextButton } from "~/demo-kit/controls.tsx";
+import {
+	DropNextButton,
+	ErrorNotice,
+	FailNextButton,
+} from "~/demo-kit/controls.tsx";
 import { defineDemo } from "~/demo-kit/define.ts";
 import { Crash } from "~/demo-kit/rpcs.ts";
 
@@ -62,31 +65,14 @@ function SignedOut(props: CatchTagProps<Unauthorized>) {
 	);
 }
 
-function Unreachable(props: CatchTagProps<RpcClientError.RpcClientError>) {
-	return (
-		<ErrorNotice
-			action={
-				<Button onClick={props.reset} size="xs" variant="outline">
-					Try again
-				</Button>
-			}
-			caughtBy="<AtomErrorBoundary>"
-			type="RpcClientError"
-		>
-			The request didn’t reach the server.
-		</ErrorNotice>
-	);
-}
-
 function IssuePanel(props: { readonly id: IssueId }) {
 	return (
 		<AtomErrorBoundary
 			atom={issue(props.id)}
-			// claim throws every tag the atom fails with: one handler each, so
-			// none reaches the app's boundary.
+			// claim throws every tag the atom fails with, and RpcClientError, with
+			// no handler here, goes on to <AppBoundary>.
 			catchTags={{
 				IssueNotFound: NotFound,
-				RpcClientError: Unreachable,
 				Unauthorized: SignedOut,
 			}}
 		>
@@ -116,16 +102,19 @@ function AtomErrorBoundaryDemo() {
 					</Button>
 				))}
 			</div>
-			<AppBoundary>
-				<IssuePanel id={id} />
-			</AppBoundary>
+			<AppErrorBoundary>
+				<AppBoundary>
+					<IssuePanel id={id} />
+				</AppBoundary>
+			</AppErrorBoundary>
 			<BoundaryChain
 				atom={`GetIssue:${id}`}
 				levels={[
 					{
-						claims: ["IssueNotFound", "RpcClientError", "Unauthorized"],
+						claims: ["IssueNotFound", "Unauthorized"],
 						name: "<AtomErrorBoundary>",
 					},
+					{ claims: ["RpcClientError"], name: "<AppBoundary>" },
 				]}
 				reader="<IssueTitle>"
 			/>
@@ -135,6 +124,7 @@ function AtomErrorBoundaryDemo() {
 					make={() => new IssueNotFound({ id })}
 					tag="IssueNotFound"
 				/>
+				<DropNextButton />
 				<FailNextButton
 					make={() => new Crash({ message: "The server threw" })}
 					tag="Crash"
@@ -146,6 +136,6 @@ function AtomErrorBoundaryDemo() {
 
 export default defineDemo({
 	Component: AtomErrorBoundaryDemo,
-	hint: "Open issue #404, then queue a failure and press Try again. Every tag the atom fails with has a handler; a Crash isn’t a typed error, so it reaches the app’s error boundary as unknown.",
+	hint: "Open issue #404, then queue a failure and press Try again. IssueNotFound and Unauthorized have a handler here, and RpcClientError, a request that never reached the server, goes on to <AppBoundary>. A Crash isn’t a typed error, so it reaches the app’s error boundary as unknown.",
 	title: "AtomErrorBoundary",
 });

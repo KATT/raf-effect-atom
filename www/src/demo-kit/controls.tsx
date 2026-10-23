@@ -6,7 +6,13 @@ import { AsyncResult } from "effect/reactivity";
 import { Zap } from "lucide-react";
 import { type ReactNode, useContext } from "react";
 
-import { controlsAtom, failNext, setLatency } from "./client.ts";
+import {
+	controlsAtom,
+	droppedAtom,
+	dropNext,
+	failNext,
+	setLatency,
+} from "./client.ts";
 import { type InjectedError, latencies } from "./rpcs.ts";
 
 /** The demo server's controls, once its worker answered. */
@@ -63,20 +69,52 @@ export function FailNextButton(props: {
 		useControls()?.queued.filter((tag) => tag === props.tag).length ?? 0;
 	const count = props.count ?? 1;
 	return (
-		<Button
+		<QueueButton
+			count={count}
 			onClick={() => {
 				failNext(registry, count, props.make);
 			}}
-			size="xs"
-			variant="outline"
-		>
+			queued={queued}
+			tag={props.tag}
+		/>
+	);
+}
+
+/**
+ * Makes the demo's client drop its next request before it reaches the
+ * server, so it fails with `RpcClientError`, as with the network down. The
+ * badge counts the drops still queued.
+ */
+export function DropNextButton() {
+	const registry = useContext(RegistryContext);
+	const queued = useAtomValue(droppedAtom);
+	return (
+		<QueueButton
+			count={1}
+			onClick={() => {
+				dropNext(registry, 1);
+			}}
+			queued={queued}
+			tag="RpcClientError"
+		/>
+	);
+}
+
+function QueueButton(props: {
+	readonly count: number;
+	readonly onClick: () => void;
+	readonly queued: number;
+	readonly tag: string;
+}) {
+	return (
+		<Button onClick={props.onClick} size="xs" variant="outline">
 			<Zap />
-			{count === 1
+			{props.count === 1
 				? `Fail with ${props.tag}`
-				: `Fail ${count} with ${props.tag}`}
-			{queued > 0 ? (
+				: `Fail ${props.count} with ${props.tag}`}
+			{props.queued > 0 ? (
 				<span className="rounded bg-destructive/15 px-1 text-destructive tabular-nums">
-					{queued}
+					{props.queued}
 				</span>
 			) : null}
 		</Button>

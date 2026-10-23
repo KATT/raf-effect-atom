@@ -1,13 +1,28 @@
 import { BrowserWorker } from "@effect/platform-browser";
-import { Effect, Exit, Layer, Option, Predicate, Schema, Stream } from "effect";
+import {
+	Effect,
+	Exit,
+	Layer,
+	Option,
+	Predicate,
+	Schema,
+	Stream,
+	type Types,
+} from "effect";
 import {
 	Atom,
 	AsyncResult,
 	type AtomRegistry,
 	AtomRpc,
 } from "effect/reactivity";
-import { Rpc, RpcClient, type RpcMessage, RpcMiddleware } from "effect/rpc";
-import { Worker as Workers } from "effect/workers";
+import {
+	Rpc,
+	RpcClient,
+	RpcClientError,
+	type RpcMessage,
+	RpcMiddleware,
+} from "effect/rpc";
+import { WorkerError, Worker as Workers } from "effect/workers";
 
 import {
 	controlTags,
@@ -111,6 +126,14 @@ class Log {
 		}
 	}
 
+	/** The client dropped it before it left. */
+	drop(request: RpcMessage.Request<Rpc.Any>) {
+		this.#settle(String(request.id), {
+			error: "RpcClientError",
+			status: "failure",
+		});
+	}
+
 	#settle(id: string, outcome: Outcome) {
 		this.#inFlight.delete(id);
 		this.#update(id, (request) =>
@@ -206,13 +229,49 @@ const protocolLayer = (log: Log) =>
 		Layer.provide([BrowserWorker.layerPlatform, spawnerLayer]),
 	);
 
+/**
+ * How many of the next requests the client drops before they reach the
+ * worker. Each registry has its own.
+ */
+export const droppedAtom = Atom.make(0).pipe(
+	Atom.keepAlive,
+	Atom.withLabel("demo-kit:dropped"),
+);
+
+/**
+ * Makes the client drop its next `count` requests, after the ones already
+ * dropped. Each fails with `RpcClientError`, as with the network down.
+ */
+export const dropNext = (
+	registry: AtomRegistry.AtomRegistry,
+	count: number,
+) => {
+	registry.update(droppedAtom, (dropped) => dropped + count);
+};
+
 /** The client's part of {@link RequestLog}. */
-const requestLogLayer = (log: Log) =>
+const requestLogLayer = (log: Log, registry: AtomRegistry.AtomRegistry) =>
 	RpcMiddleware.layerClient(RequestLog, (options) =>
-		Effect.suspend(() => {
-			log.start(options.request);
-			return options.next(options.request);
-		}),
+		Effect.suspend(
+			(): Effect.Effect<
+				RpcMiddleware.SuccessValue,
+				Types.unhandled | RpcClientError.RpcClientError
+			> => {
+				log.start(options.request);
+				if (registry.get(droppedAtom) === 0) {
+					return options.next(options.request);
+				}
+				registry.update(droppedAtom, (dropped) => dropped - 1);
+				log.drop(options.request);
+				return Effect.fail(
+					new RpcClientError.RpcClientError({
+						reason: new WorkerError.WorkerSendError({
+							message: "The demo dropped the request before it left",
+						}),
+					}),
+				);
+			},
+		),
 	);
 
 /**
@@ -225,7 +284,10 @@ export class IssuesClient extends AtomRpc.Service<IssuesClient>()(
 		group: DemoRpcs,
 		protocol: (get) => {
 			const log = logFor(get.registry);
-			return Layer.merge(requestLogLayer(log), protocolLayer(log));
+			return Layer.merge(
+				requestLogLayer(log, get.registry),
+				protocolLayer(log),
+			);
 		},
 	},
 ) {}

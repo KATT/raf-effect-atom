@@ -20,7 +20,7 @@ import { Expand, FlaskConical, RotateCcw, Shrink } from "lucide-react";
 import { makeRegistry } from "raf-effect-atom/tanstack-router";
 import { type ReactNode, Suspense, useState } from "react";
 
-import { AppBoundary, StartOverContext } from "./app-boundary.tsx";
+import { AppErrorBoundary, StartOverContext } from "./app-boundary.tsx";
 import { controlsAtom, serverEventsAtom, setLatency } from "./client.ts";
 import { LatencyControl } from "./controls.tsx";
 import type { DemoDefinition } from "./define.ts";
@@ -178,11 +178,11 @@ export function DemoFrame(props: { readonly demo: DemoDefinition }) {
 
 	const Demo = demo.Component;
 	const body = (
-		<AppBoundary key={session.id}>
+		<AppErrorBoundary key={session.id}>
 			<Suspense fallback={<DemoSkeleton />}>
 				<Demo />
 			</Suspense>
-		</AppBoundary>
+		</AppErrorBoundary>
 	);
 	const icon = (
 		<FlaskConical className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />

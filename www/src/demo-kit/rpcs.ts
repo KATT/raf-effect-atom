@@ -7,7 +7,7 @@ import {
 	Unauthorized,
 } from "@examples/contract";
 import { Schema } from "effect";
-import { Rpc, RpcGroup, RpcMiddleware } from "effect/rpc";
+import { Rpc, type RpcClientError, RpcGroup, RpcMiddleware } from "effect/rpc";
 
 /**
  * A failure no procedure declares, like a bug on the server. The worker dies
@@ -39,13 +39,14 @@ export class InjectedFailure extends RpcMiddleware.Service<InjectedFailure>()(
 ) {}
 
 /**
- * Logs each request the client sends, for the demo's Queries panel. Its
- * client part does the work; the worker's part passes requests through.
+ * Logs each request the client sends, for the demo's Queries panel, and
+ * fails the ones the demo drops with `RpcClientError`. Its client part does
+ * the work; the worker's part passes requests through.
  */
-export class RequestLog extends RpcMiddleware.Service<RequestLog>()(
-	"www/demo-kit/RequestLog",
-	{ requiredForClient: true },
-) {}
+export class RequestLog extends RpcMiddleware.Service<
+	RequestLog,
+	{ clientError: RpcClientError.RpcClientError }
+>()("www/demo-kit/RequestLog", { requiredForClient: true }) {}
 
 /** The latencies a demo's toolbar offers, in ms. */
 export const latencies = [
