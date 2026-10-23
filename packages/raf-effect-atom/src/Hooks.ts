@@ -20,8 +20,15 @@ import { isDevelopment } from "./internal/development.ts";
 import * as Leases from "./internal/leases.ts";
 import * as Pending from "./internal/pending.ts";
 import * as Registry from "./internal/registry.ts";
+import * as Waterfalls from "./internal/waterfalls.ts";
 import type { SettledResult } from "./Loader.ts";
 import { isRequestRegistry } from "./RequestRegistry.ts";
+
+// Bundlers replace `process.env.NODE_ENV` at build time. Declared here, so
+// apps that type-check this source don't need Node's types.
+declare const process: {
+	readonly env: { readonly NODE_ENV?: string | undefined };
+};
 
 /**
  * The atom the loader started and the server sent: the first serializable
@@ -67,6 +74,12 @@ const sourceOf = (atom: Atom.Atom<unknown>): Atom.Atom<unknown> => {
  *   read suspends instead of returning the old failure again.
  *
  * **Gotchas**
+ *
+ * A read of an atom that nothing started starts it, and its request waits
+ * for the render: a request waterfall. In development, the read reports it
+ * as `WaterfallDetection` says, by default with a warning. Start the atom in
+ * a loader, a server component or the event handler that shows it, or read
+ * it through `useWaterfall` when only the render knows its input.
  *
  * During server rendering, the registry must be a request registry (see
  * `RequestRegistry.make`), or a module-level registry would share results
@@ -118,6 +131,9 @@ export const useAtomResult = <A, E>(
 		: undefined;
 	if (streamed !== undefined) {
 		React.use(streamed);
+	}
+	if (process.env.NODE_ENV !== "production") {
+		Waterfalls.check(registry, source, React.use(Waterfalls.ModeContext));
 	}
 	if (read !== source) {
 		// Builds the source's node from the hydrated copy, before the derived

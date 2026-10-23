@@ -272,8 +272,10 @@ export interface Loader {
  *
  * **When to use**
  *
- * Use in a framework integration, or in loaders that are async functions.
- * In Effect code, use the verbs directly with the `AtomRegistry` provided.
+ * Use in a framework integration, in loaders that are async functions, or
+ * in an event handler that starts an atom before the state change that
+ * renders its reader, such as the next page of a list. In Effect code, use
+ * the verbs directly with the `AtomRegistry` provided.
  *
  * **Example**
  *
