@@ -34,3 +34,18 @@ tanstack-start/src/routes/issues.$id.tsx#route
 Only atoms in the registry when the loaders finish are sent to the browser. An atom first read during render runs again there, so start every atom a page reads from its loader.
 
 With `defaultPreload: "intent"`, hovering a link runs its loader, so the atoms start before the click.
+
+## Loaders as Effects
+
+`RouteLoader.all(args, { ... })` runs a struct of [Effect verbs](./loader-verbs.md#in-effect-code) on the registry of `context.atoms`, so they need nothing provided, and returns the struct of their handles as the loader's data:
+
+```sample
+tanstack-start/src/docs/tanstack-start.tsx#effect-loader
+```
+
+- The loader stays an arrow that takes TanStack's arguments and passes them on, so the router types `args.params` and the loader's data.
+- The verbs run concurrently, as [`Effect.all`](https://effect.website/docs/v4/concurrency/basic-concurrency/#unbounded-concurrency) with unbounded concurrency.
+- `RouteLoader.run(args, effect)` runs any Effect, such as an `Effect.gen` whose steps depend on each other, and returns its success.
+- The Effect may fail only with `RouteLoader.notFound()` or `RouteLoader.redirect(options)`, which take the options of TanStack's [`notFound`](https://tanstack.com/router/latest/docs/framework/react/api/router/notFoundFunction) and [`redirect`](https://tanstack.com/router/latest/docs/framework/react/api/router/redirectFunction). The loader throws the router's own value for them. Any other failure is a type error.
+- `Loader.catchTags` turns the typed failures you name into one of those. A handle whose result is any other failure is returned as is, for a boundary to render.
+- Navigating away interrupts the Effect. The atoms it started keep loading.
