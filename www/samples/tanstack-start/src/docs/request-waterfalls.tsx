@@ -1,8 +1,9 @@
 import type { IssueId } from "@examples/contract";
 import { Effect } from "effect";
 import { AsyncResult } from "effect/reactivity";
-import { Loader, useAtomResult } from "raf-effect-atom";
-import { Suspense } from "react";
+import { Loader, useAtomResult, useWaterfall } from "raf-effect-atom";
+import { Suspense, use, useState } from "react";
+import { RegistryContext } from "@effect/atom-react";
 
 import { useIssueBoundary } from "~/boundaries.tsx";
 import { assignee, issue } from "~/issues.ts";
@@ -71,3 +72,42 @@ const both = Effect.all(
 	{ concurrency: "unbounded" },
 );
 // #endregion effect-all
+
+// #region use-waterfall
+// The ids come from the list's result, so no loader can know them.
+function AssigneeCell(props: { issueId: IssueId }) {
+	const result = useAtomResult(
+		useIssueBoundary().wrap(useWaterfall(assignee(props.issueId))),
+	);
+	if (AsyncResult.isFailure(result)) {
+		// RpcClientError: the boundaries took IssueNotFound and Unauthorized.
+		return <td>Couldn't load the assignee.</td>;
+	}
+	return <td>{result.value.name}</td>;
+}
+// #endregion use-waterfall
+
+// #region event-handler
+function ShowAssignee(props: { issueId: IssueId }) {
+	const registry = use(RegistryContext);
+	const [shown, setShown] = useState(false);
+	if (!shown) {
+		return (
+			<button
+				onClick={() => {
+					// Starts it here, before the state change renders its reader.
+					Loader.make(registry).prefetch(assignee(props.issueId));
+					setShown(true);
+				}}
+			>
+				Show the assignee
+			</button>
+		);
+	}
+	return (
+		<Suspense fallback={<p>Loading the assignee…</p>}>
+			<Assignee issueId={props.issueId} />
+		</Suspense>
+	);
+}
+// #endregion event-handler

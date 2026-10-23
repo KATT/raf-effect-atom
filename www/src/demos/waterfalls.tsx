@@ -11,7 +11,7 @@ import {
 	useRouterState,
 } from "@tanstack/react-router";
 import { AsyncResult, Atom } from "effect/reactivity";
-import { useAtomResult } from "raf-effect-atom";
+import { useAtomResult, useWaterfall } from "raf-effect-atom";
 import { type ReactNode, Suspense, useState } from "react";
 
 import { IssuesClient } from "~/demo-kit/client.ts";
@@ -46,7 +46,7 @@ const procedures = {
 
 const startedIn = {
 	loader: "loader: prefetch(issue), prefetch(assignee), prefetch(comments)",
-	render: "no loader: each component starts its own atom",
+	render: "no loader: each component calls useWaterfall(atom)",
 } satisfies Record<Strategy, string>;
 
 /**
@@ -166,14 +166,15 @@ function LoaderPage(props: { readonly id: IssueId }) {
 }
 
 /**
- * Each component starts its atom when it renders, and renders its child
- * only once its own result is in, so each request waits for the one before.
+ * Each component starts its atom when it renders, through `useWaterfall`,
+ * and renders its child only once its own result is in, so each request
+ * waits for the one before.
  */
 function RenderIssue(props: {
 	readonly children: ReactNode;
 	readonly id: IssueId;
 }) {
-	const result = useAtomResult(atomsFor.render.issue(props.id));
+	const result = useAtomResult(useWaterfall(atomsFor.render.issue(props.id)));
 	if (AsyncResult.isFailure(result)) {
 		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
@@ -200,7 +201,9 @@ function RenderAssignee(props: {
 	readonly children: ReactNode;
 	readonly id: IssueId;
 }) {
-	const result = useAtomResult(atomsFor.render.assignee(props.id));
+	const result = useAtomResult(
+		useWaterfall(atomsFor.render.assignee(props.id)),
+	);
 	if (AsyncResult.isFailure(result)) {
 		return <IssueFailure caughtBy="the page" failure={result} />;
 	}
@@ -213,6 +216,20 @@ function RenderAssignee(props: {
 				{props.children}
 			</Suspense>
 		</>
+	);
+}
+
+function RenderComments(props: { readonly id: IssueId }) {
+	const result = useAtomResult(
+		useWaterfall(atomsFor.render.comments(props.id)),
+	);
+	if (AsyncResult.isFailure(result)) {
+		return <IssueFailure caughtBy="the page" failure={result} />;
+	}
+	return (
+		<p className="text-xs text-muted-foreground">
+			{result.value.total} comments
+		</p>
 	);
 }
 
@@ -230,7 +247,7 @@ function RenderPage(props: { readonly id: IssueId }) {
 			>
 				<RenderIssue id={props.id}>
 					<RenderAssignee id={props.id}>
-						<CommentCount atoms={atomsFor.render} id={props.id} />
+						<RenderComments id={props.id} />
 					</RenderAssignee>
 				</RenderIssue>
 			</Suspense>
