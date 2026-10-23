@@ -1,12 +1,12 @@
 import "server-only";
 
 import { headers } from "next/headers";
-import { makeRequestAtoms } from "raf-effect-atom/next";
+import { makeRequestAtoms } from "raf-effect-atom/rsc";
 
 import { requestCookie } from "./issues.ts";
 
 /**
- * The verbs and `dehydrate` the pages use. Each request's registry starts
+ * The verbs and the registry the pages use. Each request's registry starts
  * with the page request's cookie, so the in-process RPC calls run with the
  * browser's session and latency.
  *

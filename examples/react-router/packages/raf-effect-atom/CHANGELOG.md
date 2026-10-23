@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.6](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.5...raf-effect-atom%400.2.6) (2026-10-23)
+
+### Features
+
+- **raf-effect-atom:** start browser-only reads with prefetchInBrowser ([65f783a](https://github.com/KATT/raf-effect-atom/commit/65f783a0014e44a8aa11ce5e8fa34ab863063403))
+
+### Documentation
+
+- **www:** keep a search box's text in the URL, and drop the debounce sample ([a3949bf](https://github.com/KATT/raf-effect-atom/commit/a3949bfca4b64e478132f983033b2776e50ba949))
+
+### Tests
+
+- **raf-effect-atom:** start a browser-only read from a client-only TanStack route ([69a8bd8](https://github.com/KATT/raf-effect-atom/commit/69a8bd887c34a7aeef51fdd20057ac30aa9e1fbc))
+- **raf-effect-atom:** type a derived atom's handle through it and its wrappers ([a16b587](https://github.com/KATT/raf-effect-atom/commit/a16b587a59dc4827dd18ecb3a3d5bb8f6fdedf0b))
+
 ## [0.2.5](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.4...raf-effect-atom%400.2.5) (2026-10-23)
 
 ### Features

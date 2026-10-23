@@ -1,5 +1,6 @@
 /**
- * The registry provider shared by the Next.js and React Router integrations.
+ * The registry provider for apps that render the server's state through
+ * `HydrationBoundary`, such as React Server Components and React Router.
  *
  * @stability unstable
  * @since 0.1.0
@@ -36,7 +37,7 @@ import * as Registry from "./internal/registry.ts";
  * **Example**
  *
  * ```tsx
- * import { RegistryProvider } from "raf-effect-atom/next" // or "raf-effect-atom/react-router"
+ * import { RegistryProvider } from "raf-effect-atom"
  *
  * export default function RootLayout(props: { children: React.ReactNode }) {
  *   return (

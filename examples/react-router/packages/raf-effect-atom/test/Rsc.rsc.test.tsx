@@ -1,5 +1,6 @@
 import { assert, describe, it, vi } from "@effect/vitest";
 import * as Option from "effect/Option";
+import * as Predicate from "effect/Predicate";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as EffectHydration from "effect/reactivity/Hydration";
@@ -12,9 +13,16 @@ import {
 } from "react-server-dom-webpack/server";
 
 import type { LoadedHandle } from "../src/Handle.ts";
-import * as Hydration from "../src/Hydration.ts";
-import * as NextInternal from "../src/internal/next.ts";
+import {
+	Hydration,
+	HydrationBoundary,
+	Loader,
+	RequestRegistry,
+	useAtomResult,
+} from "../src/index.react-server.ts";
 import * as Pending from "../src/internal/pending.ts";
+import * as RscInternal from "../src/internal/rsc.ts";
+import { HydrationBoundary as ServerHydrationBoundary } from "../src/ReactHydration.react-server.tsx";
 import {
 	counter,
 	gated,
@@ -26,49 +34,45 @@ import {
 	viewer,
 } from "./fixtures/issues.ts";
 
-const reference = {
-	chunks: [],
-	id: "raf-effect-atom/next",
-	name: "HydrateAtoms",
-};
-
-/**
- * `raf-effect-atom/next`'s `HydrateAtoms`, as a bundler hands it to server
- * components: a reference to the client module, which never runs here.
- */
-const HydrateAtoms = registerClientReference(
-	(_props: {
-		readonly children?: React.ReactNode;
-		readonly state: ReadonlyArray<EffectHydration.DehydratedAtom>;
-	}): React.ReactNode => {
-		throw new Error("a client component rendered on the server");
-	},
-	reference.id,
-	reference.name,
-);
-
-const titleReference = {
-	chunks: [],
-	id: "app/issue-title",
-	name: "IssueTitle",
-};
-
 /** A client component of the app that reads an issue's handle. */
 const IssueTitle = registerClientReference(
 	(_props: { readonly issue: LoadedHandle<typeof issue> }): React.ReactNode => {
 		throw new Error("a client component rendered on the server");
 	},
-	titleReference.id,
-	titleReference.name,
+	"app/issue-title",
+	"IssueTitle",
 );
 
-const clientModule = { [reference.name]: () => null };
+/** A bundler's metadata for `id#name`: a module with no chunks to load. */
+const metadataOf = (key: string | symbol) => {
+	const [id, name] = String(key).split("#");
+	return { chunks: [], id, name };
+};
+
+/**
+ * The client manifest of the server render, for every client reference:
+ * this package's `"use client"` modules (`vite.config.ts` makes their
+ * exports references) and the app's.
+ */
+const clientManifest = new Proxy({}, { get: (_, key) => metadataOf(key) });
+
+/** The browser's module map, for every client reference. */
+const moduleMap = new Proxy(
+	{},
+	{
+		get: (_, id) =>
+			new Proxy(
+				{},
+				{ get: (__, name) => metadataOf(`${String(id)}#${String(name)}`) },
+			),
+	},
+);
+
+/** Every client module, as the browser loads it: components that render nothing. */
+const clientModule = new Proxy({}, { get: () => () => null });
 
 const render = (page: React.ReactNode) =>
-	renderToReadableStream(page, {
-		[`${reference.id}#${reference.name}`]: reference,
-		[`${titleReference.id}#${titleReference.name}`]: titleReference,
-	});
+	renderToReadableStream(page, clientManifest);
 
 /** Decodes a server component payload as the browser does, as it arrives. */
 const decode = async (payload: ReadableStream<Uint8Array>) => {
@@ -77,7 +81,7 @@ const decode = async (payload: ReadableStream<Uint8Array>) => {
 	}> = await createFromReadableStream(payload, {
 		serverConsumerManifest: {
 			moduleLoading: null,
-			moduleMap: { [reference.id]: { [reference.name]: reference } },
+			moduleMap,
 			serverModuleMap: null,
 		},
 	});
@@ -96,18 +100,28 @@ const renderPayload = async (page: React.ReactNode) => {
 const streamOf = (entry: EffectHydration.DehydratedAtom) =>
 	"resultPromise" in entry ? entry.resultPromise : undefined;
 
-const Next = NextInternal.make();
+const Rsc = RscInternal.make();
 
 const resultOf = (registry: AtomRegistry.AtomRegistry, id: number) =>
 	registry.get(Hydration.hydrated(issue(id)));
 
-describe("raf-effect-atom/next in a server component render", () => {
+describe("raf-effect-atom under the react-server condition", () => {
+	it("gives server components the server HydrationBoundary, and client references for the client APIs", () => {
+		assert.strictEqual(HydrationBoundary, ServerHydrationBoundary);
+		assert.isTrue(
+			Predicate.hasProperty(useAtomResult, "$$typeof") &&
+				useAtomResult.$$typeof === Symbol.for("react.client.reference"),
+		);
+	});
+});
+
+describe("raf-effect-atom/rsc in a server component render", () => {
 	it("sends a server-side IssueNotFound that hydrates as an IssueNotFound", async () => {
 		using server = serve({ 1: ["missing"] });
 		vi.stubGlobal("__webpack_require__", () => clientModule);
 		async function IssuePage() {
-			await Next.ensure(issue, 1);
-			return <HydrateAtoms state={await Next.dehydrate()} />;
+			await Rsc.ensure(issue, 1);
+			return <HydrationBoundary registry={Rsc.getRegistry()} />;
 		}
 		const rendered = await renderPayload(<IssuePage />);
 		const registry = AtomRegistry.make();
@@ -126,8 +140,8 @@ describe("raf-effect-atom/next in a server component render", () => {
 		using server = serve({});
 		vi.stubGlobal("__webpack_require__", () => clientModule);
 		async function IssuePage() {
-			Next.prefetch(issue, 2);
-			return <HydrateAtoms state={await Next.dehydrate()} />;
+			Rsc.prefetch(issue, 2);
+			return <HydrationBoundary registry={Rsc.getRegistry()} />;
 		}
 		const rendered = await renderPayload(<IssuePage />);
 		assert.match(rendered.payload, /"resultPromise":"\$@\w+"/);
@@ -146,8 +160,8 @@ describe("raf-effect-atom/next in a server component render", () => {
 		using server = serve({});
 		vi.stubGlobal("__webpack_require__", () => clientModule);
 		async function IssuePage() {
-			Next.prefetch(issue, 4);
-			return <HydrateAtoms state={await Next.dehydrate()} />;
+			Rsc.prefetch(issue, 4);
+			return <HydrationBoundary registry={Rsc.getRegistry()} />;
 		}
 		const registry = AtomRegistry.make();
 		Hydration.hydrate(registry, await decode(render(<IssuePage />)));
@@ -167,16 +181,16 @@ describe("raf-effect-atom/next in a server component render", () => {
 		vi.stubGlobal("__webpack_require__", () => clientModule);
 		const seen: Array<AtomRegistry.AtomRegistry> = [];
 		function Comments() {
-			seen.push(Next.getRegistry());
+			seen.push(Rsc.getRegistry());
 			return null;
 		}
 		async function IssuePage() {
-			seen.push(Next.getRegistry());
-			Next.prefetch(issue, 3);
+			seen.push(Rsc.getRegistry());
+			Rsc.prefetch(issue, 3);
 			return (
-				<HydrateAtoms state={await Next.dehydrate()}>
+				<HydrationBoundary registry={Rsc.getRegistry()}>
 					<Comments />
-				</HydrateAtoms>
+				</HydrationBoundary>
 			);
 		}
 		await renderPayload(<IssuePage />);
@@ -191,7 +205,7 @@ describe("raf-effect-atom/next in a server component render", () => {
 
 	it("seeds each render's registry, and dehydrates what started while an async seed ran", async () => {
 		vi.stubGlobal("__webpack_require__", () => clientModule);
-		const seeded = NextInternal.make({
+		const seeded = RscInternal.make({
 			seed: async (registry) => {
 				await later(10);
 				registry.set(viewer, "ada");
@@ -199,7 +213,7 @@ describe("raf-effect-atom/next in a server component render", () => {
 		});
 		async function GreetingPage() {
 			seeded.prefetch(greeting);
-			return <HydrateAtoms state={await seeded.dehydrate()} />;
+			return <HydrationBoundary registry={seeded.getRegistry()} />;
 		}
 		const rendered = await renderPayload(<GreetingPage />);
 		const registry = AtomRegistry.make();
@@ -214,13 +228,13 @@ describe("raf-effect-atom/next in a server component render", () => {
 
 	it("stops a server component's wait when React aborts the render", async () => {
 		vi.stubGlobal("__webpack_require__", () => clientModule);
-		const gate = gated("next-signal");
+		const gate = gated("rsc-signal");
 		const waited =
 			Promise.withResolvers<
 				PromiseSettledResult<LoadedHandle<typeof gate.atom>>
 			>();
 		async function GatedPage() {
-			const [settled] = await Promise.allSettled([Next.ensure(gate.atom)]);
+			const [settled] = await Promise.allSettled([Rsc.ensure(gate.atom)]);
 			waited.resolve(settled);
 			return null;
 		}
@@ -243,22 +257,50 @@ describe("raf-effect-atom/next in a server component render", () => {
 		await reading;
 	});
 
+	it("passes a dehydrated state on", async () => {
+		using server = serve({});
+		vi.stubGlobal("__webpack_require__", () => clientModule);
+		const loaded = RequestRegistry.make();
+		await Loader.make(loaded).ensure(issue, 5);
+		const rendered = await renderPayload(
+			<HydrationBoundary state={Hydration.dehydrate(loaded)} />,
+		);
+		loaded.dispose();
+		const registry = AtomRegistry.make();
+		Hydration.hydrate(registry, rendered.state);
+		const result = resultOf(registry, 5);
+		assert.isTrue(
+			AsyncResult.isSuccess(result) && result.value.title === "Issue 5",
+		);
+		assert.strictEqual(server.requests(5), 1);
+		registry.dispose();
+	});
+
+	it("refuses a registry that isn't a request registry", async () => {
+		const errors: Array<unknown> = [];
+		const registry = AtomRegistry.make();
+		const payload = renderToReadableStream(
+			<HydrationBoundary registry={registry} />,
+			{},
+			{ onError: (error) => void errors.push(error) },
+		);
+		await new Response(payload).text();
+		assert.match(String(errors[0]), /isn't a request registry/);
+		registry.dispose();
+	});
+
 	it("sends a verb's handle to a client component as a prop", async () => {
 		using _server = serve({});
-		vi.stubGlobal("__webpack_require__", () => ({
-			[titleReference.name]: () => null,
-		}));
+		vi.stubGlobal("__webpack_require__", () => clientModule);
 		async function IssuePage() {
-			return <IssueTitle issue={await Next.ensure(issue, 1)} />;
+			return <IssueTitle issue={await Rsc.ensure(issue, 1)} />;
 		}
 		const element: React.ReactElement<{
 			readonly issue: LoadedHandle<typeof issue>;
 		}> = await createFromReadableStream(render(<IssuePage />), {
 			serverConsumerManifest: {
 				moduleLoading: null,
-				moduleMap: {
-					[titleReference.id]: { [titleReference.name]: titleReference },
-				},
+				moduleMap,
 				serverModuleMap: null,
 			},
 		});

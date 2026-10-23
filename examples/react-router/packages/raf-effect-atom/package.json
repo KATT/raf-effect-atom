@@ -1,6 +1,6 @@
 {
 	"name": "raf-effect-atom",
-	"version": "0.2.5",
+	"version": "0.2.6",
 	"description": "Render-as-you-fetch for Effect Atom: start atoms from route loaders and stream them into the browser, typed failures intact",
 	"keywords": [
 		"effect",
@@ -33,9 +33,12 @@
 	"type": "module",
 	"sideEffects": false,
 	"exports": {
-		".": "./src/index.ts",
-		"./next": "./src/Next.ts",
+		".": {
+			"react-server": "./src/index.react-server.ts",
+			"default": "./src/index.ts"
+		},
 		"./react-router": "./src/ReactRouter.ts",
+		"./rsc": "./src/Rsc.ts",
 		"./tanstack-router": "./src/TanStackRouter.tsx"
 	},
 	"scripts": {
@@ -80,9 +83,12 @@
 	"publishConfig": {
 		"access": "public",
 		"exports": {
-			".": "./dist/index.mjs",
-			"./next": "./dist/Next.mjs",
+			".": {
+				"react-server": "./dist/index.react-server.mjs",
+				"default": "./dist/index.mjs"
+			},
 			"./react-router": "./dist/ReactRouter.mjs",
+			"./rsc": "./dist/Rsc.mjs",
 			"./tanstack-router": "./dist/TanStackRouter.mjs"
 		},
 		"provenance": true

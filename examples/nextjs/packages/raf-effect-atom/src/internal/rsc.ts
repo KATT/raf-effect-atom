@@ -1,9 +1,7 @@
 import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
-import type * as EffectHydration from "effect/reactivity/Hydration";
 import * as React from "react";
 
 import type { ArgsOf, Handle, LoadedHandle, Source } from "../Handle.ts";
-import * as Hydration from "../Hydration.ts";
 import * as Loader from "../Loader.ts";
 import * as RequestRegistry from "../RequestRegistry.ts";
 
@@ -11,7 +9,6 @@ import * as RequestRegistry from "../RequestRegistry.ts";
 // `@effect/atom-react`, which needs React's client APIs.
 
 export interface RequestAtoms extends Loader.Loader {
-	readonly dehydrate: () => Promise<Array<EffectHydration.DehydratedAtom>>;
 	readonly getRegistry: () => AtomRegistry.AtomRegistry;
 }
 
@@ -34,11 +31,6 @@ export const make = (options?: RequestRegistry.Options): RequestAtoms => {
 		Loader.make(getRegistry(), { signal: renderSignal() ?? undefined }),
 	);
 	return {
-		dehydrate: async () => {
-			const registry = getRegistry();
-			await RequestRegistry.settled(registry);
-			return Hydration.dehydrate(registry);
-		},
 		ensure: <S extends Source>(
 			source: S,
 			...args: ArgsOf<S>

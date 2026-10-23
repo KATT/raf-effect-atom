@@ -87,4 +87,11 @@ describe("HydrationBoundary", () => {
 		expect(HydrationBoundary).type.toBeCallableWith({ state });
 		expect(HydrationBoundary).type.not.toBeCallableWith({ state: [1] });
 	});
+
+	it("takes a server component's registry, or a state, not both", () => {
+		const registry = hole<AtomRegistry.AtomRegistry>();
+		const state = Hydration.dehydrate(registry);
+		expect(HydrationBoundary).type.toBeCallableWith({ registry });
+		expect(HydrationBoundary).type.not.toBeCallableWith({ registry, state });
+	});
 });

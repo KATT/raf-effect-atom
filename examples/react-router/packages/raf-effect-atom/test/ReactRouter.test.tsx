@@ -21,13 +21,13 @@ import {
 	HydrationBoundary,
 	type LoadedHandle,
 	Loader,
+	RegistryProvider,
 	RequestRegistry,
 	useAtomResult,
 } from "../src/index.ts";
 import {
 	atomsMiddleware,
 	clientAtomsMiddleware,
-	RegistryProvider,
 	type RequestAtoms,
 } from "../src/ReactRouter.ts";
 import { settle } from "./fixtures/browser.tsx";

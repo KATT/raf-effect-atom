@@ -1,42 +1,28 @@
 /**
- * Connects the loader verbs to the Next.js App Router.
+ * Connects the loader verbs to React Server Components, such as the Next.js
+ * App Router.
  *
  * Server components share one request registry per request through React's
  * `cache`: they start atoms with `prefetch`, `ensure` and `fetch`, pass the
- * handles those return to client components as props, and pass
- * `await dehydrate()` to `HydrateAtoms`, which hydrates the client
- * components' registry from `RegistryProvider`. `makeRequestAtoms` makes the
- * same functions over a request registry that a seed prepares, such as with
- * the request's cookie.
+ * handles those return to client components as props, and render them under
+ * `<HydrationBoundary registry={getRegistry()}>` from `raf-effect-atom`,
+ * which hydrates the registry of the root's `RegistryProvider`.
+ * `makeRequestAtoms` makes the same functions over a request registry that a
+ * seed prepares, such as with the request's cookie.
  *
  * @stability unstable
- * @since 0.1.0
+ * @since 0.3.0
  */
 import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
-import type * as EffectHydration from "effect/reactivity/Hydration";
 
 import type { ArgsOf, Handle, LoadedHandle, Source } from "./Handle.ts";
-import * as internal from "./internal/next.ts";
+import * as internal from "./internal/rsc.ts";
 import type * as Loader from "./Loader.ts";
 import type * as RequestRegistry from "./RequestRegistry.ts";
 
-export {
-	/**
-	 * @since 0.1.0
-	 */
-	HydrateAtoms,
-} from "./NextClient.tsx";
-
-export {
-	/**
-	 * @since 0.1.0
-	 */
-	RegistryProvider,
-} from "./RegistryProvider.tsx";
-
 /**
  * The loader verbs over the request registry of the server render in
- * progress, with its registry and `dehydrate`.
+ * progress, with its registry.
  *
  * @stability unstable
  * @category models
@@ -44,31 +30,29 @@ export {
  */
 export interface RequestAtoms extends Loader.Loader {
 	/**
-	 * `Hydration.dehydrate` on the request's registry, for `HydrateAtoms`,
-	 * once its seed has settled.
+	 * The request registry of the server render in progress, for
+	 * `HydrationBoundary`'s `registry`.
 	 */
-	readonly dehydrate: () => Promise<Array<EffectHydration.DehydratedAtom>>;
-	/** The request registry of the server render in progress. */
 	readonly getRegistry: () => AtomRegistry.AtomRegistry;
 }
 
 /**
- * Creates the verbs, `getRegistry` and `dehydrate` over a request registry
- * that `seed` prepares.
+ * Creates the verbs and `getRegistry` over a request registry that `seed`
+ * prepares.
  *
  * **When to use**
  *
  * Use when the request's atoms need something from the request before they
  * run, such as an RPC protocol that forwards the page request's cookie. Make
  * them once, in a server-only module, and call the verbs on them instead of
- * the ones `raf-effect-atom/next` exports.
+ * the ones `raf-effect-atom/rsc` exports.
  *
  * **Details**
  *
  * The seed runs on each request's registry when a server component first
  * uses it. It can be async, as `headers()` is: `ensure` and `fetch` wait
  * for it, `prefetch` returns its handle at once and starts the atom once the
- * seed resolves, and `dehydrate` waits for both.
+ * seed resolves, and `HydrationBoundary` waits for both.
  *
  * **Example**
  *
@@ -76,7 +60,7 @@ export interface RequestAtoms extends Loader.Loader {
  * // src/atoms.server.ts
  * import "server-only"
  * import { headers } from "next/headers"
- * import { makeRequestAtoms } from "raf-effect-atom/next"
+ * import { makeRequestAtoms } from "raf-effect-atom/rsc"
  *
  * export const atoms = makeRequestAtoms({
  *   seed: async (registry) => {
@@ -189,26 +173,3 @@ export const fetch: <S extends Source>(
  * @since 0.2.3
  */
 export const run: Loader.Loader["run"] = atoms.run;
-
-/**
- * `Hydration.dehydrate` on the request's registry, for `HydrateAtoms`.
- *
- * **Gotchas**
- *
- * Includes the atoms started so far, so call it after the server component's
- * verbs. Each `HydrateAtoms` hydrates what its own `dehydrate()` saw.
- *
- * **Example**
- *
- * ```tsx
- * <HydrateAtoms state={await dehydrate()}>
- *   <Issue issue={handle} />
- * </HydrateAtoms>
- * ```
- *
- * @stability unstable
- * @category dehydration
- * @since 0.1.0
- */
-export const dehydrate: () => Promise<Array<EffectHydration.DehydratedAtom>> =
-	atoms.dehydrate;

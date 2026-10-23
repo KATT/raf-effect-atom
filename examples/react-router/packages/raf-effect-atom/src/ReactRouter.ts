@@ -4,11 +4,12 @@
  * A root `middleware` gives each server request its own registry, under a
  * router context the app creates. Loaders start atoms with its verbs and
  * return its `dehydrate()` with their data; the route component hydrates it
- * with `HydrationBoundary`, inside the root's `RegistryProvider`. A root
- * `clientMiddleware` puts the browser's registry under the same context, so
- * one function can be both the route's `loader` and its `clientLoader`: after the first
- * page, loaders run in the browser, where `ensure` finds what the registry
- * already holds. Nothing is imported from `react-router`.
+ * with `HydrationBoundary`, inside the root's `RegistryProvider`, both from
+ * `raf-effect-atom`. A root `clientMiddleware` puts the browser's registry
+ * under the same context, so one function can be both the route's `loader`
+ * and its `clientLoader`: after the first page, loaders run in the browser,
+ * where `ensure` finds what the registry already holds. Nothing is imported
+ * from `react-router`.
  *
  * **Example**
  *
@@ -55,13 +56,6 @@ import * as Hydration from "./Hydration.ts";
 import * as Registry from "./internal/registry.ts";
 import * as Loader from "./Loader.ts";
 import * as RequestRegistry from "./RequestRegistry.ts";
-
-export {
-	/**
-	 * @since 0.1.0
-	 */
-	RegistryProvider,
-} from "./RegistryProvider.tsx";
 
 /**
  * One request's registry, with the loader verbs over it. In a client loader,
@@ -298,7 +292,7 @@ export const clientAtomsMiddleware =
 		const registry = Registry.current();
 		if (registry === undefined) {
 			throw new Error(
-				"clientAtomsMiddleware found no mounted RegistryProvider: render raf-effect-atom/react-router's RegistryProvider around the app in the root layout.",
+				"clientAtomsMiddleware found no mounted RegistryProvider: render raf-effect-atom's RegistryProvider around the app in the root layout.",
 			);
 		}
 		args.context.set(context, {
