@@ -91,6 +91,16 @@ describe("setupRouterAtoms", () => {
 		assert.isDefined(screen.getByText("Welcome, ada"));
 	});
 
+	it("starts a browser-only read from a client-only route's loader, after hydration", async () => {
+		using server = serve({});
+		const response = await renderOnServer("/entry");
+		assert.include(response.html, "Opening");
+		assert.strictEqual(server.requests(5), 0);
+		using _app = await renderInBrowser("/entry", response.html, 5);
+		assert.isDefined(screen.getByText("Issue 5"));
+		assert.strictEqual(server.requests(5), 1);
+	});
+
 	it("disposes the request registry when the response finishes", async () => {
 		using _server = serve({});
 		const response = await renderOnServer("/issues/1");

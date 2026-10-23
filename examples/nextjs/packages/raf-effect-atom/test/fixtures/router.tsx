@@ -25,10 +25,17 @@ import {
 	Loader,
 	RequestRegistry,
 	useAtomResult,
+	WaterfallDetection,
 } from "../../src/index.ts";
 import { setupRouterAtoms } from "../../src/TanStackRouter.tsx";
 import { mount, settle } from "./browser.tsx";
-import { greeting, issue, IssueNotFound, welcome } from "./issues.ts";
+import {
+	greeting,
+	issue,
+	IssueNotFound,
+	unkeyedIssue,
+	welcome,
+} from "./issues.ts";
 
 const isIssueNotFound = Schema.is(IssueNotFound);
 
@@ -56,6 +63,8 @@ function IssuePage() {
 
 const rootRoute = createRootRouteWithContext<{
 	readonly atoms: Loader.Loader;
+	/** What only the browser knows, as a credential read from the URL fragment. */
+	readonly entry: number | undefined;
 }>()({
 	component: () => (
 		<React.Suspense fallback={<p>Loading</p>}>
@@ -108,11 +117,43 @@ const welcomeRoute = createRoute({
 	path: "/welcome",
 });
 
+/**
+ * `/entry` runs only in the browser: its loader starts an unkeyed query from
+ * the browser's entry.
+ */
+const entryRoute = createRoute({
+	component: function EntryPage() {
+		const data = entryRoute.useLoaderData();
+		return data.issue === undefined ? (
+			<p>No entry</p>
+		) : (
+			<EntryIssue issue={data.issue} />
+		);
+	},
+	getParentRoute: () => rootRoute,
+	loader: (match) => ({
+		issue:
+			match.context.entry === undefined
+				? undefined
+				: match.context.atoms.prefetch(unkeyedIssue, match.context.entry),
+	}),
+	path: "/entry",
+	pendingComponent: () => <p>Opening</p>,
+	pendingMinMs: 0,
+	ssr: false,
+});
+
+function EntryIssue(props: { readonly issue: Handle<typeof unkeyedIssue> }) {
+	const result = useAtomResult(unkeyedIssue, props.issue);
+	return <p>{AsyncResult.isSuccess(result) ? result.value.title : "Failed"}</p>;
+}
+
 const routeTree = rootRoute.addChildren([
 	ensureRoute,
 	prefetchRoute,
 	greetingRoute,
 	welcomeRoute,
+	entryRoute,
 ]);
 
 /**
@@ -124,9 +165,10 @@ const makeRouter = (
 	registry: AtomRegistry.AtomRegistry,
 	isServer: boolean,
 	hydrated: Array<unknown> = [],
+	entry?: number,
 ) => {
 	const router = createRouter({
-		context: { atoms: Loader.make(registry) },
+		context: { atoms: Loader.make(registry), entry },
 		dehydrate: () => ({ app: "state" }),
 		history: createMemoryHistory({ initialEntries: [url] }),
 		hydrate: (dehydrated) => {
@@ -134,7 +176,11 @@ const makeRouter = (
 		},
 		isServer,
 		routeTree,
-		Wrap: (props) => <main>{props.children}</main>,
+		Wrap: (props) => (
+			<main>
+				<WaterfallDetection mode="throw">{props.children}</WaterfallDetection>
+			</main>
+		),
 	});
 	setupRouterAtoms({ registry, router });
 	return router;
@@ -167,7 +213,11 @@ export const renderOnServer = async (
  * router from them, and renders it. React's own scripts are left out: they
  * move server-rendered HTML, which the browser render doesn't use.
  */
-export const renderInBrowser = async (url: string, html: string) => {
+export const renderInBrowser = async (
+	url: string,
+	html: string,
+	entry?: number,
+) => {
 	const template = document.createElement("template");
 	template.innerHTML = html;
 	for (const sent of template.content.querySelectorAll("script")) {
@@ -180,7 +230,7 @@ export const renderInBrowser = async (url: string, html: string) => {
 	}
 	const app = mount();
 	const hydrated: Array<unknown> = [];
-	const router = makeRouter(url, app.registry, false, hydrated);
+	const router = makeRouter(url, app.registry, false, hydrated, entry);
 	await act(async () => {
 		await hydrate(router);
 		window.$_TSR?.h();
