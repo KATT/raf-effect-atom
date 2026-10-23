@@ -6,8 +6,8 @@
 		"effect": {
 			"packages": ["effect"],
 			"url": "https://github.com/Effect-TS/effect.git",
-			"version": "4.0.5",
-			"ref": "effect@4.0.5",
+			"version": "4.0.6",
+			"ref": "effect@4.0.6",
 			"ignore": [
 				"scratchpad/**",
 				"**/.github/**",
@@ -19,8 +19,8 @@
 		"router": {
 			"packages": ["@tanstack/react-router"],
 			"url": "https://github.com/TanStack/router.git",
-			"version": "1.170.45",
-			"ref": "@tanstack/react-router@1.170.45"
+			"version": "1.170.46",
+			"ref": "@tanstack/react-router@1.170.46"
 		}
 	}
 }
