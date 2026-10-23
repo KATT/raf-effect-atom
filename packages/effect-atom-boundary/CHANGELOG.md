@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.2](https://github.com/KATT/raf-effect-atom/compare/effect-atom-boundary%400.1.1...effect-atom-boundary%400.1.2) (2026-10-23)
+
+### Features
+
+- **effect-atom-boundary:** type a boundary's errors from an AtomHttpApi client ([60b0efd](https://github.com/KATT/raf-effect-atom/commit/60b0efd92740e198a45012d4423bcd04cabfef2c))
+
+### Documentation
+
+- correct the generated changelogs' cut-off breaking change and bogus issue links ([c21f64c](https://github.com/KATT/raf-effect-atom/commit/c21f64cad3b4638f2341968aa2e10af5a19904c1))
+
 ## [0.1.1](https://github.com/KATT/raf-effect-atom/compare/effect-atom-boundary%400.1.0...effect-atom-boundary%400.1.1) (2026-10-23)
 
 ### Bug Fixes
