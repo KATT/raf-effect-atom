@@ -1,3 +1,4 @@
+import { deploymentOf, pinAssets } from "@examples/kit/lib/skew-protection";
 import { createRouter } from "@tanstack/react-router";
 import { Loader } from "raf-effect-atom";
 import {
@@ -6,13 +7,17 @@ import {
 } from "raf-effect-atom/tanstack-router";
 
 import { NotFound } from "./components/not-found.tsx";
+import { reloadForStaleChunk, RouteError } from "./components/route-error.tsx";
 import { routeTree } from "./routeTree.gen.ts";
 
 export function getRouter() {
+	pinAssets(deploymentOf(import.meta.env));
 	const registry = makeRegistry();
 	const router = createRouter({
 		context: { atoms: Loader.make(registry) },
+		defaultErrorComponent: RouteError,
 		defaultNotFoundComponent: NotFound,
+		defaultOnCatch: reloadForStaleChunk,
 		defaultPreload: "intent",
 		// The registry decides what's fresh; loaders always run and reuse it.
 		defaultPreloadStaleTime: 0,

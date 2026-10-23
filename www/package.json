@@ -20,6 +20,7 @@
 		"@examples/ui": "workspace:*",
 		"@tanstack/react-router": "1.170.46",
 		"@tanstack/react-start": "1.169.4",
+		"@tanstack/router-core": "1.171.39",
 		"effect": "catalog:",
 		"effect-atom-boundary": "workspace:*",
 		"lucide-react": "1.61.0",
