@@ -157,6 +157,27 @@ export const fetch: <S extends Source>(
 ) => Promise<LoadedHandle<S>> = atoms.fetch;
 
 /**
+ * `Loader.Loader`'s `run` on the request's registry: runs an Effect that
+ * needs the registry, such as the Effect verbs in an `Effect.gen`.
+ *
+ * **Example**
+ *
+ * ```ts
+ * const handles = await run(
+ *   Effect.gen(function* () {
+ *     const issueHandle = yield* Loader.ensure(issue, id)
+ *     return { comments: yield* Loader.prefetch(commentPage, id, 0), issue: issueHandle }
+ *   })
+ * )
+ * ```
+ *
+ * @stability unstable
+ * @category verbs
+ * @since 0.2.3
+ */
+export const run: Loader.Loader["run"] = atoms.run;
+
+/**
  * `Hydration.dehydrate` on the request's registry, for `HydrateAtoms`.
  *
  * **Gotchas**

@@ -359,6 +359,16 @@ export interface Loader {
 		source: S,
 		...args: ArgsOf<S>
 	) => Handle<S>;
+	/**
+	 * Runs an Effect that needs the registry, such as the Effect verbs in an
+	 * `Effect.gen`, as a Promise that rejects with its squashed cause.
+	 * Aborting `signal`, or the one the verbs were made with, interrupts it,
+	 * and the Promise rejects with the abort reason.
+	 */
+	readonly run: <A, E>(
+		effect: Effect.Effect<A, E, AtomRegistry.AtomRegistry>,
+		options?: { readonly signal?: AbortSignal | undefined },
+	) => Promise<A>;
 }
 
 /**
@@ -366,15 +376,15 @@ export interface Loader {
  *
  * @stability unstable
  * @category models
- * @since 0.3.0
+ * @since 0.2.2
  */
 export interface MakeOptions {
 	/** How long a lease lasts in the browser. See {@link LeaseTTL}. */
 	readonly leaseTTL?: Duration.Input | undefined;
 	/**
 	 * The request's or the navigation's abort signal. Aborting it interrupts
-	 * the `ensure` and `fetch` calls still waiting, which reject with its
-	 * reason. The atoms they started keep loading.
+	 * the `ensure`, `fetch` and `run` calls still waiting, which reject with
+	 * its reason. The atoms they started keep loading.
 	 */
 	readonly signal?: AbortSignal | undefined;
 }
@@ -387,6 +397,14 @@ const runPromise = <A, E>(
 		throw signal?.aborted ? signal.reason : error;
 	});
 
+const either = (
+	first: AbortSignal | undefined,
+	second: AbortSignal | undefined,
+): AbortSignal | undefined =>
+	first === undefined || second === undefined
+		? (first ?? second)
+		: AbortSignal.any([first, second]);
+
 /**
  * Creates the Promise verbs over one registry.
  *
@@ -395,14 +413,14 @@ const runPromise = <A, E>(
  * Use in a framework integration, in loaders that are async functions, or
  * in an event handler that starts an atom before the state change that
  * renders its reader, for state that can't be in the URL, such as a
- * search-as-you-type query. In Effect code, use the verbs directly with the
- * `AtomRegistry` provided.
+ * search-as-you-type query. In Effect code, use the verbs directly, and run
+ * the Effect on the registry with `run`.
  *
  * **Details**
  *
- * With a `signal`, an aborted request or navigation stops waiting: `ensure`
- * and `fetch` reject with the signal's reason, and the atoms they started
- * keep loading. The React Router and Next.js integrations pass the
+ * With a `signal`, an aborted request or navigation stops waiting: `ensure`,
+ * `fetch` and `run` reject with the signal's reason, and the atoms they
+ * started keep loading. The React Router and Next.js integrations pass the
  * request's.
  *
  * **Example**
@@ -452,5 +470,7 @@ export const make = (
 			});
 			return Handles.make<S>(args, atom);
 		},
+		run: (effect, runOptions) =>
+			runPromise(provide(effect), either(signal, runOptions?.signal)),
 	};
 };

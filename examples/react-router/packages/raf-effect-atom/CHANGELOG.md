@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.2](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.1...raf-effect-atom%400.2.2) (2026-10-23)
+
+### Features
+
+- **raf-effect-atom:** stop a loader's wait when its request is aborted ([b1f2f16](https://github.com/KATT/raf-effect-atom/commit/b1f2f16fcce9cd5dd1ba18fa653b40c805eebd93)), references [#41](https://github.com/KATT/raf-effect-atom/issues/41) [#40](https://github.com/KATT/raf-effect-atom/issues/40) [#40](https://github.com/KATT/raf-effect-atom/issues/40) [#41](https://github.com/KATT/raf-effect-atom/issues/41)
+
+### Bug Fixes
+
+- **raf-effect-atom:** refuse to hydrate a shared registry during server rendering ([2f793a6](https://github.com/KATT/raf-effect-atom/commit/2f793a63627482bdf2f0e2891829f5191077cfc7))
+
+### Documentation
+
+- **raf-effect-atom:** date clientAtomsMiddleware to 0.2.1, the release it shipped in ([c2a4288](https://github.com/KATT/raf-effect-atom/commit/c2a4288f4c5b63575e019712edc9fdc49a052bd2))
+- record that the packages' module state is keyed by what one request owns ([22b23f9](https://github.com/KATT/raf-effect-atom/commit/22b23f947544f8c4459ef172e8b21499403059c4))
+
 ## [0.2.1](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.0...raf-effect-atom%400.2.1) (2026-10-23)
 
 ### Features

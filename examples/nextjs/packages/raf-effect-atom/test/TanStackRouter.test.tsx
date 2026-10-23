@@ -1,12 +1,19 @@
 // @vitest-environment-options {"settings":{"enableJavaScriptEvaluation":true,"suppressInsecureJavaScriptEnvironmentWarning":true}}
 import { assert, describe, it } from "@effect/vitest";
-import { createRootRoute, createRouter } from "@tanstack/react-router";
+import {
+	createMemoryHistory,
+	createRootRoute,
+	createRootRouteWithContext,
+	createRoute,
+	createRouter,
+} from "@tanstack/react-router";
 import { screen } from "@testing-library/react";
+import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as AtomRegistry from "effect/reactivity/AtomRegistry";
 
-import { RequestRegistry } from "../src/index.ts";
+import { type LoadedHandle, Loader, RequestRegistry } from "../src/index.ts";
 import { makeRegistry, setupRouterAtoms } from "../src/TanStackRouter.tsx";
-import { counter, later, serve, viewer } from "./fixtures/issues.ts";
+import { counter, gated, later, serve, viewer } from "./fixtures/issues.ts";
 import { renderInBrowser, renderOnServer } from "./fixtures/router.tsx";
 
 describe("setupRouterAtoms", () => {
@@ -95,6 +102,62 @@ describe("setupRouterAtoms", () => {
 			() => setupRouterAtoms({ registry: registry.value, router }),
 			/with a request registry/,
 		);
+	});
+});
+
+describe("a loader that runs its verbs with the navigation's signal", () => {
+	it("stops waiting when another navigation supersedes it", async () => {
+		using registry = disposable(AtomRegistry.make());
+		const gate = gated("tanstack-router-signal");
+		const waited = Promise.withResolvers<{
+			readonly settled: PromiseSettledResult<LoadedHandle<typeof gate.atom>>;
+			readonly signal: AbortSignal;
+		}>();
+		const rootRoute = createRootRouteWithContext<{
+			readonly atoms: Loader.Loader;
+		}>()();
+		const gatedRoute = createRoute({
+			getParentRoute: () => rootRoute,
+			loader: async (match) => {
+				const [settled] = await Promise.allSettled([
+					match.context.atoms.run(Loader.ensure(gate.atom), {
+						signal: match.abortController.signal,
+					}),
+				]);
+				waited.resolve({ settled, signal: match.abortController.signal });
+				return null;
+			},
+			path: "/gated",
+		});
+		const homeRoute = createRoute({
+			getParentRoute: () => rootRoute,
+			path: "/",
+		});
+		const router = createRouter({
+			context: { atoms: Loader.make(registry.value) },
+			history: createMemoryHistory({ initialEntries: ["/"] }),
+			isServer: false,
+			routeTree: rootRoute.addChildren([gatedRoute, homeRoute]),
+		});
+		await router.load();
+		const leaving = router.navigate({ to: "/gated" });
+		await later(5);
+		await router.navigate({ to: "/" });
+		const outcome = await waited.promise;
+		assert.isTrue(outcome.signal.aborted);
+		assert.strictEqual(outcome.settled.status, "rejected");
+		assert.strictEqual(
+			outcome.settled.status === "rejected"
+				? outcome.settled.reason
+				: undefined,
+			outcome.signal.reason,
+		);
+		await leaving;
+		assert.strictEqual(router.state.location.pathname, "/");
+		gate.open("loaded");
+		await later(5);
+		const result = registry.value.get(gate.atom);
+		assert.isTrue(AsyncResult.isSuccess(result) && result.value === "loaded");
 	});
 });
 

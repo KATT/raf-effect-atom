@@ -79,6 +79,21 @@ describe("Loader", () => {
 		>();
 	});
 
+	it("runs an Effect that needs only the registry, with its success type", () => {
+		const loader = Loader.make(hole<AtomRegistry.AtomRegistry>());
+		expect(loader.run(Loader.ensure(issue, 1))).type.toBe<
+			Promise<LoadedHandle<typeof issue>>
+		>();
+		expect(
+			loader.run(hole<Effect.Effect<number, "boom">>(), {
+				signal: hole<AbortSignal>(),
+			}),
+		).type.toBe<Promise<number>>();
+		expect(loader.run).type.not.toBeCallableWith(
+			hole<Effect.Effect<number, never, "OtherService">>(),
+		);
+	});
+
 	it("rejects an atom that isn't an AsyncResult", () => {
 		expect(Loader.ensure).type.not.toBeCallableWith(Atom.make(1));
 		expect(

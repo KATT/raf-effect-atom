@@ -3,7 +3,7 @@ import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
 import type * as EffectHydration from "effect/reactivity/Hydration";
 import { describe, expect, it } from "tstyche";
 
-import type { Handle, LoadedHandle } from "../src/index.ts";
+import { type Handle, type LoadedHandle, Loader } from "../src/index.ts";
 import * as Next from "../src/Next.ts";
 import { issue } from "../test/fixtures/issues.ts";
 
@@ -17,6 +17,9 @@ describe("raf-effect-atom/next", () => {
 			Promise<LoadedHandle<typeof issue>>
 		>();
 		expect(Next.ensure).type.not.toBeCallableWith(Atom.make(1));
+		expect(Next.run(Loader.ensure(issue, 1))).type.toBe<
+			Promise<LoadedHandle<typeof issue>>
+		>();
 	});
 
 	it("returns the request's registry and its dehydrated state", () => {
