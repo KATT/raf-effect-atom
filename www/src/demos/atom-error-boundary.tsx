@@ -3,6 +3,7 @@ import { Skeleton } from "@examples/ui/components/skeleton";
 import { IssueId, IssueNotFound, Unauthorized } from "@examples/contract";
 import { useAtomSuspense } from "@effect/atom-react";
 import { AtomErrorBoundary, type CatchTagProps } from "effect-atom-boundary";
+import type { RpcClientError } from "effect/rpc";
 import { Suspense, useState } from "react";
 
 import { AppBoundary } from "~/demo-kit/app-boundary.tsx";
@@ -61,11 +62,33 @@ function SignedOut(props: CatchTagProps<Unauthorized>) {
 	);
 }
 
+function Unreachable(props: CatchTagProps<RpcClientError.RpcClientError>) {
+	return (
+		<ErrorNotice
+			action={
+				<Button onClick={props.reset} size="xs" variant="outline">
+					Try again
+				</Button>
+			}
+			caughtBy="<AtomErrorBoundary>"
+			type="RpcClientError"
+		>
+			The request didn’t reach the server.
+		</ErrorNotice>
+	);
+}
+
 function IssuePanel(props: { readonly id: IssueId }) {
 	return (
 		<AtomErrorBoundary
 			atom={issue(props.id)}
-			catchTags={{ IssueNotFound: NotFound, Unauthorized: SignedOut }}
+			// claim throws every tag the atom fails with: one handler each, so
+			// none reaches the app's boundary.
+			catchTags={{
+				IssueNotFound: NotFound,
+				RpcClientError: Unreachable,
+				Unauthorized: SignedOut,
+			}}
 		>
 			<Suspense fallback={<Skeleton className="h-12 w-full" />}>
 				<IssueTitle id={props.id} />
@@ -100,7 +123,7 @@ function AtomErrorBoundaryDemo() {
 				atom={`GetIssue:${id}`}
 				levels={[
 					{
-						claims: ["IssueNotFound", "Unauthorized"],
+						claims: ["IssueNotFound", "RpcClientError", "Unauthorized"],
 						name: "<AtomErrorBoundary>",
 					},
 				]}
@@ -123,6 +146,6 @@ function AtomErrorBoundaryDemo() {
 
 export default defineDemo({
 	Component: AtomErrorBoundaryDemo,
-	hint: "Open issue #404, then queue a failure and press Try again. IssueNotFound and Unauthorized have handlers; a Crash isn’t a typed error, so it reaches the app’s error boundary as unknown.",
+	hint: "Open issue #404, then queue a failure and press Try again. Every tag the atom fails with has a handler; a Crash isn’t a typed error, so it reaches the app’s error boundary as unknown.",
 	title: "AtomErrorBoundary",
 });

@@ -12,13 +12,17 @@ export function IssuePanel(props: { id: IssueId }) {
 	return (
 		<AtomErrorBoundary
 			atom={issue(props.id)}
+			// claim throws every tag the atom fails with, and a tag with no
+			// handler here goes to the boundaries above: name each one.
 			catchTags={{
-				IssueNotFound: ({ error, reset }) => (
+				IssueNotFound: ({ error }) => <p>There's no issue #{error.id}.</p>,
+				RpcClientError: ({ reset }) => (
 					<p>
-						There's no issue #{error.id}.{" "}
+						Couldn't reach the server.{" "}
 						<button onClick={reset}>Try again</button>
 					</p>
 				),
+				Unauthorized: () => <p>Sign in to see this issue.</p>,
 			}}
 		>
 			<Suspense fallback={<p>Loading…</p>}>
@@ -30,9 +34,9 @@ export function IssuePanel(props: { id: IssueId }) {
 
 function IssueTitle(props: { id: IssueId }) {
 	// Suspends while loading, throws a typed failure to the boundaries above.
-	const result = useAtomSuspense(AtomErrorBoundary.claim(issue(props.id)), {
-		suspendOnWaiting: true,
-	});
+	const claimed = AtomErrorBoundary.claim(issue(props.id));
+	const result = useAtomSuspense(claimed, { suspendOnWaiting: true });
+	//    ^?
 	return <h1>{result.value.title}</h1>;
 }
 // #endregion boundary
