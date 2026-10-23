@@ -1,4 +1,5 @@
 import { Button } from "@examples/ui/components/button";
+import { Link } from "@tanstack/react-router";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -9,19 +10,27 @@ const storageKey = "raf-effect-atom-docs:announcement-dismissed";
  * see the next.
  */
 const announcements = {
-	early: {
-		id: "early-minor",
+	onNpm: {
+		id: "on-npm-pre-1",
 		message: (
 			<>
-				<strong className="font-semibold">raf-effect-atom is early.</strong>{" "}
-				Both packages can still change between minor releases, so use them at
-				your own risk.
+				<strong className="font-semibold">
+					raf-effect-atom and effect-atom-boundary are on npm.
+				</strong>{" "}
+				Both are pre-1.0, so a minor release can still break them.{" "}
+				<Link
+					className="font-semibold underline underline-offset-4"
+					params={{ slug: "installation" }}
+					to="/docs/$slug"
+				>
+					Install them
+				</Link>
 			</>
 		),
 	},
 } satisfies Record<string, { id: string; message: ReactNode }>;
 
-const announcement = announcements.early;
+const announcement = announcements.onNpm;
 
 /** Set on `<html>` once dismissed; `styles.css` hides the bar under it. */
 const dismissedAttribute = "data-announcement-dismissed";

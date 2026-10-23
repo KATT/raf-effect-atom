@@ -7,7 +7,7 @@
 <p align="center">Render-as-you-fetch for <a href="https://github.com/Effect-TS/effect/tree/main/packages/atom/react">Effect Atom</a>: typed error boundaries, and atoms prefetched from route loaders.</p>
 
 > [!NOTE]
-> raf-effect-atom is early. Nothing is published yet, and the API can still change between minor releases.
+> raf-effect-atom is early. Both packages are on npm, pre-1.0, and the API can still change between minor releases. See [Installation](https://raf-effect-atom.katt.dev/docs/installation).
 
 Effect Atom's registry is the cache. These packages add only what it lacks, as thin layers over Effect Atom and [Effect RPC](https://github.com/Effect-TS/effect/tree/main/packages/effect/src/rpc):
 
