@@ -79,7 +79,7 @@ const [IssuePageBoundary, useIssuePageBoundary] = createErrorBoundary({
 
 function IssuePanel(props: { readonly issue: Handle<typeof issue> }) {
 	return (
-		<IssuePageBoundary>
+		<IssuePageBoundary key={props.issue.args[0]}>
 			<Suspense fallback={<Skeleton className="h-12 w-full" />}>
 				<IssueTitle issue={props.issue} />
 			</Suspense>

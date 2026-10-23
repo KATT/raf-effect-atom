@@ -129,7 +129,7 @@ function BoundaryChainDemo() {
 			<AppErrorBoundary>
 				<AppBoundary>
 					<AuthBoundary>
-						<IssueBoundary>
+						<IssueBoundary key={id}>
 							<Suspense fallback={<Skeleton className="h-12 w-full" />}>
 								<IssueTitle issue={picked} />
 							</Suspense>

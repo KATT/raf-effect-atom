@@ -32,6 +32,8 @@ A component under `<IssueBoundary>` reads its handle through `useIssueBoundary()
 
 A caught failure renders the boundary's handler in place of its children. `reset` refreshes every atom in the registry that failed with a tag the boundary handles, and renders the children again.
 
+The handler stays until `reset`: with its children replaced, the boundary can't tell that they'd now read another atom. Give a boundary around one issue's page the issue's id as its [`key`](https://react.dev/learn/preserving-and-resetting-state#option-2-resetting-state-with-a-key), so opening another issue mounts a new boundary, without the last issue's failure.
+
 A handler renders as a component, so it can call hooks. A handler written inline is a new component each time the component around the boundary renders, so it mounts again and loses its state: give a handler with state a name outside the render.
 
 ## When every tag is caught
