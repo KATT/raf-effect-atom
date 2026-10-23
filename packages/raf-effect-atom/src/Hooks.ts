@@ -7,10 +7,12 @@
 "use client";
 
 import { RegistryContext, useAtomSuspense } from "@effect/atom-react";
+import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
+import * as Option from "effect/Option";
 import * as Predicate from "effect/Predicate";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
-import type * as Atom from "effect/reactivity/Atom";
+import * as Atom from "effect/reactivity/Atom";
 import type { ClaimedResult, ErrorBoundaryClaims } from "effect-atom-boundary";
 import * as React from "react";
 
@@ -21,6 +23,24 @@ import * as Pending from "./internal/pending.ts";
 import * as Registry from "./internal/registry.ts";
 import type { SettledResult } from "./Loader.ts";
 import { isRequestRegistry } from "./RequestRegistry.ts";
+
+/**
+ * The atom the loader started and the server sent: the first serializable
+ * atom in `atom`'s `initialValueTarget` chain, starting with `atom`. An
+ * AtomRpc query is serializable itself, though it points at an inner atom.
+ */
+const sourceOf = (atom: Atom.Atom<unknown>): Atom.Atom<unknown> => {
+	for (
+		let target: Atom.Atom<unknown> | undefined = atom;
+		target !== undefined;
+		target = target.initialValueTarget
+	) {
+		if (Atom.isSerializable(target)) {
+			return target;
+		}
+	}
+	return atom;
+};
 
 /**
  * Reads an `AsyncResult` atom through React Suspense: a result streamed from
@@ -38,6 +58,9 @@ import { isRequestRegistry } from "./RequestRegistry.ts";
  * - The atom is read through `hydrated`, so a hydrated result is kept.
  * - Once the component mounts, the loader's lease ends and the component
  *   keeps the atom mounted.
+ * - A derived atom is read through the first serializable atom its
+ *   `initialValueTarget` chain points at: that one is awaited, hydrated and
+ *   released, so the derived atom doesn't request it again.
  * - Without claims, the settled result is returned, typed failures
  *   included. With claims, `claims.claim` throws a claimed failure to its
  *   boundary and returns the rest, typed without the claimed errors.
@@ -49,6 +72,12 @@ import { isRequestRegistry } from "./RequestRegistry.ts";
  * During server rendering, the registry must be a request registry (see
  * `RequestRegistry.make`), or a module-level registry would share results
  * between requests: in development, the hook throws without one.
+ *
+ * `Atom.transform`'s `initialValueTarget` option points at the end of the
+ * target's own chain, which for an AtomRpc query with `reactivityKeys` is an
+ * inner atom with no serialization key. A derived atom read here sets
+ * `initialValueTarget` to its source itself, as an error boundary's
+ * wrapper does, or it requests the source again after hydration.
  *
  * **Example**
  *
@@ -89,21 +118,34 @@ export function useAtomResult<A, E>(
 			"raf-effect-atom: useAtomResult rendered on the server without a request registry, so results would be shared between requests. Provide RequestRegistry.make() through RegistryContext, as the framework integrations do.",
 		);
 	}
-	const target = hydrated(atom);
-	const key = Leases.keyOf(target);
+	const target = sourceOf(atom);
+	const source = hydrated(target);
+	const read = target === atom ? hydrated(atom) : atom;
+	const key = Leases.keyOf(source);
 	const streamed = Predicate.isString(key)
 		? Pending.get(registry, key)
 		: undefined;
 	if (streamed !== undefined) {
 		React.use(streamed);
 	}
-	const current = registry.get(target);
-	const result = useAtomSuspense(target, {
+	if (read !== source) {
+		// Builds the source's node from the hydrated copy, before the derived
+		// atom builds it from the source and requests it again.
+		registry.get(source);
+	}
+	const current = registry.get(read);
+	const result = useAtomSuspense(read, {
 		includeFailure: true,
 		suspendOnWaiting: AsyncResult.isFailure(current) && current.waiting,
 	});
 	React.useEffect(() => {
-		Leases.release(registry, target);
-	}, [registry, target]);
+		Leases.release(registry, source);
+	}, [registry, source]);
+	if (
+		AsyncResult.isFailure(result) &&
+		Option.isNone(Cause.findErrorOption(result.cause))
+	) {
+		throw Cause.squash(result.cause);
+	}
 	return claims === undefined ? result : claims.claim(atom, registry, result);
 }

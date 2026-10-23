@@ -66,7 +66,11 @@ export class Issues extends AtomRpc.Service<Issues>()("Issues", {
 
 /** A query atom that hydrates, as the example apps write them. */
 export const issue = (id: number) =>
-	Issues.query("GetIssue", { id }, { serializationKey: String(id) });
+	Issues.query(
+		"GetIssue",
+		{ id },
+		{ reactivityKeys: ["issues"], serializationKey: String(id) },
+	);
 
 /** A query atom without a `serializationKey`, which never hydrates. */
 export const unkeyedIssue = (id: number) => Issues.query("GetIssue", { id });

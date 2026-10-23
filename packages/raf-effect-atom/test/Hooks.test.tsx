@@ -3,6 +3,7 @@ import { screen } from "@testing-library/react";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
+import * as Atom from "effect/reactivity/Atom";
 import * as Schema from "effect/Schema";
 import { createErrorBoundary } from "effect-atom-boundary";
 import * as React from "react";
@@ -123,7 +124,82 @@ describe("useAtomResult after server rendering", () => {
 	});
 });
 
+/** A derived atom pointing at its source, as a boundary's wrapper is. */
+const titled = Atom.family((id: number) =>
+	Object.assign(
+		Atom.transform(issue(id), (get) =>
+			AsyncResult.map(get(issue(id)), (found) => ({
+				...found,
+				title: `Titled ${found.title}`,
+			})),
+		),
+		{ initialValueTarget: issue(id) },
+	),
+);
+
+function DerivedTitle(props: { readonly id: number }) {
+	const result = useAtomResult(titled(props.id));
+	return <p>{AsyncResult.isSuccess(result) ? result.value.title : "Failed"}</p>;
+}
+
+const DerivedPage = (props: {
+	readonly id: number;
+	readonly state?: Parameters<typeof HydrationBoundary>[0]["state"];
+}) => (
+	<HydrationBoundary state={props.state}>
+		<React.Suspense fallback={<p>Loading</p>}>
+			<DerivedTitle id={props.id} />
+		</React.Suspense>
+	</HydrationBoundary>
+);
+
+describe("useAtomResult on a derived atom", () => {
+	it("reads its source's hydrated result, one request", async () => {
+		using server = serve();
+		using rendered = await load(Loader.ensure(issue(1)));
+		using app = mount();
+		await app.render(<DerivedPage id={1} state={rendered.state} />, true);
+		await settle(100);
+		expect(screen.getByText("Titled Issue 1")).toBeDefined();
+		expect(server.requests(1)).toBe(1);
+	});
+
+	it("waits for its source's streamed result, one request", async () => {
+		using server = serve();
+		using rendered = await load(Loader.prefetch(issue(2)));
+		using app = mount();
+		await app.render(<DerivedPage id={2} state={rendered.state} />, true);
+		await settle(100);
+		expect(screen.getByText("Titled Issue 2")).toBeDefined();
+		expect(server.requests(2)).toBe(1);
+	});
+
+	it("ends the loader's lease on its source", async () => {
+		using server = serve();
+		using app = mount();
+		Loader.make(app.registry).prefetch(issue(3));
+		await app.render(<DerivedPage id={3} />);
+		expect(screen.getByText("Titled Issue 3")).toBeDefined();
+		await app.unmount();
+		await settle(2000);
+		expect(nodeOf(app, 3)).toBeUndefined();
+		expect(server.requests(3)).toBe(1);
+	});
+});
+
 describe("useAtomResult", () => {
+	it("throws a defect to the error boundaries above", async () => {
+		using _server = serve({ 1: ["crash"] });
+		using _errors = silenceCaughtErrors();
+		using app = mount();
+		await app.render(
+			<React.Suspense fallback={<p>Loading</p>}>
+				<UnclaimedTitle id={1} />
+			</React.Suspense>,
+		);
+		expect(screen.getByText(/^Outer: .*the server crashed/)).toBeDefined();
+	});
+
 	it("returns a failure it isn't given claims for", async () => {
 		using _server = serve({ 1: ["missing"] });
 		using app = mount();
