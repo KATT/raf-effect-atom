@@ -1,0 +1,7 @@
+# Every dependency at its latest release, pinned exactly (human asked)
+
+- Human: use the latest published version of every dependency; don't copy raf-query's pins. Before adding or bumping a package, check the registry (`npm view <package> version`) and pin that exact version. GitHub Actions use their latest major (`gh release list --repo <owner>/<action>`).
+- Node is the latest 26.x from [nodejs.org/dist](https://nodejs.org/dist/index.json), pinned in `.nvmrc` ([vercel-projects.md](./vercel-projects.md) covers Vercel, which lags).
+- If the latest version breaks something, pin back to the newest one that works and give the reason in the commit body, and add a comment next to the pin so the next bump retries it.
+- `.repos/*` follows: vendor-src vendors the installed version, so a bump of a vendored package is followed by `pnpm exec vendor-src sync` ([vendored-source.md](./vendored-source.md)).
+- pnpm 12 has a built-in one-day minimum release age that isn't strict: an exact version younger than a day still installs, and pnpm records it in `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`. Those entries are expected after a bump; delete them on a later bump once the versions are older than a day.

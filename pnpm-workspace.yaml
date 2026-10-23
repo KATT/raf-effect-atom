@@ -29,6 +29,8 @@ peerDependencyRules:
   allowedVersions:
     vite: 1.4.0
 
+# pnpm adds a version here when an install takes it before it is a day old
+# (its built-in, non-strict minimum release age). Drop entries once they're older.
 minimumReleaseAgeExclude:
   - "@effect/platform-node@4.0.6"
   - "@oxlint-tsgolint/darwin-arm64@7.0.2005"
