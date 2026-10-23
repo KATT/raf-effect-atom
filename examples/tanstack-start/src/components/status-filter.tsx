@@ -1,0 +1,67 @@
+import type { IssueListInput } from "@examples/contract";
+import {
+	issueStatuses,
+	statusLabel,
+} from "@examples/kit/components/status-badge";
+import type { LoaderVerb } from "@examples/kit/lib/loader-verb";
+import { cn } from "@examples/ui/lib/utils";
+import { Link } from "@tanstack/react-router";
+import { AsyncResult } from "effect/reactivity";
+import { useAtomResult } from "raf-effect-atom";
+
+import { useAuthBoundary } from "~/boundaries.tsx";
+import { LoadFailed } from "~/components/load-failed.tsx";
+import { issueCounts } from "~/issues.ts";
+
+const sorts = ["newest", "oldest"] as const;
+
+export function StatusFilter(props: {
+	readonly current: IssueListInput;
+	readonly verb: LoaderVerb;
+}) {
+	const result = useAtomResult(issueCounts, useAuthBoundary());
+	if (!AsyncResult.isSuccess(result)) {
+		return <LoadFailed result={result} />;
+	}
+	const counts = result.value;
+	const current = props.current;
+
+	return (
+		<aside className="grid content-start gap-3 md:gap-6">
+			<nav className="flex flex-wrap gap-1 md:grid">
+				{(["all", ...issueStatuses] as const).map((status) => (
+					<Link
+						className={cn(
+							"flex justify-between gap-2 rounded-md px-3 py-1.5 text-sm hover:bg-muted",
+							current.status === status && "bg-muted font-medium",
+						)}
+						key={status}
+						search={{ ...current, status }}
+						to={`/${props.verb}/issues`}
+					>
+						{statusLabel(status)}
+						<span className="text-muted-foreground">{counts[status]}</span>
+					</Link>
+				))}
+			</nav>
+			<nav className="flex flex-wrap items-center gap-1 md:grid">
+				<span className="px-3 text-xs font-medium text-muted-foreground uppercase">
+					Sort
+				</span>
+				{sorts.map((sort) => (
+					<Link
+						className={cn(
+							"rounded-md px-3 py-1.5 text-sm capitalize hover:bg-muted",
+							current.sort === sort && "bg-muted font-medium",
+						)}
+						key={sort}
+						search={{ ...current, sort }}
+						to={`/${props.verb}/issues`}
+					>
+						{sort}
+					</Link>
+				))}
+			</nav>
+		</aside>
+	);
+}

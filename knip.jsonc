@@ -44,6 +44,8 @@
 	"ignore": [".repos/**"],
 	"workspaces": {
 		".": {
+			// Scripts the agent skills run with `node`.
+			"entry": [".agents/skills/*/scripts/*.mjs"],
 			"ignoreDependencies": [
 				// `vp lint` / `vp fmt` load these. vite-plus depends on them
 				// too; the root pins the versions those commands run.
@@ -61,15 +63,12 @@
 			// with the CLI and stay available to the apps.
 			"includeEntryExports": false,
 		},
-		"examples/.shared/kit": {
-			// Its exports are for www and the example apps, which don't import
-			// it yet. Remove this once they do.
-			"includeEntryExports": false,
-		},
-		"examples/.shared/backend": {
-			// Its entry is for the example apps' server-only RPC routes, which
-			// don't exist yet. Remove this once the first app imports it.
-			"includeEntryExports": false,
+		"examples/tanstack-start": {
+			"ignoreIssues": {
+				// `#rpc-transport` resolves here under the `browser` condition,
+				// which Knip doesn't follow.
+				"src/rpc-transport.browser.ts": ["exports"],
+			},
 		},
 		"tooling/oxlint-plugins": {
 			// Loaded by path from the root `.oxlintrc.json`.

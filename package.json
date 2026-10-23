@@ -11,7 +11,7 @@
 		"lint": "vp lint -c .oxlintrc.json --disable-nested-config",
 		"lint:fix": "vp lint -c .oxlintrc.json --fix --disable-nested-config",
 		"prepare": "husky",
-		"test": "pnpm -r --filter \"./packages/*\" --filter \"./examples/.shared/*\" --filter \"./tooling/*\" --filter \"./www\" test",
+		"test": "pnpm -r --filter \"./packages/*\" --filter \"./examples/*\" --filter \"./examples/.shared/*\" --filter \"./tooling/*\" --filter \"./www\" test",
 		"typecheck": "pnpm -r --filter \"./packages/*\" --filter \"./examples/*\" --filter \"./examples/.shared/*\" --filter \"./www\" --filter \"./www/samples/*\" --filter \"./tooling/*\" typecheck",
 		"postinstall": "vendor-src check"
 	},
