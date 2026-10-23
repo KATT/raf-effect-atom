@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Husky's `commit-msg` hook: checks the subject of the message file git passes
- * as the first argument, so a non-conventional commit never reaches `main`.
+ * Husky's `commit-msg` hook: checks the message file git passes as the first
+ * argument, so a commit release-it would misread never reaches `main`.
  */
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { Console, Effect, FileSystem } from "effect";
 
-import { formatError, validateSubject } from "../validate.ts";
+import { messageError, messageFromFile } from "../message.ts";
 
 const program = Effect.gen(function* () {
 	const file = process.argv[2];
@@ -14,13 +14,10 @@ const program = Effect.gen(function* () {
 		return yield* Effect.fail("Usage: check-message.ts <commit message file>");
 	}
 	const fs = yield* FileSystem.FileSystem;
-	const message = yield* fs.readFileString(file);
-	const subject =
-		message.split("\n").find((line) => !line.startsWith("#")) ?? "";
-	const result = validateSubject(subject);
-	if (!result.ok) {
-		yield* Console.error(formatError(subject, result.reason));
-		return yield* Effect.fail("The commit subject isn't conventional");
+	const error = messageError(messageFromFile(yield* fs.readFileString(file)));
+	if (error !== undefined) {
+		yield* Console.error(error);
+		return yield* Effect.fail("The commit message isn't valid");
 	}
 });
 

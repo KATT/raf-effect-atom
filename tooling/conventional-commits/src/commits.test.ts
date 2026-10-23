@@ -34,12 +34,15 @@ describe("pushedCommits", () => {
 		Effect.gen(function* () {
 			const root = yield* repo;
 			const before = yield* commit(root, "Initial commit");
-			yield* commit(root, "feat: one");
+			yield* commit(root, "feat: one\n\nThe body.\n\nRefs: #1");
 			const after = yield* commit(root, "fix: two");
 			const commits = yield* pushedCommits(root, before, after);
 			assert.deepStrictEqual(
-				commits.map((entry) => entry.subject),
-				["feat: one", "fix: two"],
+				commits.map((entry) => [entry.subject, entry.message]),
+				[
+					["feat: one", "feat: one\n\nThe body.\n\nRefs: #1"],
+					["fix: two", "fix: two"],
+				],
 			);
 		}).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 	);
@@ -99,6 +102,24 @@ describe("invalidCommits", () => {
 				invalid.map((entry) => [entry.sha, entry.subject]),
 				[[bad, "Update stuff"]],
 			);
+		}).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+	);
+
+	it.effect("reads each commit's whole message", () =>
+		Effect.gen(function* () {
+			const root = yield* repo;
+			const before = yield* commit(root, "Initial commit");
+			yield* commit(root, "feat: fine\n\nBody.\n\nRefs: #1");
+			const bad = yield* commit(
+				root,
+				"feat: run loaders in the browser\n\nThe second visit to #41 shows the issue.",
+			);
+			const invalid = yield* invalidCommits(root, before, bad);
+			assert.deepStrictEqual(
+				invalid.map((entry) => entry.sha),
+				[bad],
+			);
+			assert.include(invalid[0]?.error, 'line 3 mentions "#41"');
 		}).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 	);
 

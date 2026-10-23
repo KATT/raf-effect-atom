@@ -1,6 +1,7 @@
 # Commits land on main as they are, with no PR title to squash them into, and
-# release-it reads each subject for the changelog and version bump. So every
-# commit a push brings must be a conventional commit.
+# release-it reads each message for the changelog and version bump. So every
+# commit a push brings must be a conventional commit whose body the changelog
+# reads right (no stray `#N`, a one-line BREAKING CHANGE footer).
 name: Commits
 
 on:
@@ -17,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/prepare
-      - name: Check the pushed commits' subjects
+      - name: Check the pushed commits' messages
         env:
           COMMITS_AFTER: ${{ github.event.after }}
           COMMITS_BEFORE: ${{ github.event.before }}

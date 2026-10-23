@@ -11,6 +11,7 @@
 - If CI on `main` goes red, the next commit fixes it, before anything else.
 - Never force push, rewrite `main`'s history, or amend a pushed commit. Fix forward.
 - Every subject is a [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) (`type(scope)!: description`, types from `release-it/<package>.json`). The `commit-msg` hook and the `Commits` workflow check it, because release-it reads these subjects for the changelog and the version bump.
+- release-it reads the body too, so the same checks reject two things in it. A `#N` may only appear in a `Refs: #N` / `Fixes: #N` footer or as the subject's trailing `(#N)`, and only for this repo's own issues and PRs; anywhere else the changelog links it as one, so write "issue 41" or use backticks. A `BREAKING CHANGE:` footer must be one line in the last paragraph ([details](.github/DEVELOPMENT.md#commits)).
 - The commit body holds what a PR description would: what changed, the alternatives you rejected and why, and what you verified. Durable decisions also go in `.agent-docs/decisions/`.
 - Never run release-it or `npm publish`. The Release workflow publishes on its own after CI passes on `main`, for every package with commits under `packages/<package>/` since its last tag, so a green push that touches a package ships it. Breaking changes still land straight on `main`: mark them with `!`, and while a package is 0.x they bump the minor.
 

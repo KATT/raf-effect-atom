@@ -14,7 +14,7 @@ Tools live in `tooling/` and are written in TypeScript with Effect, run with pla
 | Directory                      | What                                                           |
 | ------------------------------ | -------------------------------------------------------------- |
 | `tooling/oxlint-plugins`       | The custom lint rules `.oxlintrc.json` loads                   |
-| `tooling/conventional-commits` | Checks commit subjects (`commit-msg` hook, `Commits` workflow) |
+| `tooling/conventional-commits` | Checks commit messages (`commit-msg` hook, `Commits` workflow) |
 | `tooling/pack-check`           | Packs the packages and installs the tarballs in an npm project |
 | `tooling/vercel-ignore`        | Vercel's Ignored Build Step                                    |
 | `tooling/og-image`             | The sites' social cards (`og:image`), rendered at build time   |
@@ -44,6 +44,20 @@ When the packages changed, build and pack them (`pnpm build && pnpm check:pack`)
 ## Commits
 
 Every commit subject is a [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/): `type(scope)!: description`, with a type from `release-it/<package>.json` (`feat`, `fix`, `perf`, `build`, `chore`, `ci`, `docs`, `refactor`, `style`, `test`). Breaking changes mark the type with `!`. The `commit-msg` hook rejects other subjects, and the `Commits` workflow checks every commit a push brings to `main`. release-it reads these subjects for the changelog and the version bump.
+
+release-it's parser ([conventional-commits-parser](https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-commits-parser)) also reads the body for the changelog and the GitHub release, so the hook and the workflow check two more things in it:
+
+- **`#N` only in reference footers.** The parser links every `#N` in a message as an issue of this repo: an example app's `#41`, React error `#321`, a colour like `#A78BFA`, a URL anchor, or `Atom#get`. A `#N` may appear only in a `Refs: #N`, `Fixes: #N`, `Closes: #N` or `Resolves: #N` footer (several separated by commas) and as the subject's trailing `(#N)`, and only for this repo's own issues and PRs. The check can't tell whether the number exists, so that part is up to you. Elsewhere, write "issue 41", put it in backticks, or link the full URL. `owner/repo#N` is fine: it links that repo's issue.
+- **`BREAKING CHANGE:` on one line, in the last paragraph.** The parser reads every line after the footer into the breaking change until it reaches a line that looks like a footer (`word: text`). A wrapped second line that starts with `word: ` (`promise: write ...`) cuts the note short. Any other wrapped line drags the rest of the body into the note. So only `Refs:` / `Fixes:` / `Closes:` / `Resolves:`, `Co-authored-by:` and `Signed-off-by:` footers may follow it. Put the explanation in the body above it.
+
+```text
+feat(raf-effect-atom)!: seed each request registry
+
+Why it changed, what was rejected, what was verified.
+
+BREAKING CHANGE: `dehydrate()` from `raf-effect-atom/next` returns a promise: write `<HydrateAtoms state={await dehydrate()}>`.
+Refs: #1
+```
 
 ## Formatting
 

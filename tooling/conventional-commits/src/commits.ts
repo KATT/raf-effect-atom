@@ -1,7 +1,7 @@
 import { Data, Effect, Stream, String as Str } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
-import { validateSubject } from "./validate.ts";
+import { messageError } from "./message.ts";
 
 class GitError extends Data.TaggedError("GitError")<{
 	readonly args: ReadonlyArray<string>;
@@ -35,6 +35,7 @@ export const git = Effect.fn("git")(function* (
 const noCommit = /^0+$/;
 
 interface Commit {
+	readonly message: string;
 	readonly sha: string;
 	readonly subject: string;
 }
@@ -59,22 +60,24 @@ export const pushedCommits = Effect.fn("pushedCommits")(function* (
 	const output = yield* git(
 		cwd,
 		"log",
+		"-z",
 		"--reverse",
 		"--first-parent",
 		"--no-merges",
-		"--format=%H%x00%s",
+		"--format=%H%n%B",
 		...range,
 	);
-	return Str.trim(output)
-		.split("\n")
-		.filter((line) => line !== "")
-		.map((line): Commit => {
-			const [sha = "", subject = ""] = line.split("\0");
-			return { sha, subject };
+	return output
+		.split("\0")
+		.filter((record) => record.trim() !== "")
+		.map((record): Commit => {
+			const [sha = "", ...lines] = record.split("\n");
+			const message = Str.trimEnd(lines.join("\n"));
+			return { message, sha, subject: lines[0] ?? "" };
 		});
 });
 
-/** The pushed commits whose subjects aren't conventional, with the reason. */
+/** The pushed commits whose messages don't pass, with the error to show. */
 export const invalidCommits = Effect.fn("invalidCommits")(function* (
 	cwd: string,
 	before: string,
@@ -82,7 +85,7 @@ export const invalidCommits = Effect.fn("invalidCommits")(function* (
 ) {
 	const commits = yield* pushedCommits(cwd, before, after);
 	return commits.flatMap((commit) => {
-		const result = validateSubject(commit.subject);
-		return result.ok ? [] : [{ ...commit, reason: result.reason }];
+		const error = messageError(commit.message);
+		return error === undefined ? [] : [{ ...commit, error }];
 	});
 });
