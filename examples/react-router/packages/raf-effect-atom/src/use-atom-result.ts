@@ -1,12 +1,16 @@
 /**
- * The read hook for atoms started by loaders and streamed from the server.
+ * The read hooks for atoms started by loaders and streamed from the server.
  *
  * @stability unstable
  * @since 0.1.0
  */
 "use client";
 
-import { RegistryContext, useAtomSuspense } from "@effect/atom-react";
+import {
+	RegistryContext,
+	useAtomSuspense,
+	useAtomValue,
+} from "@effect/atom-react";
 import * as Cause from "effect/Cause";
 import * as Option from "effect/Option";
 import * as Predicate from "effect/Predicate";
@@ -42,6 +46,38 @@ type Readable<S> = S extends (
 	: S extends Atom.Atom<AsyncResult.AsyncResult<infer A, infer _E>>
 		? Atom.Atom<AsyncResult.AsyncResult<A, unknown>>
 		: never;
+
+/** The atoms a read of a handle uses. */
+interface Targets<A> {
+	/** The lease's key: `started`'s serialization key, or `started`. */
+	readonly key: Atom.Atom<unknown> | string;
+	/** The atom the component reads: `started`, or a derived atom pointing at it. */
+	readonly read: A;
+	/** The hydrated copy of the serializable atom a loader started. */
+	readonly started: Atom.Atom<unknown>;
+}
+
+const targetsOf = <A extends Atom.Atom<unknown>>(
+	atom: A,
+	handle: { readonly key?: string | undefined },
+	hook: string,
+): Targets<A> => {
+	const target = Handles.sourceOf(atom);
+	const started = hydrated(target);
+	const read = target === atom ? hydrated(atom) : atom;
+	const key = Leases.keyOf(started);
+	if (
+		process.env.NODE_ENV !== "production" &&
+		handle.key !== undefined &&
+		Predicate.isString(key) &&
+		handle.key !== key
+	) {
+		throw new Error(
+			`raf-effect-atom: ${hook} read the handle of ${handle.key} through a source that makes ${key}. Read a handle through the source that made it.`,
+		);
+	}
+	return { key, read, started };
+};
 
 /**
  * Reads a handle through React Suspense, through the source that made it: a
@@ -135,22 +171,10 @@ export const useAtomResult = <S extends Source>(
 			`raf-effect-atom: ${String(atom)} starts in the browser (Loader.prefetchInBrowser), so the server renders the nearest Suspense boundary's fallback, and the browser renders the boundary.`,
 		);
 	}
-	const target = Handles.sourceOf(atom);
-	const started = hydrated(target);
-	const read = target === atom ? hydrated(atom) : atom;
-	const key = Leases.keyOf(started);
-	if (
-		process.env.NODE_ENV !== "production" &&
-		handle.key !== undefined &&
-		Predicate.isString(key) &&
-		handle.key !== key
-	) {
-		throw new Error(
-			`raf-effect-atom: useAtomResult read the handle of ${handle.key} through a source that makes ${key}. Read a handle through the source that made it.`,
-		);
-	}
-	const streamed = Predicate.isString(key)
-		? Pending.stream(registry, key)
+	const targets = targetsOf(atom, handle, "useAtomResult");
+	const { read, started } = targets;
+	const streamed = Predicate.isString(targets.key)
+		? Pending.stream(registry, targets.key)
 		: undefined;
 	if (streamed !== undefined) {
 		React.use(streamed);
@@ -183,4 +207,113 @@ export const useAtomResult = <S extends Source>(
 	return result as [ErrorOf<S>] extends [never]
 		? AsyncResult.Success<SuccessOf<S>, never>
 		: SettledResult<SuccessOf<S>, ErrorOf<S>>;
+};
+
+/** What a read shows while it can't read the atom yet. */
+const loading = Atom.make(AsyncResult.initial<never, never>(true));
+
+/**
+ * Reads a handle without React Suspense, through the source that made it,
+ * and returns the atom's current result as it is.
+ *
+ * **When to use**
+ *
+ * Use where a component renders every state of the read itself: its loading
+ * state, a failure that stays on the page while the atom refreshes, or a
+ * defect. Otherwise prefer `useAtomResult`, which suspends until the result
+ * settles and sends defects to the error boundaries above.
+ *
+ * **Details**
+ *
+ * - It reads the atom as `useAtomResult` does: through `hydrated`, through
+ *   the serializable atom a derived source points at, and with the same
+ *   development checks on the handle's key and on request waterfalls.
+ * - It returns `Initial` while the atom loads, and while a result the server
+ *   was still loading streams in. It doesn't read the atom until the stream
+ *   settles, so the browser doesn't request it a second time.
+ * - A failure is returned as it is, `waiting` while the atom refreshes, and
+ *   so is a defect.
+ * - Once the component has subscribed to the atom, the loader's lease ends
+ *   and the component keeps the atom mounted.
+ * - A handle `Loader.prefetchInBrowser` returned on the server reads as
+ *   `Initial` there, without starting the atom; the browser's read starts
+ *   it.
+ *
+ * **Gotchas**
+ *
+ * The server renders what the read returns, `Initial` for a result still
+ * loading, and the browser's first render has to match it: render the same
+ * loading state for every `Initial`.
+ *
+ * During server rendering, the registry must be a request registry (see
+ * `RequestRegistry.make`): in development, the hook throws without one.
+ *
+ * **Example**
+ *
+ * ```tsx
+ * import { AsyncResult } from "effect/reactivity"
+ * import { type Handle, useHandleValue } from "raf-effect-atom"
+ *
+ * function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
+ *   const result = useHandleValue(issue, props.issue)
+ *   return AsyncResult.isSuccess(result) ? <h1>{result.value.title}</h1> : <p>Loading…</p>
+ * }
+ * ```
+ *
+ * @see {@link useAtomResult} for a read that suspends until the result settles
+ *
+ * @stability unstable
+ * @category hooks
+ * @since 0.3.1
+ */
+export const useHandleValue = <S extends Source>(
+	source: S,
+	handle: NoInfer<Handle<Readable<S>>>,
+): AsyncResult.AsyncResult<SuccessOf<S>, ErrorOf<S>> => {
+	const registry = React.useContext(RegistryContext);
+	const atom = Handles.atomOf(source, handle.args);
+	Registry.requireRequestRegistry(registry, "useHandleValue");
+	const targets = targetsOf(atom, handle, "useHandleValue");
+	const { started } = targets;
+	const streamed = Predicate.isString(targets.key)
+		? Pending.get(registry, targets.key)
+		: undefined;
+	const [, settled] = React.useReducer((count: number) => count + 1, 0);
+	React.useEffect(() => {
+		if (streamed === undefined) {
+			return;
+		}
+		let active = true;
+		const rerender = () => {
+			if (active) {
+				settled();
+			}
+		};
+		streamed.then(rerender, rerender);
+		return () => {
+			active = false;
+		};
+	}, [streamed]);
+	const waiting =
+		streamed !== undefined ||
+		(handle.inBrowser === true && isRequestRegistry(registry));
+	if (!waiting) {
+		if (process.env.NODE_ENV !== "production" && handle.inBrowser !== true) {
+			Waterfalls.check(registry, started, React.use(Waterfalls.ModeContext));
+		}
+		if (targets.read !== started) {
+			// Builds the source's node from the hydrated copy, before the derived
+			// atom builds it from the source and requests it again.
+			registry.get(started);
+		}
+	}
+	const result = useAtomValue(waiting ? loading : targets.read);
+	React.useEffect(() => {
+		if (!waiting) {
+			Leases.release(registry, started);
+		}
+	}, [registry, started, waiting]);
+	// SAFETY: `source` makes atoms of its own result type, and `loading` is an
+	// `Initial`, which every result type includes.
+	return result as AsyncResult.AsyncResult<SuccessOf<S>, ErrorOf<S>>;
 };
