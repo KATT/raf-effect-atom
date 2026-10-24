@@ -93,6 +93,8 @@ When the data really can't be reshaped, such as a third-party API, you have two 
 tanstack-start/src/docs/request-waterfalls.tsx#dependent
 ```
 
+[Shapes that force waterfalls](./data-shapes.md) goes through the API and URL shapes that cause these chains: an id only another response has, a child that needs its parent's data, a shell that gates its reads, a key that isn't in the URL, one read per item, and data a background job creates. Each comes with its escape hatch and the change that removes it.
+
 ## Put the state in the URL
 
 Loaders start what the URL names. The example apps' issue list keeps its status filter and sort order in search params, so its loader starts the matching page, and a filtered list survives a reload or a shared link.
@@ -179,7 +181,7 @@ Lazy route components are another waterfall: the code has to download before it 
 - Start atoms in loaders and server components, never in render, and pass their handles to the components that read them.
 - Put the state that picks data in the URL: search params, a search box's text included, and routes for dialogs.
 - Start every atom before awaiting any, and give `Effect.all` a `concurrency`.
-- Shape data so a route's inputs come from the URL, not from other atoms.
+- Shape data so a route's inputs come from the URL, not from other atoms: see [Shapes that force waterfalls](./data-shapes.md).
 - Start reads that need what only the browser has, such as a token in the URL's fragment, with `prefetchInBrowser` in the loader, and read them under Suspense.
 - Start an atom a click or a submit picks in its handler, and one whose input only a render finds with `useWaterfall`, a known cost.
 - Keep `<WaterfallDetection mode="throw">` in the root layout, so development finds the rest.

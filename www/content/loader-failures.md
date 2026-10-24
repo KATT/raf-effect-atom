@@ -49,4 +49,4 @@ The server sends every atom the loaders started, so data the page should carry o
 tanstack-start/src/docs/loader-failures.tsx#guarded
 ```
 
-A failed check sends none of the guarded atoms, even ones that would have succeeded. The reads wait for the check, one round trip, which on the server is usually an in-process call, and still run alongside each other. The server should still authorize each read on its own: the check decides what the page shows, not what a request may fetch.
+A failed check sends none of the guarded atoms, even ones that would have succeeded. The reads wait for the check, one round trip, which on the server is usually an in-process call, and still run alongside each other. The server should still authorize each read on its own: the check decides what the page shows, not what a request may fetch. Once every endpoint does, the loader can start the reads with the check instead of after it: see [A shell that gates the reads inside it](./data-shapes.md#a-shell-that-gates-the-reads-inside-it).
