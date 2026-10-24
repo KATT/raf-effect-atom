@@ -50,10 +50,9 @@ function SearchPage() {
 
 function SearchResults(props: { results: Handle<typeof searchIssues> }) {
 	// The auth and app boundaries claim Unauthorized and RpcClientError.
-	const result = useAtomResult(
+	const result = useAuthBoundary(
 		//    ^?
-		useAuthBoundary(searchIssues),
-		props.results,
+		useAtomResult(searchIssues, props.results),
 	);
 	return (
 		<ul>

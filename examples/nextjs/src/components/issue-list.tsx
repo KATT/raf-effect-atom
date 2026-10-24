@@ -39,7 +39,7 @@ function IssuePage(props: {
 	readonly page: Handle<typeof issuePage>;
 	readonly verb: LoaderVerb;
 }) {
-	const result = useAtomResult(useAuthBoundary(issuePage), props.page);
+	const result = useAuthBoundary(useAtomResult(issuePage, props.page));
 	const [more, setMore] = useState<Handle<typeof issuePage>>();
 	const registry = use(RegistryContext);
 	const [input, cursor] = props.page.args;

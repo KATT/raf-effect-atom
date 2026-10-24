@@ -46,7 +46,7 @@ function IssuePage(props: {
 }) {
 	// IssueNotFound, Unauthorized and RpcClientError go to their boundaries,
 	// so no failure is left.
-	const result = useAtomResult(useIssueBoundary(issue), props.issue);
+	const result = useIssueBoundary(useAtomResult(issue, props.issue));
 	//    ^?
 	return (
 		<article>
@@ -61,7 +61,7 @@ function IssuePage(props: {
 // Takes the handle the loader returned, not an id: it reads a request that
 // already started, and can't start its own.
 function Assignee(props: { assignee: Handle<typeof assignee> }) {
-	const result = useAtomResult(useIssueBoundary(assignee), props.assignee);
+	const result = useIssueBoundary(useAtomResult(assignee, props.assignee));
 	return <p>{result.value.name}</p>;
 }
 // #endregion component

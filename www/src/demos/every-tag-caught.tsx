@@ -27,7 +27,7 @@ const ids = [1, 2, 3, 404].map((id) => IssueId.make(id));
  * parent's name every tag of the atom's error, so the result is a success.
  */
 function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
-	const result = useAtomResult(useIssuePageBoundary(issue), props.issue);
+	const result = useIssuePageBoundary(useAtomResult(issue, props.issue));
 	return (
 		<div className="grid gap-1">
 			<p className="font-mono text-xs text-muted-foreground">

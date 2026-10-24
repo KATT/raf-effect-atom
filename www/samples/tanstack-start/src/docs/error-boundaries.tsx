@@ -45,7 +45,7 @@ export function IssuePanel(props: { issue: Handle<typeof issue> }) {
 }
 
 function IssueTitle(props: { issue: Handle<typeof issue> }) {
-	const result = useAtomResult(useIssueBoundary(issue), props.issue);
+	const result = useIssueBoundary(useAtomResult(issue, props.issue));
 	if (AsyncResult.isSuccess(result)) {
 		return <h1>{result.value.title}</h1>;
 	}

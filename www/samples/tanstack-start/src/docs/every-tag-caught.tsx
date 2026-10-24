@@ -44,7 +44,7 @@ export function IssuePage(props: { issue: Handle<typeof issue> }) {
 }
 
 function IssueTitle(props: { issue: Handle<typeof issue> }) {
-	const result = useAtomResult(useIssuePageBoundary(issue), props.issue);
+	const result = useIssuePageBoundary(useAtomResult(issue, props.issue));
 	//    ^?
 	return <h1>{result.value.title}</h1>;
 }

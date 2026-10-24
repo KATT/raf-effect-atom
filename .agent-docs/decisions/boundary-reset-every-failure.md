@@ -2,7 +2,7 @@
 
 - **Scope:**
   - A `createErrorBoundary` boundary's `reset` refreshes every registry node whose settled failure has a tag that boundary has a handler for. The parents' tags aren't included.
-  - `AtomErrorBoundary`'s `reset` still refreshes only its own atom, because it claims every failure.
+  - `AtomErrorBoundary`'s `reset` still refreshes only its own atom, the one whose failure it caught.
 - **Why:**
   - One outage, such as an `RpcClientError`, fails every atom on a page.
   - The boundary catches only the first read that throws. The other atoms fail after the handler replaced the children, so they throw to no boundary.
@@ -10,7 +10,6 @@
   - This uses the same registry scan as the server pre-render check ([boundary-server-rendering.md](./boundary-server-rendering.md)).
 - **Each query refreshes once:**
   - Refreshing a node marks its dependents waiting, and the scan skips nodes that are waiting.
-  - The wrapper atoms are skipped, because they hold defects.
 - **Refresh the node's atom, not the caller's:**
   - Every refresh, here and in `raf-effect-atom`'s `Loader.fetch`, goes through `registry.getNodes().get(key).atom`.
   - Once the garbage collector takes an `Atom.family` member (an AtomRpc query), a read makes it again with the same serialization key but new inner atoms.

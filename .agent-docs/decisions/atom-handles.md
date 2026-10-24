@@ -12,10 +12,9 @@
 - **The result doesn't travel on the handle:**
   - AsyncResult and Schema classes don't survive the wires the handles cross.
   - Loader code reads the settled result with `Loader.result(handle)`, from a WeakMap keyed by the handle object, which throws for a copy.
-- **Boundaries wrap the family:**
-  - `useIssueBoundary().wrap(issue)` and `AtomErrorBoundary.claim(issue)` return a family of wrapped atoms, memoized per family, and the reader takes it with the handle: `useAtomResult(wrap(issue), props.issue)`.
-  - The reader's handle parameter widens the source's error to `unknown`, so the wrapped family takes the unwrapped family's handle and keeps the per-tag narrowing and the `Success<A, never>` typing.
+- **Boundaries narrow the result, not the handle:** `useIssueBoundary(useAtomResult(issue, props.issue))` (see [boundary-hook-takes-result.md](./boundary-hook-takes-result.md)).
+  - The reader's handle parameter widens the source's error to `unknown`, so a derived family whose atoms point at the loader's takes the loader's handle.
 - **Rejected:**
-  - `wrap(handle)`: the handle would carry an atom or a function, which aren't serializable.
+  - A boundary over the handle: the handle would carry an atom or a function, which aren't serializable.
   - Handles that carry their atom: same reason.
   - A handle type over the atom instead of the family: two ids of one family are one type either way, and the family is what the reader rebuilds from.

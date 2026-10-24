@@ -76,15 +76,13 @@ interface TitleProps {
 
 function Title(props: TitleProps) {
 	const of = props.of ?? issue;
-	const result = useAtomSuspense(AtomErrorBoundary.claim(of(props.id)), {
-		suspendOnWaiting: true,
-	});
+	const result = useAtomSuspense(of(props.id), { suspendOnWaiting: true });
 	return <p>{result.value.title}</p>;
 }
 
 function ClaimedTitle(props: TitleProps) {
 	const of = props.of ?? issue;
-	const result = useRead(useAuthBoundary(of)(props.id));
+	const result = useAuthBoundary(useRead(of(props.id)));
 	if (AsyncResult.isSuccess(result)) {
 		return <p>{result.value.title}</p>;
 	}
@@ -352,67 +350,43 @@ describe("createErrorBoundary", () => {
 		expect([1, 2, 3].map(server.requests)).toEqual([2, 2, 1]);
 	});
 
-	it("wraps an atom once, so every render reads the same atom", async () => {
-		using _server = serve();
+	it("throws a defect the read returned to the app's error boundary", async () => {
+		using _server = serve({ 1: ["crash"] });
+		using _errors = silenceCaughtErrors();
 		using app = mount();
-		function Same() {
-			const first = useAuthBoundary(issue(1));
-			const again = useAuthBoundary(issue(1));
-			const other = useAuthBoundary(issue(2));
-			const same = again === first && other !== first;
-			return <p>{same ? "Same" : "Different"}</p>;
+		function Returned() {
+			const result = useAuthBoundary(
+				useAtomSuspense(issue(1), {
+					includeFailure: true,
+					suspendOnWaiting: true,
+				}),
+			);
+			return <p>{AsyncResult.isSuccess(result) ? result.value.title : null}</p>;
 		}
 		await app.render(
 			<OfflineBoundary>
 				<AuthBoundary>
-					<Same />
+					<React.Suspense fallback={<p>Loading</p>}>
+						<Returned />
+					</React.Suspense>
 				</AuthBoundary>
 			</OfflineBoundary>,
 		);
-		expect(screen.getByText("Same")).toBeDefined();
-		const claimed = AtomErrorBoundary.claim(issue(1));
-		expect(AtomErrorBoundary.claim(issue(1))).toBe(claimed);
+		expect(screen.getByText(/^Outer: .*the server crashed/)).toBeDefined();
 	});
 
-	it("wraps a family once, into a family of the atoms' wrappers", async () => {
+	it("returns a success as it is", async () => {
 		using _server = serve();
 		using app = mount();
-		function Same() {
-			const family = useAuthBoundary(issue);
-			const again = useAuthBoundary(issue);
-			const one = useAuthBoundary(issue(1));
-			const same =
-				again === family && family(1) === one && family(2) !== family(1);
-			return <p>{same ? "Same" : "Different"}</p>;
-		}
-		await app.render(
-			<OfflineBoundary>
-				<AuthBoundary>
-					<Same />
-				</AuthBoundary>
-			</OfflineBoundary>,
-		);
-		expect(screen.getByText("Same")).toBeDefined();
-		const claimed = AtomErrorBoundary.claim(issue);
-		expect(AtomErrorBoundary.claim(issue)).toBe(claimed);
-		expect(claimed(1)).toBe(AtomErrorBoundary.claim(issue(1)));
-	});
-
-	it("points the wrapper at the atom it wraps, not past it", () => {
-		const reactive = Issues.query(
-			"GetIssue",
-			{ id: 1 },
-			{ reactivityKeys: ["issues"], serializationKey: "1" },
-		);
-		expect(reactive.initialValueTarget).toBeDefined();
-		expect(AtomErrorBoundary.claim(reactive).initialValueTarget).toBe(reactive);
+		await app.render(<ChainTree id={1} />);
+		expect(screen.getByText("Issue 1")).toBeDefined();
 	});
 
 	it("needs its boundary mounted above its hook", async () => {
 		using _errors = silenceCaughtErrors();
 		using app = mount();
 		function Lonely() {
-			useOfflineBoundary(issue);
+			useOfflineBoundary(AsyncResult.initial());
 			return null;
 		}
 		await app.render(<Lonely />);
@@ -482,7 +456,7 @@ describe("a handler that's a component", () => {
 			name: "NotFound",
 		});
 		function Read() {
-			const result = useRead(useNotFoundBoundary(issue(1)));
+			const result = useNotFoundBoundary(useRead(issue(1)));
 			return <p>{AsyncResult.isSuccess(result) ? result.value.title : null}</p>;
 		}
 		await app.render(
@@ -585,15 +559,14 @@ const [SessionBoundary, useSessionBoundary] = createErrorBoundary({
 	name: "Session",
 });
 
-function SessionText(props: {
-	readonly atom: Atom.Atom<AsyncResult.AsyncResult<string, never>>;
-}) {
-	const result = useRead(props.atom);
-	return <p>{AsyncResult.isSuccess(result) ? result.value : "Not caught"}</p>;
+function SessionText() {
+	const result = useAtomSuspense(session, { suspendOnWaiting: true });
+	return <p>{result.value}</p>;
 }
 
 function SharedSessionText() {
-	return <SessionText atom={useSessionBoundary(session)} />;
+	const result = useSessionBoundary(useRead(session));
+	return <p>{AsyncResult.isSuccess(result) ? result.value : "Not caught"}</p>;
 }
 
 describe("two registries failing with one error object", () => {
@@ -602,7 +575,7 @@ describe("two registries failing with one error object", () => {
 			name: "AtomErrorBoundary",
 			tree: () => (
 				<AtomErrorBoundary atom={session} catchTags={{ SignedOut: SignIn }}>
-					<SessionText atom={AtomErrorBoundary.claim(session)} />
+					<SessionText />
 				</AtomErrorBoundary>
 			),
 		},
@@ -659,45 +632,4 @@ describe("two registries failing with one error object", () => {
 			expect(sessionRuns.get(second)).toBe(1);
 		},
 	);
-});
-
-function ResultTitle(props: { readonly id: number }) {
-	const result = useAuthBoundary(useRead(issue(props.id)));
-	if (AsyncResult.isSuccess(result)) {
-		return <p>{result.value.title}</p>;
-	}
-	const error = AsyncResult.error(result);
-	return (
-		<p>{`Result: ${Option.isSome(error) ? error.value._tag : "defect"}`}</p>
-	);
-}
-
-describe("a boundary's hook over a read's result", () => {
-	const tree = (...ids: ReadonlyArray<number>) => (
-		<OfflineBoundary>
-			<AuthBoundary>
-				{ids.map((id) => (
-					<React.Suspense fallback={<p>Loading</p>} key={id}>
-						<ResultTitle id={id} />
-					</React.Suspense>
-				))}
-			</AuthBoundary>
-		</OfflineBoundary>
-	);
-
-	it("throws a claimed failure to the boundary that claims it", async () => {
-		using _server = serve({ 1: ["signed-out"] });
-		using _errors = silenceCaughtErrors();
-		using app = mount();
-		await app.render(tree(1));
-		expect(screen.getByText("Signed out: expired")).toBeDefined();
-	});
-
-	it("returns a failure no boundary claims, and a success", async () => {
-		using _server = serve({ 1: ["missing"] });
-		using app = mount();
-		await app.render(tree(1, 2));
-		expect(screen.getByText("Result: IssueNotFound")).toBeDefined();
-		expect(screen.getByText("Issue 2")).toBeDefined();
-	});
 });

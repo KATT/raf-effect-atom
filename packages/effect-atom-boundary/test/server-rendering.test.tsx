@@ -19,7 +19,7 @@ import { renderToReadableStream } from "react-dom/server";
 import { AtomErrorBoundary, createErrorBoundary } from "../src/index.ts";
 import { hydratedIssue, Issues, serve } from "./fixtures/issues.ts";
 
-const [AuthBoundary, useAuthBoundary] = createErrorBoundary({
+const [AuthBoundary] = createErrorBoundary({
 	catchTags: {
 		Unauthorized: (caught) => (
 			<button onClick={caught.reset} type="button">
@@ -62,8 +62,7 @@ const useRead = <A, E>(
 };
 
 function SharedTitle(props: { readonly id: number }) {
-	useAuthBoundary(hydratedIssue);
-	const result = useRead(useIssueBoundary(hydratedIssue(props.id)));
+	const result = useIssueBoundary(useRead(hydratedIssue(props.id)));
 	return (
 		<p>{AsyncResult.isSuccess(result) ? result.value.title : "Not caught"}</p>
 	);
@@ -81,10 +80,9 @@ const SharedPage = (props: { readonly id: number }) => (
 );
 
 function OwnTitle(props: { readonly id: number }) {
-	const result = useAtomSuspense(
-		AtomErrorBoundary.claim(hydratedIssue(props.id)),
-		{ suspendOnWaiting: true },
-	);
+	const result = useAtomSuspense(hydratedIssue(props.id), {
+		suspendOnWaiting: true,
+	});
 	return <p>{result.value.title}</p>;
 }
 

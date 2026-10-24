@@ -122,18 +122,6 @@ describe("AtomErrorBoundary", () => {
 		/>;
 	});
 
-	it("claims every typed failure of the atom it wraps", () => {
-		expect(AtomErrorBoundary.claim(issue(1))).type.toBe<
-			Atom.Atom<AsyncResult.AsyncResult<Issue, never>>
-		>();
-	});
-
-	it("claims every typed failure of each atom in a family", () => {
-		expect(AtomErrorBoundary.claim(issue)).type.toBe<
-			(id: number) => Atom.Atom<AsyncResult.AsyncResult<Issue, never>>
-		>();
-	});
-
 	it("rejects a misspelled tag", () => {
 		<AtomErrorBoundary
 			atom={issue(1)}
@@ -225,44 +213,9 @@ describe("createErrorBoundary", () => {
 		});
 	});
 
-	it("wraps an atom into one typed without the claimed errors", () => {
-		expect(useAuthBoundary(issue(1))).type.toBe<
-			Atom.Atom<
-				AsyncResult.AsyncResult<
-					Issue,
-					Tagged<IssueError, "IssueNotFound" | "RpcClientError">
-				>
-			>
-		>();
-		expect(useAuthBoundary(user("a"))).type.toBe<
-			Atom.Atom<AsyncResult.AsyncResult<string, UserError>>
-		>();
-	});
-
-	it("wraps a family into one of atoms typed without the claimed errors", () => {
-		expect(useAuthBoundary(issue)).type.toBe<
-			(
-				id: number,
-			) => Atom.Atom<
-				AsyncResult.AsyncResult<
-					Issue,
-					Tagged<IssueError, "IssueNotFound" | "RpcClientError">
-				>
-			>
-		>();
-	});
-
-	it("rejects an atom or a family that isn't an AsyncResult", () => {
-		expect(useAuthBoundary).type.not.toBeCallableWith(
-			hole<Atom.Atom<number>>(),
-		);
-		expect(useAuthBoundary).type.not.toBeCallableWith(
-			hole<(id: number) => Atom.Atom<number>>(),
-		);
-	});
+	type Left = Tagged<IssueError, "IssueNotFound" | "RpcClientError">;
 
 	it("narrows a read's result to the errors it doesn't claim", () => {
-		type Left = Tagged<IssueError, "IssueNotFound" | "RpcClientError">;
 		expect(
 			useAuthBoundary(
 				hole<
@@ -273,5 +226,35 @@ describe("createErrorBoundary", () => {
 		).type.toBe<
 			AsyncResult.Success<Issue, Left> | AsyncResult.Failure<Issue, Left>
 		>();
+		expect(
+			useAuthBoundary(hole<AsyncResult.AsyncResult<Issue, IssueError>>()),
+		).type.toBe<AsyncResult.AsyncResult<Issue, Left>>();
+		expect(
+			useAuthBoundary(hole<AsyncResult.AsyncResult<string, UserError>>()),
+		).type.toBe<AsyncResult.AsyncResult<string, UserError>>();
+	});
+
+	it("types a read whose failures it all claims as a success", () => {
+		const [, useIssueBoundary] = createErrorBoundary({
+			catchTags: { IssueNotFound: () => null, RpcClientError: () => null },
+			errors: Issues,
+			name: "Issue",
+			parent: AuthBoundary,
+		});
+		expect(
+			useIssueBoundary(
+				hole<
+					| AsyncResult.Success<Issue, IssueError>
+					| AsyncResult.Failure<Issue, IssueError>
+				>(),
+			),
+		).type.toBe<AsyncResult.Success<Issue, never>>();
+	});
+
+	it("rejects what isn't an AsyncResult, such as an atom", () => {
+		expect(useAuthBoundary).type.not.toBeCallableWith(hole<number>());
+		expect(useAuthBoundary).type.not.toBeCallableWith(
+			hole<Atom.Atom<AsyncResult.AsyncResult<Issue, IssueError>>>(),
+		);
 	});
 });

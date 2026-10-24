@@ -28,7 +28,7 @@ It returns the boundary component and its hook, named by destructuring.
 
 ## Reads under it are typed without what it catches
 
-A component under `<IssueBoundary>` reads its handle through `useIssueBoundary(issue)`: the same atoms with the tags this boundary and its parents catch turned into defects. The read throws `IssueNotFound` to `<IssueBoundary>` and `RpcClientError` to `<AppBoundary>`. `raf-effect-atom`'s [`useAtomResult`](./reading-atoms.md) returns any other failure, typed without the caught tags. The `^?` above shows `Unauthorized`, the one tag of `issue`'s error that neither boundary's `catchTags` names, and the component handles it by its tag.
+A component under `<IssueBoundary>` passes what it reads to `useIssueBoundary`. `raf-effect-atom`'s [`useAtomResult`](./reading-atoms.md) returns the typed failures, and the hook throws `IssueNotFound` to `<IssueBoundary>` and `RpcClientError` to `<AppBoundary>`, and returns any other failure, typed without the caught tags. The `^?` above shows `Unauthorized`, the one tag of `issue`'s error that neither boundary's `catchTags` names, and the component handles it by its tag.
 
 A caught failure renders the boundary's handler in place of its children. `reset` refreshes every atom in the registry that failed with a tag the boundary handles, and renders the children again.
 
@@ -38,13 +38,13 @@ A handler renders as a component, so it can call hooks. A handler written inline
 
 ## When every tag is caught
 
-When the boundaries' `catchTags` name every tag of the atom's error, no failure is left. `<IssuePageBoundary>` catches `IssueNotFound` and `Unauthorized`, and its parent, `<AppBoundary>`, catches `RpcClientError`, so the read's error type is `never` and `useAtomResult` returns a success:
+When the boundaries' `catchTags` name every tag of the atom's error, no failure is left. `<IssuePageBoundary>` catches `IssueNotFound` and `Unauthorized`, and its parent, `<AppBoundary>`, catches `RpcClientError`, so no error is left in the result's type and the hook returns a success:
 
 ```sample
 tanstack-start/src/docs/every-tag-caught.tsx#every-tag
 ```
 
-The `never` comes from those `catchTags`: without the `Unauthorized` handler, the read's error type is `Unauthorized` again, and the component has to handle it.
+The `never` comes from those `catchTags`: without the `Unauthorized` handler, the result's error type is `Unauthorized` again, and the component has to handle it.
 
 ```demo
 every-tag-caught
@@ -68,6 +68,5 @@ tanstack-start/src/docs/error-boundaries.tsx#misspelled
 
 - A failure whose tag has no handler goes to the error boundaries above it.
 - A defect or an interruption isn't a typed error: the read throws `Cause.squash(cause)` to the app's own error boundary.
-- A claimed failure is a defect inside the wrapped atom's value, so code that inspects that value, such as `AsyncResult.error`, sees no typed error. Read the atom itself to inspect its failure.
 
-A boundary from `createErrorBoundary` matches by tag: it catches its tags from any atom read under it, not only from the atoms its hook wrapped. [Shared boundaries](./shared-boundaries.md) covers boundaries for failures that belong to the app, such as `RpcClientError` and being signed out, and chaining them with `parent`.
+A boundary from `createErrorBoundary` matches by tag: it catches its tags from any atom read under it, not only from the results passed to its hook. [Shared boundaries](./shared-boundaries.md) covers boundaries for failures that belong to the app, such as `RpcClientError` and being signed out, and chaining them with `parent`.

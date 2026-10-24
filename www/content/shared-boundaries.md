@@ -15,13 +15,13 @@ tanstack-start/src/boundaries.tsx#app
 
 ## Reads under the boundary
 
-`useAppBoundary(atom)` returns the same atom with the failures the boundary claims turned into defects, recorded with the atom. Given an atom family, such as `issue`, it returns a family of wrapped atoms, which a component reads with the handle its loader returned for `issue`. A read that returns typed failures and throws defects, such as `raf-effect-atom`'s `useAtomResult`, throws them to the boundary and returns a result typed without them:
+A component wraps its read in the boundary's hook. `useAppBoundary(result)` takes the `AsyncResult` a read returned, throws the failures the boundary claims to the boundary, and returns the result typed without them. Around `raf-effect-atom`'s `useAtomResult`, which returns typed failures and throws defects, that's `useAppBoundary(useAtomResult(issue, props.issue))`:
 
 ```sample
 tanstack-start/src/docs/shared-boundaries.tsx#narrowed
 ```
 
-It's a hook, so a component calls it on every render: for an atom only some renders read, it passes the family. The hook throws when its boundary isn't mounted above the component:
+It's a hook, called with the read it narrows, so it goes wherever the read goes. It throws when its boundary isn't mounted above the component:
 
 ```sample
 tanstack-start/src/docs/shared-boundaries.tsx#mounted
@@ -35,7 +35,7 @@ tanstack-start/src/docs/shared-boundaries.tsx#misspelled
 
 ## Chained boundaries
 
-`parent` puts a boundary under another one. An atom passed to the child's hook throws the tags any boundary in the chain claims, each to the nearest boundary that claims it, and the claimed tags add up along the chain. Being signed out belongs to the app too, so `<AuthBoundary>` claims `Unauthorized` under `<AppBoundary>`, and `<IssueBoundary>` claims `IssueNotFound` under `<AuthBoundary>`:
+`parent` puts a boundary under another one. A result passed to the child's hook throws the tags any boundary in the chain claims, each to the nearest boundary that claims it, and the claimed tags add up along the chain. Being signed out belongs to the app too, so `<AuthBoundary>` claims `Unauthorized` under `<AppBoundary>`, and `<IssueBoundary>` claims `IssueNotFound` under `<AuthBoundary>`:
 
 ```sample
 tanstack-start/src/boundaries.tsx#auth
@@ -45,7 +45,7 @@ tanstack-start/src/boundaries.tsx#auth
 tanstack-start/src/boundaries.tsx#issue
 ```
 
-A read through `useIssueBoundary(issue)` throws `IssueNotFound` to `<IssueBoundary>`, `Unauthorized` to `<AuthBoundary>` and `RpcClientError` to `<AppBoundary>`. No failure is left, so `useAtomResult` types its result as a success. `<IssueBoundary>` throws when `<AuthBoundary>` isn't mounted above it.
+`useIssueBoundary(useAtomResult(issue, props.issue))` throws `IssueNotFound` to `<IssueBoundary>`, `Unauthorized` to `<AuthBoundary>` and `RpcClientError` to `<AppBoundary>`. No failure is left, so the hook types the result as a success. `<IssueBoundary>` throws when `<AuthBoundary>` isn't mounted above it.
 
 ```demo
 boundary-chain
@@ -53,7 +53,7 @@ boundary-chain
 
 ## Matching is by tag
 
-A shared boundary catches a claimed tag from any atom read under it, not only from the atoms passed to its hook. `reset` refreshes every atom in the registry whose failure has a tag the boundary handles, not only the one whose read threw: one outage fails every atom on the page, and one `reset` loads them all again.
+A shared boundary catches a claimed tag from any atom read under it, not only from the results passed to its hook. `reset` refreshes every atom in the registry whose failure has a tag the boundary handles, not only the one whose read threw: one outage fails every atom on the page, and one `reset` loads them all again.
 
 ## AtomHttpApi transport failures
 
@@ -67,8 +67,6 @@ A defect skips the boundaries `createErrorBoundary` makes:
 
 Keep these failures in that boundary. On the server, `createErrorBoundary` boundaries check typed failures only, and a defect reaches the browser without its `_tag`. A boundary that matched `HttpClientError` would render a fallback in the browser that the server didn't.
 
-## Reading a wrapped atom
+## Reads the hook narrows
 
-The wrapper is a derived atom with no serialization key that points at the atom with Effect's `initialValueTarget`. `raf-effect-atom`'s loader verbs follow it to start the atom, and its `useAtomResult` follows it to hydrate the atom and wait for its streamed result, so a loader can start either the atom or the wrapper, and a component reads the wrapper with the handle the loader returned.
-
-`useAtomSuspense` with `includeFailure` returns claimed failures instead of throwing them, and without it throws every failure, including the ones left. Under a shared boundary, use a read that throws only defects: `raf-effect-atom`'s `useAtomResult`, or your own over `useAtomSuspense(atom, { includeFailure: true, suspendOnWaiting: true })`.
+The hook takes any `AsyncResult`, so it narrows what any read hook returns: `raf-effect-atom`'s `useAtomResult`, Effect Atom's `useAtomValue`, or `useAtomSuspense(atom, { includeFailure: true, suspendOnWaiting: true })`. It throws a defect it's given too, to the nearest other React error boundary. `useAtomSuspense` without `includeFailure` throws every failure itself, including the ones the boundaries leave, before the hook sees the result.

@@ -6,11 +6,11 @@
 - **Never:** a module-level `Map`, `Set`, counter or singleton that holds request data, a `globalThis` write, or a weak map keyed by a value two requests can share, such as an error object a module creates once. Import-time side effects stay out too: both packages declare `"sideEffects": false`.
 - **Why:** a server renders overlapping requests in one process. State keyed by a shared value carries one request's data, or the target of its `reset`, into another, and pins the request's registry. State keyed by a per-request object goes away with the request.
 - **Fixed in the audit:**
-  - `effect-atom-boundary`'s failed reads were one `WeakMap<error, { atom, registry }>`. Two registries failing with one error object kept only the last record, so the other boundary's `reset` refreshed the wrong registry. It's now `WeakMap<AtomRegistry, WeakMap<error, atom>>`, read and reset in the boundary's own registry (`src/internal/failed-reads.ts`).
+  - `effect-atom-boundary`'s failed reads were one `WeakMap<error, { atom, registry }>`. Two registries failing with one error object kept only the last record, so the other boundary's `reset` refreshed the wrong registry. There's no record now: `AtomErrorBoundary` checks the caught error against its atom's failure in its own registry, and resets there.
   - raf's `HydrationBoundary` hydrated into whatever registry the context gave on the server, including `@effect/atom-react`'s module-level default, which every request shares. In development it now throws there, as `useAtomResult` does (`requireRequestRegistry` in `src/internal/registry.ts`).
 - **Judged safe:**
   - Keyed per request: `RequestRegistry`'s marks, leases, pending and streamed results, seeds, `sources`, waterfall warnings (per registry) and errors (per node), `Loader.result`'s results (per handle object).
-  - Definitions only: `Hydration.hydrated`'s copies (atom to copy), `wrap`'s per-boundary atom and family memos, `createErrorBoundary`'s component internals, `ModeContext`, `LeaseTTL`, and the never-resolving promise `Prerendered` suspends on, which only the browser renders.
+  - Definitions only: `Hydration.hydrated`'s copies (atom to copy), `createErrorBoundary`'s component internals, `ModeContext`, `LeaseTTL`, and the never-resolving promise `Prerendered` suspends on, which only the browser renders.
   - Per request through React: `raf-effect-atom/rsc`'s `React.cache` registry.
   - Browser only: `internal/registry.ts`'s `mounted` registry for `clientAtomsMiddleware`, set from `RegistryProvider`'s effect, which never runs on the server.
 - **Limits accepted:**

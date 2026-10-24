@@ -56,7 +56,7 @@ What `AtomRpc` lacks, and how this repo covers it:
 | quick-start                    | Docs        | Contract, `AtomRpc` client, loader verb, read hook, boundary.                                                                                                                    |
 | react-router                   | Adds        | `raf-effect-atom/react-router`.                                                                                                                                                  |
 | react-server-components        | Adds        | `raf-effect-atom/rsc`.                                                                                                                                                           |
-| reading-queries                | Atom + Adds | `useAtomValue`, `useAtomSuspense`, `useAtomRefresh`. Adds: the read hook that waits for a streamed result instead of fetching again, and claims errors for boundaries.           |
+| reading-queries                | Atom + Adds | `useAtomValue`, `useAtomSuspense`, `useAtomRefresh`. Adds: the read hook that waits for a streamed result instead of fetching again, whose result a boundary's hook narrows.     |
 | render-optimizations           | Atom        | Fine-grained atoms, `Atom.map`, `withEquality`. Structural sharing is n/a.                                                                                                       |
 | request-waterfalls             | Adds        | The loader verbs. raf-query's `useWaterfall` is n/a.                                                                                                                             |
 | retries                        | Atom + Adds | Retry in the atom's Effect (`Effect.retry(schedule)`) or RPC client middleware. "One place for every error" is the boundary package.                                             |
@@ -201,15 +201,15 @@ const [AuthBoundary, useAuthBoundary] = createErrorBoundary({
 });
 
 function IssueTitle(props: { readonly id: number }) {
-	const result = useAtomResult(useAuthBoundary().wrap(issue(props.id)));
+	const result = useAuthBoundary(useAtomResult(issue(props.id)));
 	// result's error: IssueNotFound | RpcClientError (Unauthorized is claimed)
 	return <Title result={result} />;
 }
 ```
 
-- **Type requirement, tested:** a `catchTags` key that isn't one of the atom's tags is a compile error (on `AtomErrorBoundary` through the object literal's excess-property check; on `createErrorBoundary` through a `const` type parameter whose extra keys map to `never`); a handler's `error` is `Extract<E, { _tag: K }>`; a boundary's `wrap(atom)` is typed `AsyncResult<A, Exclude<E, { _tag: claimed }>>`. The package ships a type test (`*.test-d.ts` / `expectTypeOf`) whose UI file imports only the `AtomRpc` client and the atoms, never an error class, with `@ts-expect-error` on a misspelled tag and a wrong field. The sketch above typechecked, including those cases.
+- **Type requirement, tested:** a `catchTags` key that isn't one of the atom's tags is a compile error (on `AtomErrorBoundary` through the object literal's excess-property check; on `createErrorBoundary` through a `const` type parameter whose extra keys map to `never`); a handler's `error` is `Extract<E, { _tag: K }>`; a boundary's hook types the result as `AsyncResult<A, Exclude<E, { _tag: claimed }>>`. The package ships a type test (`*.test-d.ts` / `expectTypeOf`) whose UI file imports only the `AtomRpc` client and the atoms, never an error class, with `@ts-expect-error` on a misspelled tag and a wrong field. The sketch above typechecked, including those cases.
 - **Runtime:** `Cause.findErrorOption` on the failure, then `Predicate.isTagged(error, tag)` for each claimed tag, nearest boundary first. A defect or interruption throws `Cause.squash` to an ordinary React error boundary, as #227 does.
-- **Claiming is a wrapper atom** (superseded the `claim(atom, registry, result, boundary)` primitive and the claims argument, see [boundary-wrap-read-api.md](./boundary-wrap-read-api.md)): `wrap(atom)` turns a claimed failure into a defect, recorded in #227's `failedReads` WeakMap with its atom and registry so `reset` can refresh that atom. The packages don't depend on each other.
+- **Claiming is the boundary's hook over the read's result** (see [boundary-hook-takes-result.md](./boundary-hook-takes-result.md)): it throws a claimed failure as the error itself. The packages don't depend on each other.
 - **Reset** refreshes the failed atom and clears the boundary; while the atom refreshes, the read suspends instead of throwing the old error again (#227's `waiting` check).
 - **Known issue, pinned by a test:** an intermittent duplicate request after a boundary catches a failed first load (#222 / #223). The test counts RPC calls through client middleware: first load fails (1 call), reset (exactly 1 more), and no further calls across re-renders and StrictMode.
 
