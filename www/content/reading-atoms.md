@@ -1,6 +1,6 @@
 ---
 title: Reading atoms
-description: useAtomResult reads an atom a loader started or the server streamed, waits for it under Suspense, and returns its typed failures.
+description: useAtomResult reads an atom a loader started or the server streamed, waits for it under Suspense, and returns its typed failures. useHandleValue reads it without suspending.
 section: raf-effect-atom
 order: 3
 ---
@@ -34,6 +34,18 @@ While a failed atom refreshes, such as after a boundary's `reset`, the read susp
 - Once the component mounts, the loader's [lease](./loader-verbs.md#leases) ends and the component keeps the atom mounted.
 - A derived atom that points at another with Effect's `initialValueTarget` is read through that atom: the streamed result, the hydrated copy and the lease are the source's.
 
+## Reading without Suspense
+
+`useHandleValue(source, handle)` takes the same source and handle and returns the atom's current result without suspending, for a component that renders every state of the read itself:
+
+- `Initial` while the atom loads, and while a result the server was still loading streams in. It doesn't read the atom until the stream settles, so the browser doesn't request it a second time.
+- A failure as it is, `waiting` while the atom refreshes, instead of suspending.
+- A defect or an interruption as a failure with its cause, instead of throwing it.
+
+It reads through `Hydration.hydrated(atom)` and through the atom a derived source points at, ends the loader's lease once it has subscribed, and checks the handle's key and waterfalls in development, as `useAtomResult` does. A handle `prefetchInBrowser` returned reads as `Initial` on the server, without starting the atom.
+
+The server renders the `Initial` of a result still loading, so render the same loading state for every `Initial` or the browser's first render won't match it. Where a [Suspense](https://react.dev/reference/react/Suspense) fallback and the error boundaries above can show the loading state and the defects, use `useAtomResult`.
+
 ## On the server
 
-Server rendering needs a registry per request, or one user's results would reach another. In development, `useAtomResult` and `HydrationBoundary` throw during server rendering when the registry isn't a request registry, such as [`@effect/atom-react`](https://github.com/Effect-TS/effect/tree/effect%404.0.6/packages/atom/react)'s default one, which every request shares. The framework integrations provide one; outside them, provide `RequestRegistry.make()` through `RegistryContext`.
+Server rendering needs a registry per request, or one user's results would reach another. In development, `useAtomResult`, `useHandleValue` and `HydrationBoundary` throw during server rendering when the registry isn't a request registry, such as [`@effect/atom-react`](https://github.com/Effect-TS/effect/tree/effect%404.0.6/packages/atom/react)'s default one, which every request shares. The framework integrations provide one; outside them, provide `RequestRegistry.make()` through `RegistryContext`.
