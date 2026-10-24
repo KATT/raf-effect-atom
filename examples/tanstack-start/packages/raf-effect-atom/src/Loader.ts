@@ -70,9 +70,11 @@ export type SettledResult<A, E> =
  *
  * **Details**
  *
- * A lease ends when `useAtomResult` mounts the atom, or when this time has
- * passed, after which the registry's idle TTL applies as usual. On a request
- * registry, leases last until the registry is disposed.
+ * A lease ends when `useAtomResult` or `useHandleValue` mounts the atom, or
+ * when this time has passed, after which the registry's idle TTL applies as
+ * usual. While a component reads the atom, a verb takes no lease on it, so the
+ * atom goes idle when the last reader unmounts. On a request registry, leases
+ * last until the registry is disposed.
  *
  * @stability unstable
  * @category references
@@ -168,7 +170,8 @@ const rejectDefects = <A, E>(
  * **Details**
  *
  * - Starts the atom if it isn't in the registry, and leaves it alone if it
- *   is. Takes a lease either way. The component that reads the handle
+ *   is. Takes a lease either way, unless a mounted component reads the
+ *   atom. The component that reads the handle
  *   suspends until the result settles. On a request registry whose async
  *   seed is still running, it waits for the seed first.
  * - A derived atom that isn't serializable starts the first serializable

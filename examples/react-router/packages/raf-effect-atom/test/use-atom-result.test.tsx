@@ -325,6 +325,32 @@ describe("useAtomResult", () => {
 		expect(server.requests(1)).toBe(1);
 	});
 
+	it("leaves the atom to its readers when a loader starts it again", async () => {
+		using server = serve();
+		using app = mount();
+		const loader = Loader.make(app.registry);
+		const handle = loader.prefetch(issue, 1);
+		await app.render(<Page issues={[handle]} />);
+		expect(screen.getByText("Issue 1")).toBeDefined();
+		await loader.ensure(issue, 1);
+		await app.unmount();
+		await settle(2000);
+		expect(nodeOf(app, 1)).toBeUndefined();
+		expect(server.requests(1)).toBe(1);
+	});
+
+	it("takes a lease again once the last reader unmounts", async () => {
+		using _server = serve();
+		using app = mount();
+		const loader = Loader.make(app.registry);
+		const handle = loader.prefetch(issue, 1);
+		await app.render(<Page issues={[handle]} />);
+		await app.unmount();
+		loader.prefetch(issue, 1);
+		await settle(2000);
+		expect(nodeOf(app, 1)).toBeDefined();
+	});
+
 	it("leaves the atom to its lease until a component mounts it", async () => {
 		using _server = serve();
 		using app = mount();

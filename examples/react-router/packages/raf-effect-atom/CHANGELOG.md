@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.3.1](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.3.0...raf-effect-atom%400.3.1) (2026-10-24)
+
+### Features
+
+- **raf-effect-atom:** add useHandleValue, a handle read that doesn't suspend ([4b083f7](https://github.com/KATT/raf-effect-atom/commit/4b083f7dee91834cda71691f44a1498061f3cfe1))
+
+### Code Refactoring
+
+- name files in kebab-case, PascalCase only for Effect modules ([d76b06a](https://github.com/KATT/raf-effect-atom/commit/d76b06aef3d04d6be6c0b0e086a756234ab3f253))
+
+### Documentation
+
+- **raf-effect-atom:** pass a read's result to a boundary's hook in the README and JSDoc ([fd82e5c](https://github.com/KATT/raf-effect-atom/commit/fd82e5c1f92b3f99dc166140383837b11b695ca7))
+- **raf-effect-atom:** pass the atom to a boundary's hook in the README and JSDoc ([772d349](https://github.com/KATT/raf-effect-atom/commit/772d3494954f64a5c0fc92ebfd146b5f14e16e51))
+
+### Tests
+
+- **raf-effect-atom:** pass a read's result to a boundary's hook ([df11247](https://github.com/KATT/raf-effect-atom/commit/df11247edab69b060c0677059ae24a4d8835c28e))
+- **raf-effect-atom:** read through a boundary's hook with the atom ([de19b85](https://github.com/KATT/raf-effect-atom/commit/de19b8502ef41a8efbd9b50da6e00843cb38f2fd))
+- **raf-effect-atom:** start an Atom.swr over a keyed readable that picks a seed or a live query ([697e785](https://github.com/KATT/raf-effect-atom/commit/697e78550bff0dce02903b963677828786770338))
+
 ## [0.3.0](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.2.6...raf-effect-atom%400.3.0) (2026-10-23)
 
 ### ⚠ BREAKING CHANGES

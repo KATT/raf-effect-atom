@@ -105,7 +105,8 @@ const targetsOf = <A extends Atom.Atom<unknown>>(
  *   instead of started, so the browser doesn't request it a second time.
  * - The atom is read through `hydrated`, so a hydrated result is kept.
  * - Once the component mounts, the loader's lease ends and the component
- *   keeps the atom mounted.
+ *   keeps the atom mounted. A loader that starts the atom again while it's
+ *   mounted takes no lease, so the atom goes idle when the component unmounts.
  * - A derived atom is read through the first serializable atom its
  *   `initialValueTarget` chain points at: that one is awaited, hydrated and
  *   released, so the derived atom doesn't request it again.
@@ -192,9 +193,7 @@ export const useAtomResult = <S extends Source>(
 		includeFailure: true,
 		suspendOnWaiting: AsyncResult.isFailure(current) && current.waiting,
 	});
-	React.useEffect(() => {
-		Leases.release(registry, started);
-	}, [registry, started]);
+	React.useEffect(() => Leases.hold(registry, started), [registry, started]);
 	if (
 		AsyncResult.isFailure(result) &&
 		Option.isNone(Cause.findErrorOption(result.cause))
@@ -234,7 +233,9 @@ const loading = Atom.make(AsyncResult.initial<never, never>(true));
  * - A failure is returned as it is, `waiting` while the atom refreshes, and
  *   so is a defect.
  * - Once the component has subscribed to the atom, the loader's lease ends
- *   and the component keeps the atom mounted.
+ *   and the component keeps the atom mounted. A loader that starts the atom
+ *   again while it's mounted takes no lease, so the atom goes idle when the
+ *   component unmounts.
  * - A handle `Loader.prefetchInBrowser` returned on the server reads as
  *   `Initial` there, without starting the atom; the browser's read starts
  *   it.
@@ -310,8 +311,9 @@ export const useHandleValue = <S extends Source>(
 	const result = useAtomValue(waiting ? loading : targets.read);
 	React.useEffect(() => {
 		if (!waiting) {
-			Leases.release(registry, started);
+			return Leases.hold(registry, started);
 		}
+		return undefined;
 	}, [registry, started, waiting]);
 	// SAFETY: `source` makes atoms of its own result type, and `loading` is an
 	// `Initial`, which every result type includes.
