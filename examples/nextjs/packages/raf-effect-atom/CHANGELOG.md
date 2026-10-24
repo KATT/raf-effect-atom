@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.2](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.3.1...raf-effect-atom%400.3.2) (2026-10-24)
+
+### Bug Fixes
+
+- **raf-effect-atom:** take no lease on an atom a mounted component reads ([899d0b7](https://github.com/KATT/raf-effect-atom/commit/899d0b7c70f6836c41c4416b0c2063c1ccf3d8b2))
+
 ## [0.3.1](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.3.0...raf-effect-atom%400.3.1) (2026-10-24)
 
 ### Features

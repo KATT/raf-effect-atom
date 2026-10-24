@@ -135,6 +135,21 @@ describe("useAtomResult on the server", () => {
 		expect(server.requests(1)).toBe(0);
 	});
 
+	it("fails the render for a handle left to the browser with no Suspense boundary around it", async () => {
+		using server = serve();
+		using rendered = await load(Loader.prefetchInBrowser(issue, 1));
+		const render = renderToReadableStream(
+			<RegistryContext.Provider value={rendered.registry}>
+				<Title issue={rendered.handles} />
+			</RegistryContext.Provider>,
+			{ onError: () => {} },
+		);
+		await expect(render).rejects.toThrow(
+			"Read it under a Suspense boundary inside the route, or with useHandleValue",
+		);
+		expect(server.requests(1)).toBe(0);
+	});
+
 	it("throws in development without a request registry", () => {
 		using server = serve();
 		const registry = AtomRegistry.make();

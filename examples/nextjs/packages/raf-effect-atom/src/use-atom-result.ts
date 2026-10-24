@@ -134,6 +134,12 @@ const targetsOf = <A extends Atom.Atom<unknown>>(
  * `RequestRegistry.make`), or a module-level registry would share results
  * between requests: in development, the hook throws without one.
  *
+ * On the server, the hook throws for a handle `Loader.prefetchInBrowser`
+ * returned, so React renders the nearest Suspense boundary's fallback and
+ * reports the error. With no boundary between the read and the route, the
+ * server can't render the page. `useHandleValue` returns `Initial` there
+ * instead.
+ *
  * `Atom.transform`'s `initialValueTarget` option points at the end of the
  * target's own chain, which for an AtomRpc query with `reactivityKeys` is an
  * inner atom with no serialization key. A derived atom read here sets
@@ -169,7 +175,7 @@ export const useAtomResult = <S extends Source>(
 	Registry.requireRequestRegistry(registry, "useAtomResult");
 	if (handle.inBrowser === true && isRequestRegistry(registry)) {
 		throw new Error(
-			`raf-effect-atom: ${String(atom)} starts in the browser (Loader.prefetchInBrowser), so the server renders the nearest Suspense boundary's fallback, and the browser renders the boundary.`,
+			`raf-effect-atom: ${String(atom)} starts in the browser (Loader.prefetchInBrowser), so useAtomResult throws on the server: React renders the nearest Suspense boundary's fallback, and the browser renders the boundary. Read it under a Suspense boundary inside the route, or with useHandleValue, which returns Initial on the server.`,
 		);
 	}
 	const targets = targetsOf(atom, handle, "useAtomResult");
