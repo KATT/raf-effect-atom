@@ -11,6 +11,7 @@
 "use client";
 
 import { RegistryContext } from "@effect/atom-react";
+import * as Cause from "effect/Cause";
 import type {
 	HttpApiEndpoint,
 	HttpApiGroup,
@@ -18,7 +19,7 @@ import type {
 } from "effect/http-api";
 import * as Option from "effect/Option";
 import * as Predicate from "effect/Predicate";
-import type * as AsyncResult from "effect/reactivity/AsyncResult";
+import * as AsyncResult from "effect/reactivity/AsyncResult";
 import type * as Atom from "effect/reactivity/Atom";
 import type * as AtomHttpApi from "effect/reactivity/AtomHttpApi";
 import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
@@ -580,15 +581,30 @@ export const createErrorBoundary = <
 	});
 	internals.set(component, boundary);
 
-	// SAFETY: `wrap`'s overloads type what it returns for an atom and for a
-	// family; the hook only checks the boundary is mounted first.
-	const useBoundary = ((source: Parameters<typeof wrap>[0]) => {
+	// SAFETY: for a result, a claimed failure and a defect are thrown, so
+	// what's returned is the result without them, as `UnclaimedResult` types
+	// it; `wrap`'s overloads type what it returns for an atom and a family.
+	const useBoundary = ((source: unknown) => {
 		if (!isMounted(React.useContext(MountedBoundaries), boundary)) {
 			throw new Error(
 				`The ${options.name} error boundary's hook found no <${boundary.displayName}> above it: wrap the tree in <${boundary.displayName}>`,
 			);
 		}
-		return wrap(source);
+		if (!AsyncResult.isAsyncResult(source)) {
+			// SAFETY: the hook's overloads take an atom or a family here.
+			const atom = source as never;
+			return wrap(atom);
+		}
+		if (AsyncResult.isFailure(source)) {
+			const error = Cause.findErrorOption(source.cause);
+			if (Option.isNone(error)) {
+				throw Cause.squash(source.cause);
+			}
+			if (owns(error.value)) {
+				throw error.value;
+			}
+		}
+		return source;
 	}) as UseErrorBoundary<string>;
 
 	// SAFETY: the tags are type-level only; `variance` is the same value for

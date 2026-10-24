@@ -660,3 +660,44 @@ describe("two registries failing with one error object", () => {
 		},
 	);
 });
+
+function ResultTitle(props: { readonly id: number }) {
+	const result = useAuthBoundary(useRead(issue(props.id)));
+	if (AsyncResult.isSuccess(result)) {
+		return <p>{result.value.title}</p>;
+	}
+	const error = AsyncResult.error(result);
+	return (
+		<p>{`Result: ${Option.isSome(error) ? error.value._tag : "defect"}`}</p>
+	);
+}
+
+describe("a boundary's hook over a read's result", () => {
+	const tree = (...ids: ReadonlyArray<number>) => (
+		<OfflineBoundary>
+			<AuthBoundary>
+				{ids.map((id) => (
+					<React.Suspense fallback={<p>Loading</p>} key={id}>
+						<ResultTitle id={id} />
+					</React.Suspense>
+				))}
+			</AuthBoundary>
+		</OfflineBoundary>
+	);
+
+	it("throws a claimed failure to the boundary that claims it", async () => {
+		using _server = serve({ 1: ["signed-out"] });
+		using _errors = silenceCaughtErrors();
+		using app = mount();
+		await app.render(tree(1));
+		expect(screen.getByText("Signed out: expired")).toBeDefined();
+	});
+
+	it("returns a failure no boundary claims, and a success", async () => {
+		using _server = serve({ 1: ["missing"] });
+		using app = mount();
+		await app.render(tree(1, 2));
+		expect(screen.getByText("Result: IssueNotFound")).toBeDefined();
+		expect(screen.getByText("Issue 2")).toBeDefined();
+	});
+});

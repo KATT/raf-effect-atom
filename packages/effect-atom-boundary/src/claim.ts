@@ -67,9 +67,30 @@ export interface Variance<Tags extends string> {
 }
 
 /**
- * A boundary's hook: takes an atom, or an atom family, that a component reads
- * under the boundary, and returns it with the failures this boundary and the
- * boundaries above it claim turned into defects, typed without them.
+ * An `AsyncResult`, or a union of them, typed without the errors whose
+ * `_tag` is in `Tags`: a failure with no error left is gone from the union,
+ * so a read whose failures are all claimed is typed as a success.
+ *
+ * @stability unstable
+ * @category utility types
+ * @since 0.3.0
+ */
+export type UnclaimedResult<R, Tags extends string> =
+	R extends AsyncResult.Success<infer A, infer E>
+		? AsyncResult.Success<A, Unclaimed<E, Tags>>
+		: R extends AsyncResult.Failure<infer A, infer E>
+			? [Unclaimed<E, Tags>] extends [never]
+				? never
+				: AsyncResult.Failure<A, Unclaimed<E, Tags>>
+			: R extends AsyncResult.Initial<infer A, infer E>
+				? AsyncResult.Initial<A, Unclaimed<E, Tags>>
+				: never;
+
+/**
+ * A boundary's hook: takes the result a component read under the boundary,
+ * throws the failures this boundary and the boundaries above it claim, and
+ * returns the result typed without them. Given an atom, or an atom family,
+ * it returns it with those failures turned into defects instead.
  *
  * **When to use**
  *
@@ -104,6 +125,9 @@ export interface Variance<Tags extends string> {
  * @since 0.1.0
  */
 export interface UseErrorBoundary<Tags extends string> {
+	<R extends AsyncResult.AsyncResult<unknown, unknown>>(
+		result: R,
+	): UnclaimedResult<R, Tags>;
 	<A, E>(
 		atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
 	): Atom.Atom<AsyncResult.AsyncResult<A, Unclaimed<E, Tags>>>;

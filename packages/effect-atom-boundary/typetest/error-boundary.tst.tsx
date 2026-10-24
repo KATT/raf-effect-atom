@@ -260,4 +260,18 @@ describe("createErrorBoundary", () => {
 			hole<(id: number) => Atom.Atom<number>>(),
 		);
 	});
+
+	it("narrows a read's result to the errors it doesn't claim", () => {
+		type Left = Tagged<IssueError, "IssueNotFound" | "RpcClientError">;
+		expect(
+			useAuthBoundary(
+				hole<
+					| AsyncResult.Success<Issue, IssueError>
+					| AsyncResult.Failure<Issue, IssueError>
+				>(),
+			),
+		).type.toBe<
+			AsyncResult.Success<Issue, Left> | AsyncResult.Failure<Issue, Left>
+		>();
+	});
 });
