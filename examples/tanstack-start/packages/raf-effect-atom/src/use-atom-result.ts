@@ -32,8 +32,8 @@ declare const process: {
 
 /**
  * A source with the same arguments and success type as `S`, and any error:
- * the sources whose handles `S` reads, such as the source an error
- * boundary's hook narrows into `S`.
+ * the sources whose handles `S` reads, such as the source a derived `S`
+ * points at.
  */
 type Readable<S> = S extends (
 	...args: infer Args
@@ -51,8 +51,9 @@ type Readable<S> = S extends (
  *
  * Use in the component a loader, a server component or `useWaterfall` gave
  * the handle to. The source can be the one the verb started, or one derived
- * from it whose atoms point at its atoms with `initialValueTarget`, such as
- * the family an error boundary's hook returns for `source`.
+ * from it whose atoms point at its atoms with `initialValueTarget`. To send
+ * some failures to an error boundary, pass the result to the boundary's hook,
+ * such as `useIssueBoundary(useAtomResult(issue, handle))`.
  *
  * **Details**
  *
@@ -73,8 +74,8 @@ type Readable<S> = S extends (
  *   `initialValueTarget` chain points at: that one is awaited, hydrated and
  *   released, so the derived atom doesn't request it again.
  * - The settled result is returned, typed failures included. A defect is
- *   thrown to the error boundaries above. With no typed failures left, such
- *   as an atom whose boundaries claim all of them, it's typed as a success.
+ *   thrown to the error boundaries above. With no typed failures, it's typed
+ *   as a success.
  * - While a failed atom refreshes, such as after a boundary's `reset`, the
  *   read suspends instead of returning the old failure again.
  *
@@ -99,8 +100,8 @@ type Readable<S> = S extends (
  * `Atom.transform`'s `initialValueTarget` option points at the end of the
  * target's own chain, which for an AtomRpc query with `reactivityKeys` is an
  * inner atom with no serialization key. A derived atom read here sets
- * `initialValueTarget` to its source itself, as an error boundary's
- * wrapper does, or it requests the source again after hydration.
+ * `initialValueTarget` to its source itself, or it requests the source again
+ * after hydration.
  *
  * **Example**
  *

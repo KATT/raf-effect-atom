@@ -105,7 +105,7 @@ export const remadeIssue = (id: number) =>
 
 /**
  * A derived atom with no serialization key that points at `issue(id)` with
- * `initialValueTarget`, as a boundary's wrapper does.
+ * `initialValueTarget`.
  */
 export const titled = Atom.family((id: number) =>
 	Object.assign(

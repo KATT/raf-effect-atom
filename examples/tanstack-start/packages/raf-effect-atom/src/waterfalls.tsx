@@ -107,9 +107,8 @@ export const WaterfallDetection = (props: {
  * - `useAtomResult` doesn't report an atom started this way.
  * - The handle is a prefetched one: its reader suspends until the result
  *   settles, as for a handle from a loader's `prefetch`.
- * - A derived source, such as the one an error boundary's hook returns, starts
- *   the serializable atom its `initialValueTarget` chain points at, as
- *   `Loader.prefetch` does.
+ * - A derived source starts the serializable atom its `initialValueTarget`
+ *   chain points at, as `Loader.prefetch` does.
  *
  * **Example**
  *

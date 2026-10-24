@@ -3,7 +3,6 @@ import { screen } from "@testing-library/react";
 import * as Effect from "effect/Effect";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
 import * as Atom from "effect/reactivity/Atom";
-import { createErrorBoundary } from "effect-atom-boundary";
 import * as React from "react";
 
 import {
@@ -16,7 +15,7 @@ import {
 	type WaterfallMode,
 } from "../src/index.ts";
 import { mount, settle, silenceCaughtErrors } from "./fixtures/browser.tsx";
-import { issue, Issues, serve, unloaded } from "./fixtures/issues.ts";
+import { issue, serve, unloaded } from "./fixtures/issues.ts";
 import { load } from "./fixtures/server.ts";
 
 const spyOnWarnings = () =>
@@ -49,19 +48,6 @@ const shouted = Atom.family((id: number) =>
 
 function DerivedTitle(props: { readonly issue: IssueHandle }) {
 	const result = useAtomResult(shouted, props.issue);
-	return (
-		<p>{AsyncResult.isSuccess(result) ? result.value.title : "Not found"}</p>
-	);
-}
-
-const [NotFoundBoundary, useNotFoundBoundary] = createErrorBoundary({
-	catchTags: { IssueNotFound: () => <p>No issue</p> },
-	errors: Issues,
-	name: "NotFound",
-});
-
-function WrappedTitle(props: { readonly issue: IssueHandle }) {
-	const result = useAtomResult(useNotFoundBoundary(issue), props.issue);
 	return (
 		<p>{AsyncResult.isSuccess(result) ? result.value.title : "Not found"}</p>
 	);
@@ -155,26 +141,6 @@ describe("useAtomResult's waterfall check", () => {
 		await settle();
 		expect(screen.getByText("ISSUE 1")).toBeDefined();
 		expect(warnings).not.toHaveBeenCalled();
-	});
-
-	it("checks the source of a boundary's wrapper", async () => {
-		using _server = serve();
-		const warnings = spyOnWarnings();
-		using app = mount();
-		const handle = Loader.make(app.registry).prefetch(issue, 1);
-		await app.render(
-			<Page>
-				<NotFoundBoundary>
-					<WrappedTitle issue={handle} />
-					<WrappedTitle issue={unloaded(2)} />
-				</NotFoundBoundary>
-			</Page>,
-		);
-		await settle();
-		expect(screen.getByText("Issue 1")).toBeDefined();
-		expect(screen.getByText("Issue 2")).toBeDefined();
-		expect(warnings).toHaveBeenCalledOnce();
-		expect(warnings.mock.calls[0]?.[0]).toContain("read AtomRpc:GetIssue:2 ");
 	});
 
 	it("names the source a derived read started", async () => {

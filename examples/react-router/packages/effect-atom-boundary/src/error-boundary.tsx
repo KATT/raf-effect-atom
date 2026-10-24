@@ -11,6 +11,7 @@
 "use client";
 
 import { RegistryContext } from "@effect/atom-react";
+import * as Cause from "effect/Cause";
 import type {
 	HttpApiEndpoint,
 	HttpApiGroup,
@@ -18,7 +19,7 @@ import type {
 } from "effect/http-api";
 import * as Option from "effect/Option";
 import * as Predicate from "effect/Predicate";
-import type * as AsyncResult from "effect/reactivity/AsyncResult";
+import * as AsyncResult from "effect/reactivity/AsyncResult";
 import type * as Atom from "effect/reactivity/Atom";
 import type * as AtomHttpApi from "effect/reactivity/AtomHttpApi";
 import type * as AtomRegistry from "effect/reactivity/AtomRegistry";
@@ -32,11 +33,9 @@ import {
 	type UseErrorBoundary,
 	type Variance,
 } from "./claim.ts";
-import * as FailedReads from "./internal/failed-reads.ts";
 import * as Prerender from "./internal/prerender.tsx";
 import * as Refresh from "./internal/refresh.ts";
 import { variance } from "./internal/variance.ts";
-import * as Wrap from "./internal/wrap.ts";
 
 /**
  * Props for a `catchTags` handler: the caught error, and `reset`.
@@ -151,14 +150,37 @@ const caughtBy = (
 	return Handler === undefined ? undefined : { error: error.value, Handler };
 };
 
+/**
+ * Whether `error` is the typed error `atom` currently fails with in
+ * `registry`: the same object, since a read throws the error its atom's
+ * failure holds.
+ */
+const failsWith = (
+	registry: AtomRegistry.AtomRegistry,
+	// oxlint-disable-next-line typescript/no-explicit-any -- any atom's result
+	atom: Atom.Atom<any>,
+	error: unknown,
+): boolean =>
+	Option.exists(
+		Prerender.peek(registry, atom),
+		(value) =>
+			AsyncResult.isAsyncResult(value) &&
+			AsyncResult.isFailure(value) &&
+			Option.exists(
+				Cause.findErrorOption(value.cause),
+				(failure) => failure === error,
+			),
+	);
+
 interface CatcherProps {
 	readonly children?: React.ReactNode | undefined;
 	/** Finds the failure it catches during server rendering. */
 	readonly find: Prerender.Find;
 	readonly handlers: Handlers;
 	/**
-	 * `AtomErrorBoundary`'s atom: a failure another atom's read threw goes to
-	 * the boundaries above, and a new atom clears a caught failure.
+	 * `AtomErrorBoundary`'s atom: an error that isn't its current failure, such
+	 * as one another atom's read threw, goes to the boundaries above, and a new
+	 * atom clears a caught failure.
 	 */
 	// oxlint-disable-next-line typescript/no-explicit-any -- any atom's result
 	readonly own?: Atom.Atom<any> | undefined;
@@ -205,9 +227,8 @@ class Catcher extends React.Component<CatcherProps, CatcherState> {
 		const error = caught.error;
 		const own = this.props.own;
 		const registry = this.props.registry;
-		const failed = FailedReads.get(registry, error);
 		const Handler =
-			own !== undefined && failed !== undefined && failed !== own
+			own !== undefined && !failsWith(registry, own, error)
 				? undefined
 				: handlerFor(this.props.handlers, error);
 		if (Handler === undefined) {
@@ -245,11 +266,6 @@ export interface AtomErrorBoundaryProps<A, E> {
 	readonly children?: React.ReactNode | undefined;
 }
 
-// SAFETY: it claims every typed failure, so none is left in the type.
-const claimEvery = Wrap.make<string>(
-	() => true,
-) as AtomErrorBoundaryComponent["claim"];
-
 /**
  * Provides an error boundary for one atom that renders a handler per `_tag`
  * of the atom's error, typed by the error with that tag.
@@ -261,10 +277,10 @@ const claimEvery = Wrap.make<string>(
  *
  * **Details**
  *
- * The reads under it read `AtomErrorBoundary.claim(atom)`, which turns every
- * typed failure into a defect, so it throws. A failure whose tag has a
- * handler renders that handler; its `reset` refreshes the atom and renders
- * the children again. A new `atom` clears a caught failure.
+ * The reads under it throw the atom's failures, as `useAtomSuspense` does
+ * without `includeFailure`. A failure whose tag has a handler renders that
+ * handler; its `reset` refreshes the atom and renders the children again. A
+ * new `atom` clears a caught failure.
  *
  * React runs no error boundaries on the server, so during server rendering
  * it reads `atom` before its children, from the registry or its hydrated
@@ -274,8 +290,11 @@ const claimEvery = Wrap.make<string>(
  *
  * **Gotchas**
  *
- * A failure without a handler, or one thrown by a read of another atom, goes
- * to the error boundaries above. `reset` refreshes the atom in the registry
+ * A failure without a handler, or an error that isn't the one the atom fails
+ * with in the boundary's registry, such as one a read of another atom threw,
+ * goes to the error boundaries above. Read with `suspendOnWaiting: true`, so
+ * a read waits for the refresh `reset` starts instead of throwing the old
+ * failure again. `reset` refreshes the atom in the registry
  * the boundary renders in, not in a `RegistryContext` provided under it. A
  * handler renders as a component: one written inline mounts again, losing its
  * state, each time the parent renders.
@@ -293,9 +312,7 @@ const claimEvery = Wrap.make<string>(
  * </AtomErrorBoundary>
  *
  * function IssuePage(props: { readonly id: number }) {
- *   const result = useAtomSuspense(AtomErrorBoundary.claim(issue(props.id)), {
- *     suspendOnWaiting: true
- *   })
+ *   const result = useAtomSuspense(issue(props.id), { suspendOnWaiting: true })
  *   return <h1>{result.value.title}</h1>
  * }
  * ```
@@ -306,65 +323,31 @@ const claimEvery = Wrap.make<string>(
  * @category components
  * @since 0.1.0
  */
-export const AtomErrorBoundary: AtomErrorBoundaryComponent = Object.assign(
-	<A, E>(props: AtomErrorBoundaryProps<A, E>): React.ReactNode => {
-		const registry = React.useContext(RegistryContext);
-		const handlers: Handlers = props.catchTags;
-		const atom = props.atom;
-		return (
-			<Catcher
-				find={(current) =>
-					caughtBy(
-						handlers,
-						Option.flatMap(
-							Prerender.peek(current, atom),
-							Prerender.settledError,
-						),
-					)
-				}
-				handlers={handlers}
-				own={atom}
-				registry={registry}
-				reset={(current) => {
-					Refresh.node(current, atom);
-				}}
-			>
-				{props.children}
-			</Catcher>
-		);
-	},
-	{ claim: claimEvery },
-);
-
-/**
- * `AtomErrorBoundary`, and `claim` for the reads under it.
- *
- * @stability unstable
- * @category components
- * @since 0.1.0
- */
-export interface AtomErrorBoundaryComponent {
-	<A, E>(props: AtomErrorBoundaryProps<A, E>): React.ReactNode;
-	/**
-	 * Returns the atom with every typed failure turned into a defect, recorded
-	 * with `atom`, so a read throws it to the `AtomErrorBoundary` for `atom`.
-	 *
-	 * **Details**
-	 *
-	 * Memoized per atom. Given an atom family, it returns the family of
-	 * claimed atoms, memoized per family. Reading it with `useAtomSuspense`
-	 * needs `suspendOnWaiting: true`, so a read waits for the refresh `reset`
-	 * starts instead of throwing the old failure again.
-	 */
-	readonly claim: {
-		<A, E>(
-			atom: Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-		): Atom.Atom<AsyncResult.AsyncResult<A, never>>;
-		<Args extends ReadonlyArray<unknown>, A, E>(
-			family: (...args: Args) => Atom.Atom<AsyncResult.AsyncResult<A, E>>,
-		): (...args: Args) => Atom.Atom<AsyncResult.AsyncResult<A, never>>;
-	};
-}
+export const AtomErrorBoundary = <A, E>(
+	props: AtomErrorBoundaryProps<A, E>,
+): React.ReactNode => {
+	const registry = React.useContext(RegistryContext);
+	const handlers: Handlers = props.catchTags;
+	const atom = props.atom;
+	return (
+		<Catcher
+			find={(current) =>
+				caughtBy(
+					handlers,
+					Option.flatMap(Prerender.peek(current, atom), Prerender.settledError),
+				)
+			}
+			handlers={handlers}
+			own={atom}
+			registry={registry}
+			reset={(current) => {
+				Refresh.node(current, atom);
+			}}
+		>
+			{props.children}
+		</Catcher>
+	);
+};
 
 /**
  * A boundary component: renders the `catchTags` handler for the errors it
@@ -382,8 +365,8 @@ export interface ErrorBoundaryComponent<
 }
 
 /**
- * A boundary component and its hook, which narrows the atoms read under it,
- * named freely by destructuring.
+ * A boundary component and its hook, which narrows the results read under
+ * it, named freely by destructuring.
  *
  * @stability unstable
  * @category models
@@ -455,11 +438,11 @@ const isMounted = (at: Mounted | undefined, boundary: Internal): boolean => {
  *
  * **Details**
  *
- * A component under it reads `useBoundary(atom)`, or `useBoundary(family)`:
- * the same atom with the errors this boundary or one above it claims turned
- * into defects, so the read throws them to the nearest boundary that claims
- * them, and the atom's `AsyncResult` is typed without them. `parent` is the boundary it sits
- * under; the claimed tags add up along the chain. `catchTags`' keys are tags
+ * A component under it wraps its read in the hook:
+ * `useBoundary(useAtomResult(issue, handle))` throws the failures this
+ * boundary or one above it claims to the nearest boundary that claims them,
+ * and returns the result typed without them. `parent` is the boundary it
+ * sits under; the claimed tags add up along the chain. `catchTags`' keys are tags
  * of `errors`' error type, so a misspelled tag is a type error and each
  * handler's `error` is typed.
  *
@@ -481,11 +464,11 @@ const isMounted = (at: Mounted | undefined, boundary: Internal): boolean => {
  *
  * A boundary matches `_tag` only: a failure with a claimed tag from any atom
  * under it is caught. During server rendering, that's any atom in the
- * registry, read under it or not. The boundary throws without its `parent` mounted above
- * it, and the hook throws outside its boundary. A read that returns the
- * failures left and throws defects, such as `raf-effect-atom`'s
- * `useAtomResult`, gets the narrowed result; `useAtomSuspense` throws every
- * failure.
+ * registry, read under it or not. The boundary throws without its `parent`
+ * mounted above it, and the hook throws outside its boundary. The hook needs
+ * a read that returns its failures, such as `raf-effect-atom`'s
+ * `useAtomResult`: `useAtomSuspense` without `includeFailure` throws every
+ * failure before the hook sees it.
  *
  * **Example** (A sign-in boundary)
  *
@@ -497,7 +480,7 @@ const isMounted = (at: Mounted | undefined, boundary: Internal): boolean => {
  * })
  *
  * function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
- *   const result = useAtomResult(useAuthBoundary(issue), props.issue)
+ *   const result = useAuthBoundary(useAtomResult(issue, props.issue))
  *   // AsyncResult<Issue, IssueNotFound | RpcClientError>
  * }
  * ```
@@ -519,7 +502,6 @@ export const createErrorBoundary = <
 	const handlers: Handlers = options.catchTags;
 	const owns = (error: unknown): boolean =>
 		handlerFor(handlers, error) !== undefined || (parent?.owns(error) ?? false);
-	const wrap = Wrap.make<string>(owns);
 	const boundary: Internal = {
 		displayName: `${options.name}Boundary`,
 		owns,
@@ -580,15 +562,24 @@ export const createErrorBoundary = <
 	});
 	internals.set(component, boundary);
 
-	// SAFETY: `wrap`'s overloads type what it returns for an atom and for a
-	// family; the hook only checks the boundary is mounted first.
-	const useBoundary = ((source: Parameters<typeof wrap>[0]) => {
+	// SAFETY: a claimed failure and a defect are thrown, so what's returned
+	// is the result without them, as `UnclaimedResult` types it.
+	const useBoundary = ((result: AsyncResult.AsyncResult<unknown, unknown>) => {
 		if (!isMounted(React.useContext(MountedBoundaries), boundary)) {
 			throw new Error(
 				`The ${options.name} error boundary's hook found no <${boundary.displayName}> above it: wrap the tree in <${boundary.displayName}>`,
 			);
 		}
-		return wrap(source);
+		if (AsyncResult.isFailure(result)) {
+			const error = Cause.findErrorOption(result.cause);
+			if (Option.isNone(error)) {
+				throw Cause.squash(result.cause);
+			}
+			if (owns(error.value)) {
+				throw error.value;
+			}
+		}
+		return result;
 	}) as UseErrorBoundary<string>;
 
 	// SAFETY: the tags are type-level only; `variance` is the same value for

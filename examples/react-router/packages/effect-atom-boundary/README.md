@@ -17,7 +17,7 @@ npm install effect-atom-boundary effect @effect/atom-react react
 
 ## Usage
 
-A boundary catches the tags its `catchTags` name, and no others. `createErrorBoundary` makes one, with a hook that takes an atom, or an atom family, and turns the tags it and the boundaries above it catch into defects. A read that returns typed failures and throws defects, such as [`raf-effect-atom`](https://github.com/KATT/raf-effect-atom/tree/main/packages/raf-effect-atom)'s `useAtomResult`, throws those to their boundaries and returns the failures left, typed without them:
+A boundary catches the tags its `catchTags` name, and no others. `createErrorBoundary` makes one, with a hook that takes a read's `AsyncResult`, such as what [`raf-effect-atom`](https://github.com/KATT/raf-effect-atom/tree/main/packages/raf-effect-atom)'s `useAtomResult` returns, throws the tags it and the boundaries above it catch to their boundaries, and returns the failures left, typed without them:
 
 ```tsx
 import { Match, Option } from "effect";
@@ -39,7 +39,7 @@ const [IssueBoundary, useIssueBoundary] = createErrorBoundary({
 });
 
 function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
-	const result = useAtomResult(useIssueBoundary(issue), props.issue);
+	const result = useIssueBoundary(useAtomResult(issue, props.issue));
 	if (AsyncResult.isSuccess(result)) {
 		return <h1>{result.value.title}</h1>;
 	}
@@ -57,11 +57,11 @@ function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
 </AppBoundary>;
 ```
 
-`issue`'s error is `IssueNotFound | Unauthorized | RpcClientError`. `issueHandle` is the handle the route's loader got from `raf-effect-atom`'s `ensure(issue, id)`. The read throws `IssueNotFound` to `<IssueBoundary>` and `RpcClientError` to `<AppBoundary>`, and returns `Unauthorized`, the one failure left. `errors` names what the errors come from, for the types: an `AtomRpc` client, an atom, or an atom family. A handler's `reset` refreshes every atom whose failure the boundary has a handler for, and renders the children again.
+`issue`'s error is `IssueNotFound | Unauthorized | RpcClientError`. `issueHandle` is the handle the route's loader got from `raf-effect-atom`'s `ensure(issue, id)`. The hook throws `IssueNotFound` to `<IssueBoundary>` and `RpcClientError` to `<AppBoundary>`, and returns `Unauthorized`, the one failure left. `errors` names what the errors come from, for the types: an `AtomRpc` client, an atom, or an atom family. A handler's `reset` refreshes every atom whose failure the boundary has a handler for, and renders the children again.
 
-When the boundaries' `catchTags` name every tag of the atom's error, the read's error type is `never`. See [Error boundaries](https://raf-effect-atom.katt.dev/docs/error-boundaries).
+When the boundaries' `catchTags` name every tag of the atom's error, the hook types the result as a success. See [Error boundaries](https://raf-effect-atom.katt.dev/docs/error-boundaries).
 
-`AtomErrorBoundary` is a separate component for one atom (`<AtomErrorBoundary atom={issue(id)} catchTags={…}>`), with no hook. Its read, `AtomErrorBoundary.claim(atom)`, claims every typed failure whatever its `catchTags` name, so the read's error type is `never` and a tag without a handler goes to the boundaries above.
+`AtomErrorBoundary` is a separate component for one atom (`<AtomErrorBoundary atom={issue(id)} catchTags={…}>`), with no hook. It catches the atom's failures that a read under it throws, such as `useAtomSuspense(atom)`, and a tag without a handler goes to the boundaries above.
 
 ## For coding agents
 

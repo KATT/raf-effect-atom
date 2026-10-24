@@ -20,7 +20,7 @@ export function StatusFilter(props: {
 	readonly current: IssueListInput;
 	readonly verb: LoaderVerb;
 }) {
-	const result = useAtomResult(useAuthBoundary(issueCounts), props.counts);
+	const result = useAuthBoundary(useAtomResult(issueCounts, props.counts));
 	const counts = result.value;
 	const current = props.current;
 

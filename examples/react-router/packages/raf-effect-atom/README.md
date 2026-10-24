@@ -37,13 +37,13 @@ export async function loader(args: LoaderArgs) {
 }
 ```
 
-A component takes the handle as a prop and reads it with `useAtomResult(source, handle)`, which waits for a streamed result instead of starting the atom again, and returns typed failures. Given a handle instead of an id, it can't start a request of its own. The source can be a family derived from the loader's, such as the one an [`effect-atom-boundary`](https://github.com/KATT/raf-effect-atom/tree/main/packages/effect-atom-boundary) boundary's hook returns, which throws the errors that boundary claims to it:
+A component takes the handle as a prop and reads it with `useAtomResult(source, handle)`, which waits for a streamed result instead of starting the atom again, and returns typed failures. Given a handle instead of an id, it can't start a request of its own. An [`effect-atom-boundary`](https://github.com/KATT/raf-effect-atom/tree/main/packages/effect-atom-boundary) boundary's hook takes the result, throws the errors that boundary claims to it, and returns the rest:
 
 ```tsx
 import { type Handle, useAtomResult } from "raf-effect-atom";
 
 function IssueTitle(props: { readonly issue: Handle<typeof issue> }) {
-	const result = useAtomResult(useIssueBoundary(issue), props.issue);
+	const result = useIssueBoundary(useAtomResult(issue, props.issue));
 	// Success<Issue, never>: its boundaries claim every failure
 	return <h1>{result.value.title}</h1>;
 }
