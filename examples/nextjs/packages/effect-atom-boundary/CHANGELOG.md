@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/KATT/raf-effect-atom/compare/effect-atom-boundary%400.2.0...effect-atom-boundary%400.3.0) (2026-10-24)
+
+### ⚠ BREAKING CHANGES
+
+- **effect-atom-boundary:** a boundary's hook takes a read's result, `useBoundary(useAtomResult(atom, handle))` instead of `useAtomResult(useBoundary(atom), handle)`, and `AtomErrorBoundary.claim` and `AtomErrorBoundaryComponent` are removed: read an `AtomErrorBoundary`'s atom with `useAtomSuspense`.
+
+### Features
+
+- **effect-atom-boundary:** pass a read's result to a boundary's hook ([a46f2c5](https://github.com/KATT/raf-effect-atom/commit/a46f2c556145a74f9bdbdbff386a4f4d23ae754e))
+- **effect-atom-boundary:** take only a read's result in a boundary's hook, and drop AtomErrorBoundary.claim ([2a7b55d](https://github.com/KATT/raf-effect-atom/commit/2a7b55d4df4d841faf30424571ecaba88946c8fb))
+
 ## [0.2.0](https://github.com/KATT/raf-effect-atom/compare/effect-atom-boundary%400.1.2...effect-atom-boundary%400.2.0) (2026-10-23)
 
 ### ⚠ BREAKING CHANGES

@@ -100,16 +100,19 @@ export type UnclaimedResult<R, Tags extends string> =
  * A failure whose error has a claimed `_tag` is thrown as the error itself,
  * so the nearest boundary that claims it catches it. A failure with no typed
  * error, a defect, is thrown too, to the error boundaries above. Any other
- * result is returned as it is. It takes any `AsyncResult`, so it works over
- * any read hook: `raf-effect-atom`'s `useAtomResult`, which returns typed
- * failures and suspends while a failed atom refreshes, or Effect Atom's
- * `useAtomValue`.
+ * result is returned as it is. It takes any `AsyncResult`, from a read that
+ * returns typed failures and suspends while a failed atom refreshes:
+ * `raf-effect-atom`'s `useAtomResult`, or `useAtomSuspense` with
+ * `includeFailure: true` and `suspendOnWaiting: true`.
  *
  * **Gotchas**
  *
- * It's a hook, and it throws outside its boundary. A read that throws every
- * failure itself, such as `useAtomSuspense` without `includeFailure`, throws
- * before the hook sees the result.
+ * It's a hook, and it throws outside its boundary. It throws a claimed
+ * failure whether or not the atom is refreshing, so a read that returns the
+ * old failure while a `reset` refreshes it, such as `useAtomValue`, throws
+ * it to the boundary again, and the handler stays after the refresh. A read
+ * that throws every failure itself, such as `useAtomSuspense` without
+ * `includeFailure`, throws before the hook sees the result.
  *
  * @stability unstable
  * @category models
