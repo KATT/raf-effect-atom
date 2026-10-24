@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.3](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.3.2...raf-effect-atom%400.3.3) (2026-10-24)
+
+### Bug Fixes
+
+- **raf-effect-atom:** name the fixes when useAtomResult throws for a browser-only handle on the server ([40b94d0](https://github.com/KATT/raf-effect-atom/commit/40b94d07947b65bb06d278cf47c855f4b8afdc78))
+
 ## [0.3.2](https://github.com/KATT/raf-effect-atom/compare/raf-effect-atom%400.3.1...raf-effect-atom%400.3.2) (2026-10-24)
 
 ### Bug Fixes
