@@ -15,6 +15,7 @@ import {
 	RegistryProvider,
 	RequestRegistry,
 	useAtomResult,
+	useHandleValue,
 } from "../src/index.ts";
 import { makeRegistry } from "../src/tanstack-router.tsx";
 import { issue, serve, unloaded } from "./fixtures/issues.ts";
@@ -62,6 +63,47 @@ const page = (
 		</React.Suspense>
 	</RegistryContext.Provider>
 );
+
+function ValueTitle(props: { readonly issue: Handle<typeof issue> }) {
+	const result = useHandleValue(issue, props.issue);
+	return (
+		<p>{AsyncResult.isSuccess(result) ? result.value.title : result._tag}</p>
+	);
+}
+
+describe("useHandleValue on the server", () => {
+	it("renders a loader's result, and Initial for one still loading", async () => {
+		using server = serve();
+		using ensured = await load(Loader.ensure(issue, 1));
+		using prefetched = await load(Loader.prefetch(issue, 2));
+		const render = (
+			registry: AtomRegistry.AtomRegistry,
+			handle: Handle<typeof issue>,
+		) =>
+			renderToString(
+				<RegistryContext.Provider value={registry}>
+					<ValueTitle issue={handle} />
+				</RegistryContext.Provider>,
+			);
+		expect(render(ensured.registry, ensured.handles)).toContain("Issue 1");
+		expect(render(prefetched.registry, prefetched.handles)).toContain(
+			"Initial",
+		);
+		expect(server.requests(2)).toBe(1);
+	});
+
+	it("renders Initial for a handle left to the browser, without starting it", async () => {
+		using server = serve();
+		using rendered = await load(Loader.prefetchInBrowser(issue, 1));
+		const html = renderToString(
+			<RegistryContext.Provider value={rendered.registry}>
+				<ValueTitle issue={rendered.handles} />
+			</RegistryContext.Provider>,
+		);
+		expect(html).toContain("Initial");
+		expect(server.requests(1)).toBe(0);
+	});
+});
 
 describe("useAtomResult on the server", () => {
 	it("renders a loader's result from the request registry", async () => {

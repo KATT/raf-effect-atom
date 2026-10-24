@@ -11,6 +11,7 @@ import {
 	type LoadedHandle,
 	Loader,
 	useAtomResult,
+	useHandleValue,
 } from "../src/index.ts";
 import { counter, issue, titled } from "../test/fixtures/issues.ts";
 
@@ -77,6 +78,28 @@ describe("useAtomResult", () => {
 		expect(useAtomResult).type.not.toBeCallableWith(
 			plain,
 			hole<Handle<typeof plain>>(),
+		);
+	});
+});
+
+describe("useHandleValue", () => {
+	it("reads a handle's current result, every state included", () => {
+		expect(useHandleValue(issue, hole<Handle<typeof issue>>())).type.toBe<
+			AsyncResult.AsyncResult<Issue, IssueError>
+		>();
+		expect(useHandleValue(counter, hole<Handle<typeof counter>>())).type.toBe<
+			AsyncResult.AsyncResult<number, never>
+		>();
+		expect(useHandleValue).type.toBeCallableWith(
+			titled,
+			hole<Effect.Success<ReturnType<typeof prefetchTitled>>>(),
+		);
+	});
+
+	it("rejects a handle of a source with other arguments or results", () => {
+		expect(useHandleValue).type.not.toBeCallableWith(
+			issue,
+			hole<Handle<typeof counter>>(),
 		);
 	});
 });
