@@ -31,7 +31,7 @@ While a failed atom refreshes, such as after a boundary's `reset`, the read susp
 
 - A result the server was still loading when it sent the page is awaited, not started, so the browser doesn't request it a second time.
 - It reads through `Hydration.hydrated(atom)`, so a hydrated result is kept on the first read instead of running the atom's effect again.
-- Once the component mounts, the loader's [lease](./loader-verbs.md#leases) ends and the component keeps the atom mounted.
+- Once the component mounts, the loader's [lease](./loader-verbs.md#leases) ends and the component keeps the atom mounted. A loader that starts the atom again while the component is mounted takes no lease, so the atom goes idle when the last component reading it unmounts.
 - A derived atom that points at another with Effect's `initialValueTarget` is read through that atom: the streamed result, the hydrated copy and the lease are the source's.
 
 ## Reading without Suspense

@@ -58,7 +58,7 @@ tanstack-start/src/docs/loader-verbs.ts#match
 
 ## Leases
 
-A loader runs before the route renders, and an atom nobody has mounted is evicted when it goes idle. Every verb takes a lease, which keeps the atom mounted until a component reads it with `useAtomResult` or `useHandleValue`, or for 30 seconds when none does. `Loader.make(registry, { leaseTTL })` changes the time.
+A loader runs before the route renders, and an atom nobody has mounted is evicted when it goes idle. Every verb takes a lease, which keeps the atom mounted until a component reads it with `useAtomResult` or `useHandleValue`, or for 30 seconds when none does. `Loader.make(registry, { leaseTTL })` changes the time. While a component reads the atom, the verbs take no lease on it, so a loader that runs again for the same page, such as after a search param changes, doesn't keep the atom mounted after the page leaves it.
 
 ## On the server
 
