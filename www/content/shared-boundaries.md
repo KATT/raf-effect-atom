@@ -69,4 +69,7 @@ Keep these failures in that boundary. On the server, `createErrorBoundary` bound
 
 ## Reads the hook narrows
 
-The hook takes any `AsyncResult`, so it narrows what any read hook returns: `raf-effect-atom`'s `useAtomResult`, Effect Atom's `useAtomValue`, or `useAtomSuspense(atom, { includeFailure: true, suspendOnWaiting: true })`. It throws a defect it's given too, to the nearest other React error boundary. `useAtomSuspense` without `includeFailure` throws every failure itself, including the ones the boundaries leave, before the hook sees the result.
+The hook takes the `AsyncResult` of a read that returns typed failures and suspends while a failed atom refreshes: `raf-effect-atom`'s `useAtomResult`, or `useAtomSuspense(atom, { includeFailure: true, suspendOnWaiting: true })`. It throws a defect it's given too, to the nearest other React error boundary.
+
+- A read that returns the old failure while `reset` refreshes the atom, such as Effect Atom's `useAtomValue`, hands the hook the claimed failure again. The hook throws it, and the boundary keeps its handler after the refresh succeeds.
+- `useAtomSuspense` without `includeFailure` throws every failure itself, including the ones the boundaries leave, before the hook sees the result.
