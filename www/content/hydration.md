@@ -36,6 +36,17 @@ A serializable query encodes its whole `AsyncResult` with the procedure's Schema
 
 [Effect Atom's hydration](https://github.com/Effect-TS/effect/blob/effect%404.0.6/packages/effect/src/reactivity/Hydration.ts) seeds an atom's value, but an effect atom still runs its effect when it mounts, so every result the server rendered would be requested again. `Hydration.hydrated(atom)` returns a copy of a serializable atom that keeps its hydrated value on the first read. The loader verbs and `useAtomResult` read through it; use it yourself to read a hydrated atom with `@effect/atom-react`'s own hooks, such as `useAtomValue(Hydration.hydrated(issue(1)))`.
 
+## Boundaries that hydrate after the page's effects
+
+React hydrates each [Suspense](https://react.dev/reference/react/Suspense) boundary once its HTML and its code have arrived, so a boundary around a streamed result can hydrate after the components around it have hydrated and run their effects. Its first render in the browser still has to match the server's HTML, or React reports a [hydration mismatch](https://react.dev/errors/418) and renders the boundary again in the browser:
+
+- An atom it reads gives the registry's current value. An effect outside the boundary that refreshes or sets that atom can change what the boundary renders when it hydrates.
+- State the browser keeps outside React, such as whether the document has painted, has the same problem when the boundary reads it in its first render. [`useSyncExternalStore`](https://react.dev/reference/react/useSyncExternalStore#adding-support-for-server-rendering)'s server snapshot is what React uses for every component it hydrates, so it tells a hydrating component from one that mounts later:
+
+```sample
+tanstack-start/src/docs/hydration.tsx#late-boundary
+```
+
 ## HydrationBoundary
 
 Where the server's state reaches React through rendering rather than a router, `HydrationBoundary` from `raf-effect-atom` hydrates it. Apps import the same component everywhere; it does what the code around it can:
