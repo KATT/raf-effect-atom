@@ -1,0 +1,6 @@
+# A verb takes no lease on an atom a component reads
+
+- **Problem:** a reader (`useAtomResult`, `useHandleValue`) ended the loader's lease once, in an effect. A loader that ran again while the reader was mounted, such as after a search param changed, took a new lease that nothing ended, so the atom stayed mounted for the lease TTL after the page left it. KATT/executor's grouped-accounts scenario hit it: a refresh of the left-behind atom ran for real and filled the SWR window.
+- **Chosen: readers hold the atom, and `take` skips a held atom.** `Leases.hold(registry, atom)` counts the mounted readers per key and ends any lease. While the count is above zero, `take` does nothing, since the readers keep the atom mounted. When the last reader unmounts, the atom goes idle as usual, and the next verb takes a lease again.
+- **Rejected: readers subscribe to new leases and release each one.** It ends in the same state, but every reader needs a subscription and a re-render path, and the atom is mounted twice in between.
+- **Accepted cost:** a verb that starts an atom for the next page while the current page reads it leaves no lease behind it. Effect removes an idle node in a scheduled task, so a reader that hands over to another in the same React commit keeps the node. Only a gap between the two readers, longer than the idle TTL, would evict the atom.

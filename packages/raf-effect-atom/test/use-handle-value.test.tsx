@@ -117,6 +117,21 @@ describe("useHandleValue", () => {
 		expect(server.requests(1)).toBe(1);
 	});
 
+	it("leaves the atom to its readers when a loader starts it again", async () => {
+		using server = serve();
+		using app = mount();
+		const { Title } = titles();
+		const loader = Loader.make(app.registry);
+		const handle = loader.prefetch(issue, 1);
+		await app.render(<Title issue={handle} />);
+		expect(screen.getByText("Issue 1")).toBeDefined();
+		loader.prefetch(issue, 1);
+		await app.unmount();
+		await settle(2000);
+		expect(nodeOf(app, 1)).toBeUndefined();
+		expect(server.requests(1)).toBe(1);
+	});
+
 	it("reads a derived source through the atom it points at, ending that lease", async () => {
 		using server = serve();
 		using app = mount();
