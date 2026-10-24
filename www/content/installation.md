@@ -5,7 +5,7 @@ section: Getting started
 order: 2
 ---
 
-Both packages need [Effect](https://github.com/Effect-TS/effect/tree/effect%404.0.6/packages/effect) 4, [`@effect/atom-react`](https://github.com/Effect-TS/effect/tree/effect%404.0.6/packages/atom/react) and React 19 as peer dependencies.
+Both packages need [Effect](https://github.com/Effect-TS/effect/tree/effect%404.0.6/packages/effect) and [`@effect/atom-react`](https://github.com/Effect-TS/effect/tree/effect%404.0.6/packages/atom/react) 4.0.6 or later, and React 19, as peer dependencies. Hydration relies on the registry's `skipInitialRun`, which Effect's registry reads from 4.0.6 on: with an older Effect, an atom the server sent runs again on its first read in the browser, which can render something other than the server's HTML: a [hydration mismatch](https://react.dev/errors/418).
 
 ## Typed error boundaries only
 
